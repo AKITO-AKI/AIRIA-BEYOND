@@ -1,0 +1,1 @@
+{\n  "env": {\n    "browser": true,\n    "es2021": true\n  },\n  "extends": ["eslint:recommended"],\n  "parserOptions": {\n    "ecmaVersion": 12\n  },\n  "rules": {}\n}
