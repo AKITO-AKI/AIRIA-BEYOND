@@ -1,1 +1,8 @@
-{\n  "compilerOptions": {\n    "target": "esnext",\n    "module": "esnext",\n    "jsx": "react-jsx",\n    "strict": true\n  }\n}
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "jsx": "react-jsx",
+    "strict": true
+  }
+}
