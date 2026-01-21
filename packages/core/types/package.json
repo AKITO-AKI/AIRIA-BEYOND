@@ -1,1 +1,1 @@
-{\n  "name": "types",\n  "version": "1.0.0"\n}
+{"name":"core-types","version":"1.0.0","main":"index.js","scripts":{"dev":"// dev script here","build":"// build script here","lint":"// lint script here","format":"// format script here"}}
