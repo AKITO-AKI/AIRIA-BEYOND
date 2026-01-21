@@ -1,1 +1,1 @@
-{\n  "name": "airia-beyond",\n  "private": true,\n  "workspaces": [\n    "apps/*",\n    "packages/*"\n  ]\n}
+{"scripts":{"dev":"// dev script to run web app","build":"// build script to run web app","lint":"// lint script","format":"// format script"}}
