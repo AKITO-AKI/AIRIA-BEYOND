@@ -21,6 +21,15 @@ const MOOD_PALETTES: Record<string, string[]> = {
   '疲れ': ['#8b7d6b', '#a89f91', '#9c8d7e', '#b5a894', '#7d6e5d']  // Tired earth tones
 };
 
+// Complexity calculation constants
+const MIN_DURATION = 30;
+const COMPLEXITY_MULTIPLIER = 5;
+const BASE_COMPLEXITY = 3;
+const SHAPES_PER_COMPLEXITY = 8;
+
+// Noise density constant
+const NOISE_DENSITY_DIVISOR = 100;
+
 /**
  * Generates an abstract PNG image from session data
  * @param sessionData The session IR data
@@ -46,8 +55,8 @@ export function generateAbstractImage(
   const palette = MOOD_PALETTES[sessionData.mood_choice] || MOOD_PALETTES['穏やか'];
   
   // Complexity based on duration (30s = simple, 180s = complex)
-  const complexity = Math.floor((sessionData.duration_sec / 30) * 5) + 3;
-  const shapeCount = complexity * 8;
+  const complexity = Math.floor((sessionData.duration_sec / MIN_DURATION) * COMPLEXITY_MULTIPLIER) + BASE_COMPLEXITY;
+  const shapeCount = complexity * SHAPES_PER_COMPLEXITY;
   
   // Background
   ctx.fillStyle = '#0b0f17';
@@ -102,7 +111,7 @@ export function generateAbstractImage(
   
   // Add some noise/texture for visual interest
   ctx.globalAlpha = 0.05;
-  for (let i = 0; i < width * height / 100; i++) {
+  for (let i = 0; i < width * height / NOISE_DENSITY_DIVISOR; i++) {
     const x = rng.nextInt(0, width);
     const y = rng.nextInt(0, height);
     const brightness = rng.nextInt(200, 255);

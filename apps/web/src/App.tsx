@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
+import { MAX_SEED } from './utils/prng';
 
 const Phase1SessionUI = () => {
     const [mood, setMood] = useState('穏やか');
@@ -15,7 +16,7 @@ const Phase1SessionUI = () => {
         ended_at: '',
         duration_sec: duration,
         mood_choice: mood,
-        seed: Math.floor(Math.random() * 2147483647),
+        seed: Math.floor(Math.random() * MAX_SEED),
         valence: 0,
         arousal: 0,
         focus: 0,
@@ -36,7 +37,7 @@ const Phase1SessionUI = () => {
     }, [isRunning, timer]);
 
     const startTimer = () => {
-        const newSeed = Math.floor(Math.random() * 2147483647);
+        const newSeed = Math.floor(Math.random() * MAX_SEED);
         setSessionData({ 
             ...sessionData, 
             started_at: new Date().toISOString(), 
@@ -46,6 +47,9 @@ const Phase1SessionUI = () => {
             duration_sec: duration
         });
         setIsRunning(true);
+        // Clear previous preview when starting new session
+        setPreviewImageURL(null);
+        setCurrentCanvas(null);
     };
 
     const stopTimer = () => {
