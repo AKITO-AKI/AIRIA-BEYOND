@@ -1,1 +1,15 @@
-{"scripts":{"dev":"// dev script to run web app","build":"// build script to run web app","lint":"// lint script","format":"// format script"}}
+{
+  "name": "airia-beyond",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "preview": "npm --workspace apps/web run preview",
+    "lint": "echo \"TODO: add lint\"",
+    "format": "echo \"TODO: add format\""
+  }
+}
