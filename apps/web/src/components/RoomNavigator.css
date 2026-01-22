@@ -1,0 +1,125 @@
+.room-navigator {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.room-indicators {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 12px 20px;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.room-indicator {
+  background: transparent;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 500;
+}
+
+.room-indicator:hover {
+  border-color: rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.room-indicator.active {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(0, 0, 0, 0.8);
+  color: white;
+}
+
+.room-indicator-label {
+  display: block;
+  white-space: nowrap;
+}
+
+.rooms-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  will-change: transform;
+  cursor: grab;
+}
+
+.rooms-container:active {
+  cursor: grabbing;
+}
+
+.room {
+  min-width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.95);
+  position: relative;
+}
+
+.room-content {
+  width: 100%;
+  max-width: 1200px;
+  padding: 80px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.room-title {
+  font-size: clamp(32px, 6vw, 48px);
+  margin: 0 0 16px 0;
+  color: rgba(0, 0, 0, 0.9);
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+
+.room-subtitle {
+  font-size: clamp(16px, 3vw, 20px);
+  color: rgba(0, 0, 0, 0.5);
+  margin: 0 0 40px 0;
+  font-weight: 300;
+}
+
+.room-placeholder {
+  width: 100%;
+  max-width: 600px;
+  height: 300px;
+  border: 2px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .rooms-container {
+    transition: none !important;
+  }
+  
+  .room-indicator {
+    transition: none !important;
+  }
+}
