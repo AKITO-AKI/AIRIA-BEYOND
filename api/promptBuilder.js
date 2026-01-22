@@ -11,16 +11,7 @@
  * - Auto-selects style preset based on valence/arousal
  */
 
-export interface StylePreset {
-  name: string;
-  promptSuffix: string;
-  negativePrompt: string;
-  // P3: Style preset metadata for auto-selection
-  valenceRange?: [number, number]; // preferred valence range
-  arousalRange?: [number, number]; // preferred arousal range
-}
-
-export const STYLE_PRESETS: Record<string, StylePreset> = {
+export const STYLE_PRESETS = {
   'oil-painting': {
     name: '油絵 (Oil Painting)',
     promptSuffix: 'oil painting, thick brushstrokes, rich texture, classical oil painting, masterpiece, fine art',
@@ -64,10 +55,10 @@ export const MOOD_KEYS = {
   HAPPY: '嬉しい',
   ANXIOUS: '不安',
   TIRED: '疲れ',
-} as const;
+};
 
 // Mood to descriptive terms mapping
-const MOOD_DESCRIPTORS: Record<string, string> = {
+const MOOD_DESCRIPTORS = {
   [MOOD_KEYS.CALM]: 'calm, peaceful, serene, tranquil, gentle',
   [MOOD_KEYS.HAPPY]: 'joyful, vibrant, energetic, bright, uplifting',
   [MOOD_KEYS.ANXIOUS]: 'anxious, turbulent, uncertain, tense, restless',
@@ -77,8 +68,10 @@ const MOOD_DESCRIPTORS: Record<string, string> = {
 /**
  * Map valence (-1 to 1) to atmosphere/mood keywords
  * valence: -1 = dark/melancholic, 0 = neutral, +1 = bright/uplifting
+ * @param {number} valence - Valence value
+ * @returns {string} Atmosphere descriptors
  */
-function getValenceDescriptors(valence: number): string {
+function getValenceDescriptors(valence) {
   if (valence < -0.5) {
     return 'dark atmosphere, melancholic, somber tones, shadowy, moody';
   } else if (valence < -0.2) {
@@ -95,8 +88,10 @@ function getValenceDescriptors(valence: number): string {
 /**
  * Map arousal (0 to 1) to energy/intensity keywords
  * arousal: 0 = calm/still, 0.5 = moderate, 1 = intense/dynamic
+ * @param {number} arousal - Arousal value
+ * @returns {string} Energy descriptors
  */
-function getArousalDescriptors(arousal: number): string {
+function getArousalDescriptors(arousal) {
   if (arousal < 0.3) {
     return 'calm, still, peaceful, serene, quiet, gentle';
   } else if (arousal < 0.6) {
@@ -109,8 +104,10 @@ function getArousalDescriptors(arousal: number): string {
 /**
  * Map focus (0 to 1) to compositional clarity keywords
  * focus: 0 = diffuse/abstract, 1 = clear/sharp composition
+ * @param {number} focus - Focus value
+ * @returns {string} Composition descriptors
  */
-function getFocusDescriptors(focus: number): string {
+function getFocusDescriptors(focus) {
   if (focus < 0.3) {
     return 'soft focus, dreamlike, ethereal, diffused, atmospheric haze';
   } else if (focus < 0.7) {
@@ -120,8 +117,12 @@ function getFocusDescriptors(focus: number): string {
   }
 }
 
-// Duration to complexity mapping
-function getComplexityDescriptor(durationSec: number): string {
+/**
+ * Duration to complexity mapping
+ * @param {number} durationSec - Duration in seconds
+ * @returns {string} Complexity descriptor
+ */
+function getComplexityDescriptor(durationSec) {
   if (durationSec < 60) return 'simple, minimalist';
   if (durationSec < 120) return 'balanced, moderate detail';
   return 'complex, intricate, detailed';
@@ -130,15 +131,17 @@ function getComplexityDescriptor(durationSec: number): string {
 /**
  * Auto-select style preset based on valence and arousal
  * This provides intelligent defaults when user doesn't select manually
+ * @param {number} valence - Valence value
+ * @param {number} arousal - Arousal value
+ * @returns {string} Selected style preset ID
  */
+export function autoSelectStylePreset(valence, arousal) {
+  // Thresholds for auto-style selection
+  const AROUSAL_LOW_THRESHOLD = 0.4;
+  const AROUSAL_HIGH_THRESHOLD = 0.6;
+  const VALENCE_POSITIVE_THRESHOLD = 0.3;
+  const VALENCE_NEUTRAL_THRESHOLD = 0.2;
 
-// Thresholds for auto-style selection
-const AROUSAL_LOW_THRESHOLD = 0.4;
-const AROUSAL_HIGH_THRESHOLD = 0.6;
-const VALENCE_POSITIVE_THRESHOLD = 0.3;
-const VALENCE_NEUTRAL_THRESHOLD = 0.2;
-
-export function autoSelectStylePreset(valence: number, arousal: number): string {
   // Low arousal + neutral/positive valence → watercolor or abstract-minimal
   if (arousal < AROUSAL_LOW_THRESHOLD) {
     if (valence > VALENCE_POSITIVE_THRESHOLD) {
@@ -164,17 +167,17 @@ export function autoSelectStylePreset(valence: number, arousal: number): string 
 /**
  * Build a prompt from session IR data (P3 Enhanced)
  * Now uses valence, arousal, and focus for richer prompt generation
+ * @param {Object} params - Prompt parameters
+ * @param {string} [params.mood] - User mood
+ * @param {number} [params.duration=60] - Session duration in seconds
+ * @param {string[]} [params.motifTags=[]] - Artistic motif tags
+ * @param {string} [params.stylePreset] - Style preset ID
+ * @param {number} [params.valence] - Valence value
+ * @param {number} [params.arousal] - Arousal value
+ * @param {number} [params.focus] - Focus value
+ * @returns {Object} Prompt and negative prompt
  */
-export function buildPrompt(params: {
-  mood?: string;
-  duration?: number;
-  motifTags?: string[];
-  stylePreset?: string;
-  // P3: New IR parameters
-  valence?: number;
-  arousal?: number;
-  focus?: number;
-}): { prompt: string; negativePrompt: string } {
+export function buildPrompt(params) {
   const { 
     mood, 
     duration = 60, 
@@ -194,7 +197,7 @@ export function buildPrompt(params: {
   const preset = STYLE_PRESETS[selectedPreset || 'oil-painting'] || STYLE_PRESETS['oil-painting'];
   
   // Build prompt components
-  const components: string[] = [];
+  const components = [];
   
   // P3: Use IR data if available (takes precedence over mood)
   if (valence !== undefined) {
@@ -234,17 +237,18 @@ export function buildPrompt(params: {
 
 /**
  * P5: Generate reasoning for why this prompt/style was chosen
+ * @param {Object} params - Reasoning parameters
+ * @param {number} [params.valence] - Valence value
+ * @param {number} [params.arousal] - Arousal value
+ * @param {number} [params.focus] - Focus value
+ * @param {string} [params.stylePreset] - Style preset ID
+ * @param {string[]} [params.motifTags=[]] - Artistic motif tags
+ * @returns {string} Reasoning explanation
  */
-export function generatePromptReasoning(params: {
-  valence?: number;
-  arousal?: number;
-  focus?: number;
-  stylePreset?: string;
-  motifTags?: string[];
-}): string {
+export function generatePromptReasoning(params) {
   const { valence, arousal, focus, stylePreset, motifTags = [] } = params;
   
-  const reasons: string[] = [];
+  const reasons = [];
   
   // Explain valence choice
   if (valence !== undefined) {
@@ -287,9 +291,11 @@ export function generatePromptReasoning(params: {
 /**
  * Translate Japanese motif tags to English for SDXL
  * (P2 analysis returns Japanese tags like 光, 霧, etc.)
+ * @param {string} tag - Japanese motif tag
+ * @returns {string} English translation
  */
-function translateMotifTag(tag: string): string {
-  const translations: Record<string, string> = {
+function translateMotifTag(tag) {
+  const translations = {
     '光': 'light',
     '影': 'shadow',
     '霧': 'mist',
@@ -319,8 +325,9 @@ function translateMotifTag(tag: string): string {
 
 /**
  * Get list of available style presets for UI
+ * @returns {Array<{id: string, name: string}>} List of presets
  */
-export function getStylePresetsList(): Array<{ id: string; name: string }> {
+export function getStylePresetsList() {
   return Object.entries(STYLE_PRESETS).map(([id, preset]) => ({
     id,
     name: preset.name,

@@ -4,7 +4,6 @@
  */
 
 import OpenAI from 'openai';
-import type { GenerateMusicRequest, MusicStructure } from './types';
 
 // Initialize OpenAI client
 const openai = process.env.OPENAI_API_KEY
@@ -13,10 +12,15 @@ const openai = process.env.OPENAI_API_KEY
 
 /**
  * Generate music structure using LLM
+ * @param {Object} request - Music generation request
+ * @param {number} request.valence - Emotional valence (-1 to 1)
+ * @param {number} request.arousal - Arousal level (0 to 1)
+ * @param {number} request.focus - Focus level (0 to 1)
+ * @param {string[]} request.motif_tags - Artistic motif tags
+ * @param {number} [request.duration=75] - Target duration in seconds
+ * @returns {Promise<Object>} Music structure
  */
-export async function generateMusicStructure(
-  request: GenerateMusicRequest
-): Promise<MusicStructure> {
+export async function generateMusicStructure(request) {
   if (!openai) {
     throw new Error('OpenAI API key not configured');
   }
@@ -94,7 +98,7 @@ Create a composition that reflects these emotional qualities using classical mus
       throw new Error('No content in LLM response');
     }
 
-    const musicStructure = JSON.parse(content) as MusicStructure;
+    const musicStructure = JSON.parse(content);
 
     // Validate structure
     if (!musicStructure.key || !musicStructure.tempo || !musicStructure.sections) {
@@ -117,10 +121,10 @@ Create a composition that reflects these emotional qualities using classical mus
 
 /**
  * Generate music structure with fallback to rule-based generation
+ * @param {Object} request - Music generation request
+ * @returns {Promise<Object>} Music structure and provider info
  */
-export async function generateMusicStructureWithFallback(
-  request: GenerateMusicRequest
-): Promise<{ structure: MusicStructure; provider: 'openai' | 'rule-based' }> {
+export async function generateMusicStructureWithFallback(request) {
   try {
     const structure = await generateMusicStructure(request);
     return { structure, provider: 'openai' };
@@ -133,8 +137,10 @@ export async function generateMusicStructureWithFallback(
 
 /**
  * Rule-based music generation fallback
+ * @param {Object} request - Music generation request
+ * @returns {Object} Music structure
  */
-function generateRuleBasedMusic(request: GenerateMusicRequest): MusicStructure {
+function generateRuleBasedMusic(request) {
   const { valence, arousal, focus, motif_tags } = request;
 
   // Determine key based on valence

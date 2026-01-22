@@ -1,16 +1,17 @@
 /**
- * GET /api/job/[id]
+ * GET /api/job/:id
  * 
  * Get the status of a job by ID
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getJob } from '../../jobStore';
+import { getJob } from '../jobStore.js';
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
+/**
+ * Get job status handler
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function getJobStatus(req, res) {
   // Only accept GET
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -18,8 +19,8 @@ export default async function handler(
   }
 
   try {
-    // Extract job ID from query
-    const { id } = req.query;
+    // Extract job ID from params (Express style) or query (fallback)
+    const id = req.params.id || req.query.id;
 
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ error: 'Job ID is required' });

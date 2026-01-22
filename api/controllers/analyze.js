@@ -5,11 +5,9 @@
  * Integrates with P1 job system for status tracking and retry logic
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createAnalysisJob, updateAnalysisJob } from '../analysisJobStore';
-import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
-import { generateIR } from '../llmService';
-import type { AnalyzeRequest, SessionInput } from '../types';
+import { createAnalysisJob, updateAnalysisJob } from '../analysisJobStore.js';
+import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
+import { generateIR } from '../llmService.js';
 
 // Error codes
 const ERROR_CODES = {
@@ -19,25 +17,28 @@ const ERROR_CODES = {
   RATE_LIMIT: 'RATE_LIMIT',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
-} as const;
+};
 
-// Helper to get client identifier (IP address)
-function getClientIdentifier(req: VercelRequest): string {
+/**
+ * Get client identifier (IP address) from request
+ * @param {Object} req - Express request object
+ * @returns {string} Client identifier
+ */
+function getClientIdentifier(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
     return forwarded.split(',')[0].trim();
   }
-  return (req.headers['x-real-ip'] as string) || 'unknown';
+  return req.headers['x-real-ip'] || 'unknown';
 }
 
 /**
  * Execute analysis with retry logic
+ * @param {string} jobId - Job ID
+ * @param {Object} input - Session input data
+ * @param {string} clientId - Client identifier for rate limiting
  */
-async function executeAnalysis(
-  jobId: string,
-  input: SessionInput,
-  clientId: string
-): Promise<void> {
+async function executeAnalysis(jobId, input, clientId) {
   try {
     console.log(`[Analysis] Starting job ${jobId}`);
 
@@ -61,7 +62,7 @@ async function executeAnalysis(
     });
 
     console.log(`[Analysis] Job ${jobId} completed successfully with provider: ${provider}`);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`[Analysis] Job ${jobId} failed:`, error);
 
     const errorCode = error?.response?.status === 429
@@ -87,7 +88,12 @@ async function executeAnalysis(
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+/**
+ * Analyze session data handler
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function analyzeSession(req, res) {
   // Only accept POST
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -115,8 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Parse request body
-    const body: AnalyzeRequest = req.body;
-    const { mood, duration, onboardingData, freeText, timestamp } = body;
+    const { mood, duration, onboardingData, freeText, timestamp } = req.body;
 
     // Validate required fields
     if (!mood) {
@@ -130,7 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Build session input
-    const sessionInput: SessionInput = {
+    const sessionInput = {
       mood,
       duration,
       onboardingData,

@@ -4,8 +4,8 @@
  */
 
 import OpenAI from 'openai';
-import { IntermediateRepresentation, IntermediateRepresentationSchema, SessionInput } from './types';
-import { trackUsage } from './lib/usage-tracker';
+import { IntermediateRepresentationSchema } from './types.js';
+import { trackUsage } from './lib/usage-tracker.js';
 
 // System prompt for LLM
 const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。セッションデータから感情と芸術的な中間表現を生成します。
@@ -79,11 +79,11 @@ const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。
 
 /**
  * Generate IR using OpenAI
+ * @param {Object} input - Session input data
+ * @param {string} apiKey - OpenAI API key
+ * @returns {Promise<Object>} Intermediate representation
  */
-export async function generateWithLLM(
-  input: SessionInput,
-  apiKey: string
-): Promise<IntermediateRepresentation> {
+export async function generateWithLLM(input, apiKey) {
   const openai = new OpenAI({ apiKey });
 
   // Build user message
@@ -140,35 +140,30 @@ export async function generateWithLLM(
 /**
  * Rule-based fallback generation
  * Used when LLM is unavailable or fails validation
+ * @param {Object} input - Session input data
+ * @returns {Object} Intermediate representation
  */
-export function generateWithRules(input: SessionInput): IntermediateRepresentation {
+export function generateWithRules(input) {
   console.log('[RuleBased] Generating IR using rules');
 
   // Mood mappings
-  const moodMappings: Record<
-    string,
-    {
-      valence: number;
-      arousal: number;
-      tags: string[];
-    }
-  > = {
-    穏やか: {
+  const moodMappings = {
+    '穏やか': {
       valence: 0.6,
       arousal: 0.2,
       tags: ['静寂', '水面', '凪', 'レガート'],
     },
-    嬉しい: {
+    '嬉しい': {
       valence: 0.8,
       arousal: 0.7,
       tags: ['光', '希望', '朝焼け', 'アレグロ'],
     },
-    不安: {
+    '不安': {
       valence: -0.4,
       arousal: 0.6,
       tags: ['緊張', '暗雲', '嵐', '不協和音'],
     },
-    疲れ: {
+    '疲れ': {
       valence: -0.2,
       arousal: 0.1,
       tags: ['憂鬱', '影', '夕暮れ', 'アダージョ'],
@@ -196,11 +191,11 @@ export function generateWithRules(input: SessionInput): IntermediateRepresentati
 
 /**
  * Generate IR with LLM and fallback to rules on failure
+ * @param {Object} input - Session input data
+ * @param {boolean} forceFallback - Force rule-based generation
+ * @returns {Promise<Object>} IR and provider info
  */
-export async function generateIR(
-  input: SessionInput,
-  forceFallback: boolean = false
-): Promise<{ ir: IntermediateRepresentation; provider: 'openai' | 'rule-based' }> {
+export async function generateIR(input, forceFallback = false) {
   const apiKey = process.env.OPENAI_API_KEY;
   const disableLLM = process.env.DISABLE_LLM_ANALYSIS;
 

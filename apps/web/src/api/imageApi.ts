@@ -108,8 +108,8 @@ export interface ApiError {
   message?: string;
 }
 
-// Detect API base URL (local dev vs deployed)
-const API_BASE = import.meta.env.DEV ? 'http://localhost:3000' : '';
+// Detect API base URL from environment variable
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 /**
  * Generate an image using the external API

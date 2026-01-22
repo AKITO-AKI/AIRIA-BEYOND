@@ -5,12 +5,11 @@
  * Returns a job ID immediately, actual generation happens async
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Replicate from 'replicate';
-import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore';
-import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
-import { buildPrompt } from '../promptBuilder';
-import { trackUsage } from '../lib/usage-tracker';
+import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore.js';
+import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
+import { buildPrompt } from '../promptBuilder.js';
+import { trackUsage } from '../lib/usage-tracker.js';
 
 // SDXL model on Replicate
 const SDXL_MODEL = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b';
@@ -21,7 +20,7 @@ const SDXL_PARAMS = {
   height: 1024,
   num_inference_steps: 25,
   guidance_scale: 7.5,
-} as const;
+};
 
 // Timeout for image generation (120 seconds)
 const GENERATION_TIMEOUT_MS = 120 * 1000;
@@ -38,21 +37,27 @@ const ERROR_CODES = {
   RATE_LIMIT: 'RATE_LIMIT',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
-} as const;
+};
 
-// Helper to get client identifier (IP address)
-function getClientIdentifier(req: VercelRequest): string {
+/**
+ * Get client identifier (IP address) from request
+ * @param {Object} req - Express request object
+ * @returns {string} Client identifier
+ */
+function getClientIdentifier(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
     return forwarded.split(',')[0].trim();
   }
-  return req.headers['x-real-ip'] as string || 'unknown';
+  return req.headers['x-real-ip'] || 'unknown';
 }
 
 /**
  * Check if error is transient and should be retried
+ * @param {any} error - Error object
+ * @returns {boolean} True if error is transient
  */
-function isTransientError(error: any): boolean {
+function isTransientError(error) {
   const errorMessage = error?.message || '';
   const errorStatus = error?.response?.status || error?.status;
   
@@ -79,23 +84,25 @@ function isTransientError(error: any): boolean {
 
 /**
  * Calculate exponential backoff delay
+ * @param {number} retryCount - Current retry count
+ * @returns {number} Delay in milliseconds
  */
-function getRetryDelay(retryCount: number): number {
+function getRetryDelay(retryCount) {
   const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount);
   return Math.min(delay, MAX_RETRY_DELAY_MS);
 }
 
 /**
  * Run Replicate prediction with timeout
+ * @param {Promise} promise - Promise to run
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @param {string} jobId - Job ID for logging
+ * @returns {Promise} Result with timeout
  */
-async function runWithTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  jobId: string
-): Promise<T> {
-  let timeoutHandle: NodeJS.Timeout | undefined;
+async function runWithTimeout(promise, timeoutMs, jobId) {
+  let timeoutHandle;
   
-  const timeoutPromise = new Promise<T>((_, reject) => {
+  const timeoutPromise = new Promise((_, reject) => {
     timeoutHandle = setTimeout(() => {
       reject(new Error(`Generation timeout after ${timeoutMs / 1000}s`));
     }, timeoutMs);
@@ -113,22 +120,22 @@ async function runWithTimeout<T>(
 
 /**
  * Execute image generation with retry logic
+ * @param {Replicate} replicate - Replicate client
+ * @param {string} jobId - Job ID
+ * @param {string} prompt - Image prompt
+ * @param {string} negativePrompt - Negative prompt
+ * @param {number} seed - Random seed
+ * @param {string} clientId - Client identifier for rate limiting
+ * @returns {Promise<string>} Result URL
  */
-async function executeGeneration(
-  replicate: Replicate,
-  jobId: string,
-  prompt: string,
-  negativePrompt: string,
-  seed: number,
-  clientId: string
-): Promise<string> {
+async function executeGeneration(replicate, jobId, prompt, negativePrompt, seed, clientId) {
   const job = getJob(jobId);
   if (!job) {
     throw new Error('Job not found');
   }
   
   const maxRetries = job.maxRetries;
-  let lastError: any;
+  let lastError;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -173,7 +180,7 @@ async function executeGeneration(
       console.log(`[Generation] Job ${jobId} succeeded on attempt ${attempt + 1}`);
       return resultUrl;
       
-    } catch (error: any) {
+    } catch (error) {
       lastError = error;
       
       // Check if timeout
@@ -226,10 +233,12 @@ async function executeGeneration(
   throw lastError;
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
+/**
+ * Generate image handler
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function generateImage(req, res) {
   // Only accept POST
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');

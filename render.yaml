@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: airia-beyond-api
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: DISABLE_LLM_ANALYSIS
+        value: false
+    healthCheckPath: /api/health

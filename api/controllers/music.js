@@ -5,12 +5,10 @@
  * Returns a job ID immediately, actual generation happens async
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createMusicJob, updateMusicJob, getMusicJob } from '../musicJobStore';
-import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
-import { generateMusicStructureWithFallback } from '../musicLLMService';
-import { musicStructureToMIDI } from '../midiConverter';
-import type { GenerateMusicRequest } from '../types';
+import { createMusicJob, updateMusicJob, getMusicJob } from '../musicJobStore.js';
+import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
+import { generateMusicStructureWithFallback } from '../musicLLMService.js';
+import { musicStructureToMIDI } from '../midiConverter.js';
 
 // Error codes
 const ERROR_CODES = {
@@ -20,25 +18,28 @@ const ERROR_CODES = {
   RATE_LIMIT: 'RATE_LIMIT',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
-} as const;
+};
 
-// Helper to get client identifier (IP address)
-function getClientIdentifier(req: VercelRequest): string {
+/**
+ * Get client identifier (IP address) from request
+ * @param {Object} req - Express request object
+ * @returns {string} Client identifier
+ */
+function getClientIdentifier(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
     return forwarded.split(',')[0].trim();
   }
-  return (req.headers['x-real-ip'] as string) || 'unknown';
+  return req.headers['x-real-ip'] || 'unknown';
 }
 
 /**
  * Execute music generation with retry logic
+ * @param {string} jobId - Job ID
+ * @param {Object} request - Music generation request
+ * @param {string} clientId - Client identifier for rate limiting
  */
-async function executeMusicGeneration(
-  jobId: string,
-  request: GenerateMusicRequest,
-  clientId: string
-): Promise<void> {
+async function executeMusicGeneration(jobId, request, clientId) {
   try {
     console.log(`[MusicGeneration] Starting job ${jobId}`);
 
@@ -70,7 +71,7 @@ async function executeMusicGeneration(
     });
 
     console.log(`[MusicGeneration] Job ${jobId} completed successfully`);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`[MusicGeneration] Job ${jobId} failed:`, error);
 
     const errorCode = error?.response?.status === 429
@@ -96,7 +97,12 @@ async function executeMusicGeneration(
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+/**
+ * Generate music handler
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function generateMusic(req, res) {
   // Only accept POST
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -124,8 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Parse request body
-    const body: GenerateMusicRequest = req.body;
-    const { valence, arousal, focus, motif_tags, confidence, duration, seed } = body;
+    const { valence, arousal, focus, motif_tags, confidence, duration, seed } = req.body;
 
     // Validate required fields
     if (valence === undefined || arousal === undefined || focus === undefined) {

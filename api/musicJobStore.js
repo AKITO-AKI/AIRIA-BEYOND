@@ -3,25 +3,55 @@
  * Similar to analysisJobStore.ts but for music generation
  */
 
-import type { MusicJobData, GenerateMusicRequest } from './types';
+/**
+ * @typedef {Object} GenerateMusicRequest
+ * @property {string} [mood]
+ * @property {number} [duration]
+ * @property {string} [stylePreset]
+ * @property {number} [seed]
+ * @property {number} [valence]
+ * @property {number} [arousal]
+ * @property {number} [focus]
+ * @property {number} [confidence]
+ * @property {string[]} [motifTags]
+ */
+
+/**
+ * @typedef {Object} MusicJobData
+ * @property {string} id
+ * @property {'queued' | 'running' | 'succeeded' | 'failed'} status
+ * @property {string} createdAt
+ * @property {string} [startedAt]
+ * @property {string} [finishedAt]
+ * @property {string} [error]
+ * @property {string} [errorCode]
+ * @property {string} [errorMessage]
+ * @property {number} retryCount
+ * @property {number} maxRetries
+ * @property {'openai' | 'rule-based'} provider
+ * @property {GenerateMusicRequest} input
+ * @property {string} [result]
+ * @property {string} [resultUrl]
+ */
 
 // In-memory job store
-const jobs = new Map<string, MusicJobData>();
+const jobs = new Map();
 
 // Job ID counter
 let jobIdCounter = 0;
 
 /**
  * Create a new music generation job
+ * @param {Object} data
+ * @param {'openai' | 'rule-based'} data.provider
+ * @param {GenerateMusicRequest} data.input
+ * @param {number} [data.maxRetries]
+ * @returns {MusicJobData}
  */
-export function createMusicJob(data: {
-  provider: 'openai' | 'rule-based';
-  input: GenerateMusicRequest;
-  maxRetries?: number;
-}): MusicJobData {
+export function createMusicJob(data) {
   const jobId = `music_job_${Date.now()}_${jobIdCounter++}`;
 
-  const job: MusicJobData = {
+  const job = {
     id: jobId,
     status: 'queued',
     createdAt: new Date().toISOString(),
@@ -39,18 +69,20 @@ export function createMusicJob(data: {
 
 /**
  * Get a job by ID
+ * @param {string} jobId
+ * @returns {MusicJobData | undefined}
  */
-export function getMusicJob(jobId: string): MusicJobData | undefined {
+export function getMusicJob(jobId) {
   return jobs.get(jobId);
 }
 
 /**
  * Update job with partial data
+ * @param {string} jobId
+ * @param {Partial<MusicJobData>} updates
+ * @returns {void}
  */
-export function updateMusicJob(
-  jobId: string,
-  updates: Partial<MusicJobData>
-): void {
+export function updateMusicJob(jobId, updates) {
   const job = jobs.get(jobId);
   if (!job) {
     console.error(`[MusicJobStore] Job ${jobId} not found`);
@@ -63,8 +95,10 @@ export function updateMusicJob(
 
 /**
  * Increment retry count for a job
+ * @param {string} jobId
+ * @returns {void}
  */
-export function incrementMusicJobRetryCount(jobId: string): void {
+export function incrementMusicJobRetryCount(jobId) {
   const job = jobs.get(jobId);
   if (!job) {
     console.error(`[MusicJobStore] Job ${jobId} not found`);
@@ -78,8 +112,9 @@ export function incrementMusicJobRetryCount(jobId: string): void {
 /**
  * Delete old jobs to prevent memory leaks
  * Call this periodically to clean up completed/failed jobs older than 1 hour
+ * @returns {void}
  */
-export function cleanupOldMusicJobs(): void {
+export function cleanupOldMusicJobs() {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
   let deletedCount = 0;
 

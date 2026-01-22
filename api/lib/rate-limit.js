@@ -6,14 +6,16 @@
  * - Concurrent image generation spam
  */
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
+/**
+ * @typedef {Object} RateLimitEntry
+ * @property {number} count
+ * @property {number} resetAt
+ */
 
-interface ConcurrencyEntry {
-  activeJobs: number;
-}
+/**
+ * @typedef {Object} ConcurrencyEntry
+ * @property {number} activeJobs
+ */
 
 // Per-IP rate limiting (N requests per minute)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -23,8 +25,10 @@ const RATE_LIMIT_MAX_REQUESTS = 5; // 5 requests per minute
 const MAX_CONCURRENT_JOBS = 3; // Max 3 concurrent jobs per IP
 
 // In-memory stores
-const rateLimits = new Map<string, RateLimitEntry>();
-const concurrency = new Map<string, ConcurrencyEntry>();
+/** @type {Map<string, RateLimitEntry>} */
+const rateLimits = new Map();
+/** @type {Map<string, ConcurrencyEntry>} */
+const concurrency = new Map();
 
 // Cleanup old entries every 5 minutes
 setInterval(() => {
@@ -38,10 +42,10 @@ setInterval(() => {
 
 /**
  * Check if request is rate limited
- * @param identifier IP address or session ID
- * @returns true if allowed, false if rate limited
+ * @param {string} identifier - IP address or session ID
+ * @returns {boolean} true if allowed, false if rate limited
  */
-export function checkRateLimit(identifier: string): boolean {
+export function checkRateLimit(identifier) {
   const now = Date.now();
   const entry = rateLimits.get(identifier);
   
@@ -64,10 +68,10 @@ export function checkRateLimit(identifier: string): boolean {
 
 /**
  * Check if request exceeds concurrency limit
- * @param identifier IP address or session ID
- * @returns true if allowed, false if too many concurrent jobs
+ * @param {string} identifier - IP address or session ID
+ * @returns {boolean} true if allowed, false if too many concurrent jobs
  */
-export function checkConcurrency(identifier: string): boolean {
+export function checkConcurrency(identifier) {
   const entry = concurrency.get(identifier);
   
   if (!entry) {
@@ -85,8 +89,9 @@ export function checkConcurrency(identifier: string): boolean {
 
 /**
  * Decrement active job count when a job completes
+ * @param {string} identifier - IP address or session ID
  */
-export function releaseJob(identifier: string): void {
+export function releaseJob(identifier) {
   const entry = concurrency.get(identifier);
   if (entry && entry.activeJobs > 0) {
     entry.activeJobs--;
@@ -95,12 +100,10 @@ export function releaseJob(identifier: string): void {
 
 /**
  * Get rate limit info for debugging
+ * @param {string} identifier - IP address or session ID
+ * @returns {{requestsUsed: number, requestsRemaining: number, resetAt: number}}
  */
-export function getRateLimitInfo(identifier: string): {
-  requestsUsed: number;
-  requestsRemaining: number;
-  resetAt: number;
-} {
+export function getRateLimitInfo(identifier) {
   const entry = rateLimits.get(identifier);
   if (!entry) {
     return {

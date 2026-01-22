@@ -1,13 +1,15 @@
-import type { VercelResponse } from '@vercel/node';
-
 const ALLOWED_ORIGINS = [
-  'https://airia-beyond.vercel.app',
   'https://akito-aki.github.io',
   process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : null,
   process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
-].filter(Boolean) as string[];
+].filter(Boolean);
 
-export function setCorsHeaders(res: VercelResponse, origin?: string) {
+/**
+ * Set CORS headers on response
+ * @param {import('@vercel/node').VercelResponse} res - Vercel response object
+ * @param {string} [origin] - Request origin
+ */
+export function setCorsHeaders(res, origin) {
   // Check if origin is allowed
   const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) 
     ? origin 
@@ -19,7 +21,12 @@ export function setCorsHeaders(res: VercelResponse, origin?: string) {
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
 }
 
-export function handleCorsPreFlight(res: VercelResponse, origin?: string) {
+/**
+ * Handle CORS preflight request
+ * @param {import('@vercel/node').VercelResponse} res - Vercel response object
+ * @param {string} [origin] - Request origin
+ */
+export function handleCorsPreFlight(res, origin) {
   setCorsHeaders(res, origin);
   res.status(200).end();
 }

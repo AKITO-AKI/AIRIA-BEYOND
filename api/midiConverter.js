@@ -4,15 +4,14 @@
  */
 
 import MidiWriter from 'midi-writer-js';
-import type { MusicStructure, MusicSection, MusicMotif } from './types';
 
 // Map of note names to MIDI note numbers (C4 = middle C = 60)
-const NOTE_MAP: { [key: string]: number } = {
+const NOTE_MAP = {
   'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11,
 };
 
 // Key signatures map (simplified for prototype)
-const KEY_SIGNATURES: { [key: string]: { tonic: number; scale: number[] } } = {
+const KEY_SIGNATURES = {
   'C major': { tonic: 60, scale: [0, 2, 4, 5, 7, 9, 11] },
   'c minor': { tonic: 60, scale: [0, 2, 3, 5, 7, 8, 10] },
   'D major': { tonic: 62, scale: [0, 2, 4, 5, 7, 9, 11] },
@@ -30,7 +29,7 @@ const KEY_SIGNATURES: { [key: string]: { tonic: number; scale: number[] } } = {
 };
 
 // Roman numeral to chord intervals (simplified)
-const CHORD_MAP: { [key: string]: number[] } = {
+const CHORD_MAP = {
   'i': [0, 3, 7],  // minor triad
   'I': [0, 4, 7],  // major triad
   'ii': [2, 5, 9],
@@ -48,7 +47,7 @@ const CHORD_MAP: { [key: string]: number[] } = {
 };
 
 // Dynamics to MIDI velocity mapping
-const DYNAMICS_MAP: { [key: string]: number } = {
+const DYNAMICS_MAP = {
   'pp': 40,
   'p': 60,
   'mp': 75,
@@ -59,8 +58,10 @@ const DYNAMICS_MAP: { [key: string]: number } = {
 
 /**
  * Convert music structure to MIDI data (Base64 encoded)
+ * @param {Object} structure - Music structure object
+ * @returns {string} Base64-encoded MIDI data
  */
-export function musicStructureToMIDI(structure: MusicStructure): string {
+export function musicStructureToMIDI(structure) {
   const { key, tempo, timeSignature, sections } = structure;
 
   // Get key information
@@ -93,13 +94,12 @@ export function musicStructureToMIDI(structure: MusicStructure): string {
 
 /**
  * Convert a music section to MIDI events
+ * @param {Object} track - MIDI track
+ * @param {Object} section - Music section
+ * @param {Object} keyInfo - Key signature information
+ * @param {number} tempo - Tempo in BPM
  */
-function convertSectionToMIDI(
-  track: any,
-  section: MusicSection,
-  keyInfo: { tonic: number; scale: number[] },
-  tempo: number
-): void {
+function convertSectionToMIDI(track, section, keyInfo, tempo) {
   const { chordProgression, melody, dynamics } = section;
   const velocity = DYNAMICS_MAP[dynamics] || 90;
 
@@ -137,12 +137,12 @@ function convertSectionToMIDI(
 
 /**
  * Get MIDI note numbers for a chord
+ * @param {string} romanNumeral - Roman numeral chord notation
+ * @param {Object} keyInfo - Key signature information
+ * @param {number} [baseOctave=60] - Base octave for chord
+ * @returns {number[]} Array of MIDI note numbers
  */
-function getChordNotes(
-  romanNumeral: string,
-  keyInfo: { tonic: number; scale: number[] },
-  baseOctave: number = 60
-): number[] {
+function getChordNotes(romanNumeral, keyInfo, baseOctave = 60) {
   const chordIntervals = CHORD_MAP[romanNumeral] || CHORD_MAP['I'];
   
   return chordIntervals.map((interval) => {
@@ -156,13 +156,12 @@ function getChordNotes(
 
 /**
  * Add a melody motif to the track
+ * @param {Object} track - MIDI track
+ * @param {Object} motif - Melody motif with degrees and rhythm
+ * @param {Object} keyInfo - Key signature information
+ * @param {number} velocity - MIDI velocity
  */
-function addMotifToTrack(
-  track: any,
-  motif: MusicMotif,
-  keyInfo: { tonic: number; scale: number[] },
-  velocity: number
-): void {
+function addMotifToTrack(track, motif, keyInfo, velocity) {
   const { degrees, rhythm } = motif;
 
   for (let i = 0; i < degrees.length; i++) {
@@ -190,8 +189,10 @@ function addMotifToTrack(
 /**
  * Convert numeric duration (in beats) to MIDI duration string
  * Handles common musical durations with reasonable precision
+ * @param {number} beats - Duration in beats
+ * @returns {string} MIDI duration string
  */
-function getDurationString(beats: number): string {
+function getDurationString(beats) {
   // Map common beat durations to MIDI notation
   // Using threshold-based mapping for flexibility
   if (beats >= 3.5) return '1';      // Whole note (4 beats)
@@ -207,7 +208,9 @@ function getDurationString(beats: number): string {
 
 /**
  * Convert Base64 MIDI data to data URL for browser download
+ * @param {string} base64 - Base64-encoded MIDI data
+ * @returns {string} Data URL
  */
-export function midiBase64ToDataURL(base64: string): string {
+export function midiBase64ToDataURL(base64) {
   return `data:audio/midi;base64,${base64}`;
 }

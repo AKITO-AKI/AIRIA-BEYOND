@@ -4,16 +4,51 @@ An AI-powered session management and mood tracking application.
 
 🚀 **Live Demo**: [https://akito-aki.github.io/AIRIA-BEYOND/](https://akito-aki.github.io/AIRIA-BEYOND/)
 
+## Architecture
+
+AIRIA BEYOND uses a split architecture for cost-effective deployment:
+
+- **Frontend**: GitHub Pages (static hosting) - `https://akito-aki.github.io/AIRIA-BEYOND/`
+- **Backend API**: Render (Node.js/Express) - `https://airia-beyond.onrender.com`
+
+```
+┌─────────────────────────────┐
+│  GitHub Pages               │
+│  (Frontend Static Files)    │
+│  https://akito-aki.github.io│
+│  /AIRIA-BEYOND/             │
+└──────────┬──────────────────┘
+           │
+           │ API Calls (CORS enabled)
+           ▼
+┌─────────────────────────────┐
+│  Render Web Service         │
+│  (Express.js Backend)       │
+│  https://airia-beyond.      │
+│  onrender.com               │
+│  /api/*                     │
+└─────────────────────────────┘
+```
+
+**See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for deployment instructions.**
+
 ## Repository Structure
 
 ```
 AIRIA-BEYOND/
 ├── apps/
 │   └── web/              # Main web application (Vite + React + TypeScript)
+├── api/
+│   ├── routes/           # Express API routes
+│   ├── controllers/      # Express API controllers
+│   ├── lib/              # Utility libraries (rate limiting, etc.)
+│   └── *.js              # Supporting modules (job stores, LLM services, etc.)
 ├── packages/
 │   └── core/             # Shared core packages
 ├── .github/
 │   └── workflows/        # CI/CD workflows
+├── server.js             # Express API server entry point
+├── render.yaml           # Render deployment configuration
 └── package.json          # Monorepo root configuration
 ```
 
@@ -83,7 +118,7 @@ npm run dev
 
 This starts:
 - Frontend (Vite) at `http://localhost:5173/AIRIA-BEYOND/`
-- API (Vercel serverless functions) at `http://localhost:3000/api/*`
+- Backend API (Express) at `http://localhost:3000/api/*`
 
 **Alternative: Run separately**
 
@@ -92,18 +127,10 @@ Frontend only:
 npm run dev:web
 ```
 
-API only:
+Backend API only:
 ```bash
-npm run dev:api
+npm run dev:api  # or npm run server:dev
 ```
-
-### Start Development Server (Legacy - Frontend Only)
-
-```bash
-npm run dev
-```
-
-This starts the Vite development server for the web app at `http://localhost:5173/AIRIA-BEYOND/`
 
 ### Build for Production
 
