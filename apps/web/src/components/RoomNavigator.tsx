@@ -58,6 +58,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
+    e.preventDefault();
     const diff = e.clientX - startX;
     setOffsetX(diff);
   };
@@ -79,6 +80,14 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
 
   const handleMouseLeave = () => {
     if (isDragging) {
+      const threshold = 100;
+      if (Math.abs(offsetX) > threshold) {
+        if (offsetX > 0 && currentIndex > 0) {
+          setCurrentIndex(currentIndex - 1);
+        } else if (offsetX < 0 && currentIndex < rooms.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        }
+      }
       setIsDragging(false);
       setOffsetX(0);
     }
@@ -89,7 +98,8 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
     setOffsetX(0);
   };
 
-  const translateX = -currentIndex * 100 + (offsetX / (containerRef.current?.clientWidth || window.innerWidth)) * 100;
+  const containerWidth = containerRef.current?.clientWidth || window.innerWidth || 1;
+  const translateX = -currentIndex * 100 + (offsetX / containerWidth) * 100;
 
   return (
     <div className="room-navigator">
