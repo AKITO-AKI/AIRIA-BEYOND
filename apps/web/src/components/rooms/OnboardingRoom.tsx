@@ -37,6 +37,7 @@ const OnboardingRoom: React.FC = () => {
             <button 
               className="btn btn-primary" 
               onClick={() => {
+                if (!completedData) return;
                 const dataStr = JSON.stringify(completedData, null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);

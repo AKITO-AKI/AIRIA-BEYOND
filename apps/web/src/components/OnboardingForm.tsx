@@ -96,10 +96,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
     }
   }, []);
 
-  // Save to localStorage whenever formData changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
-  }, [formData]);
+  const saveToLocalStorage = (data: OnboardingData) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  };
 
   const updateField = (field: keyof OnboardingData, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -107,12 +106,14 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
 
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
+      saveToLocalStorage(formData);
       setCurrentStep(currentStep + 1);
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 0) {
+      saveToLocalStorage(formData);
       setCurrentStep(currentStep - 1);
     }
   };
@@ -123,7 +124,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
       completedAt: new Date().toISOString(),
     };
     setFormData(completedData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(completedData));
+    saveToLocalStorage(completedData);
     if (onComplete) {
       onComplete(completedData);
     }
