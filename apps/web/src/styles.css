@@ -258,6 +258,29 @@ button:disabled,
     text-align: center;
 }
 
+/* Success message */
+.success-message {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid var(--accent-success);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    color: #4caf50;
+    text-align: center;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Loading indicator */
 .loading-indicator {
     text-align: center;

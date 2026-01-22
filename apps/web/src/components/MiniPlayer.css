@@ -1,0 +1,108 @@
+.mini-player {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 12px 16px;
+  min-width: 280px;
+  transition: all 0.3s ease;
+}
+
+.mini-player:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.mini-player-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mini-player-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(74, 144, 226, 0.8);
+  background: rgba(74, 144, 226, 0.1);
+  color: rgba(74, 144, 226, 1);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.mini-player-button:hover {
+  background: rgba(74, 144, 226, 0.9);
+  color: white;
+  transform: scale(1.1);
+}
+
+.mini-player-button:active {
+  transform: scale(0.95);
+}
+
+.mini-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mini-player-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.9);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-player-progress {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-player-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, 
+    rgba(74, 144, 226, 0.8), 
+    rgba(74, 144, 226, 1)
+  );
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mini-player {
+    bottom: 80px;
+    right: 10px;
+    left: 10px;
+    min-width: auto;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .mini-player,
+  .mini-player:hover,
+  .mini-player-button,
+  .mini-player-button:hover,
+  .mini-player-button:active,
+  .mini-player-progress-bar {
+    transition: none;
+    transform: none;
+  }
+}
