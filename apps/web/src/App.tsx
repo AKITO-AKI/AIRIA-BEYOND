@@ -10,7 +10,10 @@ import {
   analyzeSession,
   pollAnalysisJobStatus,
   AnalysisJobStatus,
-  IntermediateRepresentation
+  IntermediateRepresentation,
+  generateMusic,
+  pollMusicJobStatus,
+  MusicJobStatus,
 } from './api/imageApi';
 
 // Preset configurations for image generation
@@ -58,6 +61,12 @@ const Phase1SessionUI = () => {
     const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<IntermediateRepresentation | null>(null);
+
+    // Music generation state (P4)
+    const [musicJobId, setMusicJobId] = useState<string | null>(null);
+    const [musicJobStatus, setMusicJobStatus] = useState<MusicJobStatus | null>(null);
+    const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
+    const [musicData, setMusicData] = useState<string | null>(null);
 
     const [sessionData, setSessionData] = useState({
         session_id: '',
@@ -175,7 +184,7 @@ const Phase1SessionUI = () => {
                 return;
             }
 
-            // P3: Enhanced album with full metadata
+            // P4: Enhanced album with music data
             addAlbum({
                 mood: sessionData.mood_choice,
                 duration: sessionData.duration_sec,
@@ -193,6 +202,19 @@ const Phase1SessionUI = () => {
                     seed: sessionData.seed,
                     provider: externalImageUrl ? 'replicate' : 'local',
                 },
+                // P4: Music data
+                musicData: musicData || undefined,
+                musicFormat: musicData ? 'midi' : undefined,
+                musicMetadata: musicJobStatus?.result ? {
+                    key: musicJobStatus.result.key,
+                    tempo: musicJobStatus.result.tempo,
+                    timeSignature: musicJobStatus.result.timeSignature,
+                    form: musicJobStatus.result.form,
+                    character: musicJobStatus.result.character,
+                    duration: sessionData.duration_sec,
+                    createdAt: musicJobStatus.createdAt,
+                    provider: musicJobStatus.provider,
+                } : undefined,
             });
 
             setSaveSuccess(true);
@@ -268,7 +290,68 @@ const Phase1SessionUI = () => {
         }
     };
 
-    // External image generation with Replicate (now with analysis)
+    // Music generation (P4)
+    const runMusicGeneration = async (ir?: IntermediateRepresentation) => {
+        try {
+            setError(null);
+            setIsGeneratingMusic(true);
+            setMusicJobId(null);
+            setMusicJobStatus(null);
+            setMusicData(null);
+
+            // Use IR if provided, otherwise use session data
+            const effectiveIR = ir || {
+                valence: sessionData.valence,
+                arousal: sessionData.arousal,
+                focus: sessionData.focus,
+                motif_tags: sessionData.motif_tags,
+                confidence: sessionData.confidence,
+            };
+
+            console.log('[UI] Starting music generation with IR:', effectiveIR);
+
+            // Call music generation API
+            const response = await generateMusic({
+                valence: effectiveIR.valence,
+                arousal: effectiveIR.arousal,
+                focus: effectiveIR.focus,
+                motif_tags: effectiveIR.motif_tags,
+                confidence: effectiveIR.confidence,
+                duration: sessionData.duration_sec,
+                seed: sessionData.seed,
+            });
+
+            setMusicJobId(response.jobId);
+
+            // Poll for status
+            const finalStatus = await pollMusicJobStatus(
+                response.jobId,
+                (status) => {
+                    setMusicJobStatus(status);
+                }
+            );
+
+            if (finalStatus.status === 'succeeded' && finalStatus.midiData) {
+                setMusicData(finalStatus.midiData);
+                console.log('[UI] Music generation completed successfully');
+                return finalStatus.midiData;
+            } else if (finalStatus.status === 'failed') {
+                const errorMsg = finalStatus.errorMessage || finalStatus.error || '音楽生成に失敗しました';
+                console.error('[UI] Music generation failed:', errorMsg);
+                // Don't throw - music generation is optional
+                return null;
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : '音楽生成中にエラーが発生しました';
+            console.error('[UI] Music generation error:', err);
+            // Don't throw - music generation is optional
+            return null;
+        } finally {
+            setIsGeneratingMusic(false);
+        }
+    };
+
+    // External image generation with Replicate (now with analysis and music)
     const generateExternalImage = async () => {
         try {
             setError(null);
@@ -278,13 +361,19 @@ const Phase1SessionUI = () => {
             setExternalImageUrl(null);
 
             // First, run analysis to get IR (P2)
-            console.log('[UI] Running analysis before image generation...');
+            console.log('[UI] Running analysis before generation...');
             const ir = await runAnalysis();
             
             if (!ir) {
                 // Analysis failed, but we can still generate with existing session data
                 console.warn('[UI] Analysis failed, using existing session data');
             }
+
+            // P4: Start both image AND music generation in parallel
+            console.log('[UI] Starting parallel image + music generation...');
+            
+            // Start music generation (don't await - run in parallel)
+            const musicPromise = runMusicGeneration(ir || undefined);
 
             // Start image generation with IR data
             const response = await generateImage({
@@ -301,7 +390,7 @@ const Phase1SessionUI = () => {
 
             setExternalJobId(response.jobId);
 
-            // Poll for status
+            // Poll for image status
             const finalStatus = await pollJobStatus(
                 response.jobId,
                 (status) => {
@@ -314,6 +403,10 @@ const Phase1SessionUI = () => {
             } else if (finalStatus.status === 'failed') {
                 setError(formatErrorMessage(finalStatus));
             }
+
+            // Wait for music generation to complete (if still running)
+            await musicPromise;
+
         } catch (err) {
             setError(err instanceof Error ? err.message : '外部画像生成中にエラーが発生しました');
             console.error(err);
@@ -532,8 +625,8 @@ const Phase1SessionUI = () => {
                     <h2>外部生成 (Replicate SDXL)</h2>
                     <p className="section-description">高品質なAI画像生成 - 完了まで30-60秒かかります</p>
                     
-                    {/* P3: Comprehensive progress flow indicator */}
-                    {(isAnalyzing || isGeneratingExternal || externalImageUrl) && (
+                    {/* P4: Updated progress flow with music generation */}
+                    {(isAnalyzing || isGeneratingExternal || isGeneratingMusic || externalImageUrl || musicData) && (
                         <div className="progress-flow">
                             <div className={`progress-step ${isAnalyzing ? 'active' : analysisResult ? 'completed' : ''}`}>
                                 <div className="step-icon">
@@ -549,9 +642,16 @@ const Phase1SessionUI = () => {
                                 <div className="step-label">画像生成中...</div>
                             </div>
                             <div className="progress-arrow">→</div>
-                            <div className={`progress-step ${externalImageUrl && !isGeneratingExternal ? 'completed' : ''}`}>
+                            <div className={`progress-step ${isGeneratingMusic ? 'active' : musicData ? 'completed' : ''}`}>
                                 <div className="step-icon">
-                                    {externalImageUrl && !isGeneratingExternal ? '✓' : '3'}
+                                    {musicData ? '✓' : isGeneratingMusic ? '⏳' : '3'}
+                                </div>
+                                <div className="step-label">音楽生成中...</div>
+                            </div>
+                            <div className="progress-arrow">→</div>
+                            <div className={`progress-step ${externalImageUrl && musicData && !isGeneratingExternal && !isGeneratingMusic ? 'completed' : ''}`}>
+                                <div className="step-icon">
+                                    {externalImageUrl && musicData && !isGeneratingExternal && !isGeneratingMusic ? '✓' : '4'}
                                 </div>
                                 <div className="step-label">完了</div>
                             </div>

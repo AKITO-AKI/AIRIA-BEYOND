@@ -263,3 +263,112 @@ export async function pollAnalysisJobStatus(
 
   throw new Error('Analysis job polling timeout');
 }
+
+/**
+ * Music generation types (P4)
+ */
+export interface GenerateMusicRequest {
+  valence: number;
+  arousal: number;
+  focus: number;
+  motif_tags: string[];
+  confidence: number;
+  duration?: number;
+  seed?: number;
+}
+
+export interface GenerateMusicResponse {
+  jobId: string;
+  status: string;
+  message: string;
+}
+
+export interface MusicStructure {
+  key: string;
+  tempo: number;
+  timeSignature: string;
+  form: string;
+  sections: any[];
+  instrumentation: string;
+  character: string;
+}
+
+export interface MusicJobStatus {
+  id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  retryCount: number;
+  maxRetries: number;
+  provider: 'openai' | 'rule-based';
+  input: GenerateMusicRequest;
+  result?: MusicStructure;
+  midiData?: string;
+}
+
+/**
+ * Generate music using the API
+ */
+export async function generateMusic(
+  request: GenerateMusicRequest
+): Promise<GenerateMusicResponse> {
+  const response = await fetch(`${API_BASE}/api/music/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to generate music');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get music generation job status
+ */
+export async function getMusicJobStatus(jobId: string): Promise<MusicJobStatus> {
+  const response = await fetch(`${API_BASE}/api/music/${jobId}`);
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to get music job status');
+  }
+
+  return response.json();
+}
+
+/**
+ * Poll music job status until completion
+ */
+export async function pollMusicJobStatus(
+  jobId: string,
+  onUpdate?: (status: MusicJobStatus) => void,
+  maxAttempts: number = 60,
+  intervalMs: number = 2000
+): Promise<MusicJobStatus> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await getMusicJobStatus(jobId);
+    
+    if (onUpdate) {
+      onUpdate(status);
+    }
+
+    if (status.status === 'succeeded' || status.status === 'failed') {
+      return status;
+    }
+
+    // Wait before next poll
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error('Music job polling timeout');
+}
