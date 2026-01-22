@@ -1,8 +1,8 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Album } from '../../contexts/AlbumContext';
-import { createConstellation, calculateBookPosition, calculate3DPosition } from '../../utils/galleryHelpers';
+import { Album } from '../../../contexts/AlbumContext';
+import { createConstellation, calculateBookPosition, calculate3DPosition } from '../../../utils/galleryHelpers';
 
 interface EnhancedConstellationProps {
   albums: Album[];

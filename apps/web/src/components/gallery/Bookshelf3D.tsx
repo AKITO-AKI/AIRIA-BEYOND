@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Album } from '../../contexts/AlbumContext';
 import Book3D from './Book3D';
-import Constellation from './Constellation';
+import EnhancedConstellation from '../visual/patterns/EnhancedConstellation';
 import { calculate3DPosition, calculateBookPosition } from '../../utils/galleryHelpers';
 
 interface Bookshelf3DProps {
@@ -92,8 +92,8 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         );
       })}
 
-      {/* Constellation connections */}
-      <Constellation
+      {/* Enhanced Constellation connections with particles */}
+      <EnhancedConstellation
         albums={albums}
         hoveredAlbumId={hoveredBookId}
         enabled={constellationEnabled}

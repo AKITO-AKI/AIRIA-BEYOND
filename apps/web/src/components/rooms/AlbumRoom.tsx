@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { useCausalLog } from '../../contexts/CausalLogContext';
+import { useMusicPlayer } from '../../contexts/MusicPlayerContext';
 import { generateImage, pollJobStatus } from '../../api/imageApi';
 import { MAX_SEED } from '../../utils/prng';
 import ExplainabilityPanel from '../ExplainabilityPanel';
+import Aura from '../visual/patterns/Aura';
+import { useMouseProximity } from '../visual/interactions/MouseTracker';
 import './AlbumRoom.css';
 
 const AlbumRoom: React.FC = () => {
   const { getSelectedAlbum, selectAlbum, addAlbum } = useAlbums();
   const { getLog } = useCausalLog();
+  const { state: musicState } = useMusicPlayer();
   const album = getSelectedAlbum();
   
   // P5: Get causal log for this album
@@ -18,6 +22,17 @@ const AlbumRoom: React.FC = () => {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [regenerateSuccess, setRegenerateSuccess] = useState(false);
+
+  // C-4: Aura interactivity
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const mouseProximity = useMouseProximity(imageContainerRef, 300);
+  const [hoveredMetadataLayer, setHoveredMetadataLayer] = useState(-1);
+
+  // Extract dominant colors from album (fallback to default gold palette)
+  const dominantColors = album?.metadata?.dominantColors || ['#D4AF37', '#F4E5C2', '#B8941E'];
+  
+  // Check if this album is currently playing
+  const isPlaying = musicState.isPlaying && musicState.currentAlbum?.id === album?.id;
 
   const handleBackToGallery = () => {
     selectAlbum(null);
@@ -110,7 +125,15 @@ const AlbumRoom: React.FC = () => {
       </div>
 
       <div className="album-details">
-        <div className="album-image-container">
+        <div className="album-image-container" ref={imageContainerRef}>
+          {/* C-4: Aura effect behind album image */}
+          <Aura
+            dominantColors={dominantColors}
+            isPlaying={isPlaying}
+            beatAmplitude={0}
+            mouseProximity={mouseProximity}
+            highlightedLayer={hoveredMetadataLayer}
+          />
           <img 
             src={album.imageDataURL} 
             alt={`${album.mood}のセッション画像`}
@@ -153,7 +176,11 @@ const AlbumRoom: React.FC = () => {
                 <h3 className="metadata-section-title">感情分析 (IR)</h3>
                 
                 {album.metadata.valence !== undefined && (
-                  <div className="metadata-item">
+                  <div 
+                    className="metadata-item"
+                    onMouseEnter={() => setHoveredMetadataLayer(0)}
+                    onMouseLeave={() => setHoveredMetadataLayer(-1)}
+                  >
                     <span className="metadata-label">Valence</span>
                     <span className="metadata-value">
                       {album.metadata.valence.toFixed(2)} 
@@ -165,7 +192,11 @@ const AlbumRoom: React.FC = () => {
                 )}
 
                 {album.metadata.arousal !== undefined && (
-                  <div className="metadata-item">
+                  <div 
+                    className="metadata-item"
+                    onMouseEnter={() => setHoveredMetadataLayer(1)}
+                    onMouseLeave={() => setHoveredMetadataLayer(-1)}
+                  >
                     <span className="metadata-label">Arousal</span>
                     <span className="metadata-value">
                       {album.metadata.arousal.toFixed(2)}
