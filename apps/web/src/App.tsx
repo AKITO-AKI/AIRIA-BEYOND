@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
+import { generateImage, pollJobStatus, JobStatus } from './api/imageApi';
 
 // Preset configurations for image generation
 const IMAGE_PRESETS = [
@@ -13,6 +14,14 @@ const IMAGE_PRESETS = [
 
 // Timeout to allow UI to update before heavy image generation
 const IMAGE_GENERATION_DELAY_MS = 100;
+
+// Style presets for external generation
+const STYLE_PRESETS = [
+    { id: 'abstract-oil', name: '抽象油絵' },
+    { id: 'impressionist', name: '印象派風景' },
+    { id: 'romantic-landscape', name: 'ロマン派風景' },
+    { id: 'minimal-abstract', name: 'ミニマル抽象' },
+];
 
 const Phase1SessionUI = () => {
     const { addAlbum } = useAlbums();
@@ -26,6 +35,13 @@ const Phase1SessionUI = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedPreset, setSelectedPreset] = useState(0);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    
+    // External image generation state
+    const [externalJobId, setExternalJobId] = useState<string | null>(null);
+    const [externalJobStatus, setExternalJobStatus] = useState<JobStatus | null>(null);
+    const [isGeneratingExternal, setIsGeneratingExternal] = useState(false);
+    const [selectedStylePreset, setSelectedStylePreset] = useState('abstract-oil');
+    const [externalImageUrl, setExternalImageUrl] = useState<string | null>(null);
 
     const [sessionData, setSessionData] = useState({
         session_id: '',
@@ -42,15 +58,17 @@ const Phase1SessionUI = () => {
     });
 
     useEffect(() => {
-        let interval = null;
+        let interval: number | undefined;
         if (isRunning) {
-            interval = setInterval(() => {
+            interval = window.setInterval(() => {
                 setTimer((prev) => prev + 1);
             }, 1000);
         } else if (!isRunning && timer !== 0) {
-            clearInterval(interval);
+            if (interval !== undefined) clearInterval(interval);
         }
-        return () => clearInterval(interval);
+        return () => {
+            if (interval !== undefined) clearInterval(interval);
+        };
     }, [isRunning, timer]);
 
     const startTimer = () => {
@@ -136,7 +154,7 @@ const Phase1SessionUI = () => {
             setError(null);
             setSaveSuccess(false);
             
-            if (!previewImageURL) {
+            if (!previewImageURL && !externalImageUrl) {
                 setError('画像を先に生成してください');
                 return;
             }
@@ -144,7 +162,7 @@ const Phase1SessionUI = () => {
             addAlbum({
                 mood: sessionData.mood_choice,
                 duration: sessionData.duration_sec,
-                imageDataURL: previewImageURL,
+                imageDataURL: externalImageUrl || previewImageURL || '',
                 sessionData: sessionData,
             });
 
@@ -154,6 +172,56 @@ const Phase1SessionUI = () => {
             setError('アルバムへの保存中にエラーが発生しました');
             console.error(err);
         }
+    };
+
+    // External image generation with Replicate
+    const generateExternalImage = async () => {
+        try {
+            setError(null);
+            setIsGeneratingExternal(true);
+            setExternalJobId(null);
+            setExternalJobStatus(null);
+            setExternalImageUrl(null);
+
+            // Start generation
+            const response = await generateImage({
+                mood: sessionData.mood_choice,
+                duration: sessionData.duration_sec,
+                motifTags: sessionData.motif_tags,
+                stylePreset: selectedStylePreset,
+                seed: sessionData.seed,
+                valence: sessionData.valence,
+                arousal: sessionData.arousal,
+                focus: sessionData.focus,
+                confidence: sessionData.confidence,
+            });
+
+            setExternalJobId(response.jobId);
+
+            // Poll for status
+            const finalStatus = await pollJobStatus(
+                response.jobId,
+                (status) => {
+                    setExternalJobStatus(status);
+                }
+            );
+
+            if (finalStatus.status === 'succeeded' && finalStatus.resultUrl) {
+                setExternalImageUrl(finalStatus.resultUrl);
+            } else if (finalStatus.status === 'failed') {
+                setError(finalStatus.error || '外部画像生成に失敗しました');
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : '外部画像生成中にエラーが発生しました');
+            console.error(err);
+        } finally {
+            setIsGeneratingExternal(false);
+        }
+    };
+
+    // Retry external generation
+    const retryExternalGeneration = () => {
+        generateExternalImage();
     };
 
     return (
@@ -302,12 +370,90 @@ const Phase1SessionUI = () => {
 
                     {previewImageURL && !isGenerating && (
                         <div className="preview-container">
-                            <h3>生成された画像</h3>
+                            <h3>生成された画像 (ローカル)</h3>
                             <img 
                                 src={previewImageURL} 
                                 alt="セッションデータから生成された抽象アート" 
                                 className="preview-image"
                             />
+                        </div>
+                    )}
+                </section>
+
+                <section className="external-generation" aria-label="外部画像生成">
+                    <h2>外部生成 (Replicate SDXL)</h2>
+                    <p className="section-description">高品質なAI画像生成 - 完了まで30-60秒かかります</p>
+                    
+                    <div className="control-group">
+                        <label htmlFor="style-preset-select">スタイルプリセット</label>
+                        <select 
+                            id="style-preset-select"
+                            value={selectedStylePreset}
+                            onChange={(e) => setSelectedStylePreset(e.target.value)}
+                            disabled={isGeneratingExternal}
+                            aria-label="スタイルプリセット選択"
+                        >
+                            {STYLE_PRESETS.map((preset) => (
+                                <option key={preset.id} value={preset.id}>
+                                    {preset.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="button-group">
+                        <button 
+                            onClick={generateExternalImage} 
+                            disabled={!sessionData.session_id || isGeneratingExternal}
+                            className="btn btn-primary"
+                            aria-label="外部生成"
+                        >
+                            {isGeneratingExternal ? '⏳ 生成中...' : '🌐 外部生成(Replicate)'}
+                        </button>
+                        {externalImageUrl && (
+                            <button 
+                                onClick={saveToAlbum}
+                                className="btn btn-primary"
+                                aria-label="アルバムに保存"
+                            >
+                                📚 アルバムに保存
+                            </button>
+                        )}
+                    </div>
+
+                    {isGeneratingExternal && externalJobStatus && (
+                        <div className="loading-indicator" role="status" aria-live="polite">
+                            <div className="spinner"></div>
+                            <p>
+                                ステータス: {externalJobStatus.status === 'queued' ? 'キュー待ち' : 
+                                            externalJobStatus.status === 'running' ? '生成中' : 
+                                            externalJobStatus.status}
+                            </p>
+                            {externalJobId && <p className="job-id">Job ID: {externalJobId}</p>}
+                        </div>
+                    )}
+
+                    {externalImageUrl && !isGeneratingExternal && (
+                        <div className="preview-container">
+                            <h3>生成された画像 (Replicate SDXL)</h3>
+                            <img 
+                                src={externalImageUrl} 
+                                alt="Replicate SDXLで生成された画像" 
+                                className="preview-image"
+                                crossOrigin="anonymous"
+                            />
+                        </div>
+                    )}
+
+                    {externalJobStatus?.status === 'failed' && (
+                        <div className="error-message" role="alert">
+                            <p>❌ 生成失敗: {externalJobStatus.error || '不明なエラー'}</p>
+                            <button 
+                                onClick={retryExternalGeneration}
+                                className="btn btn-secondary"
+                            >
+                                🔄 再試行
+                            </button>
                         </div>
                     )}
                 </section>

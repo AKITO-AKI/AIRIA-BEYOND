@@ -357,3 +357,36 @@ footer {
     outline: 2px solid var(--accent-primary);
     outline-offset: 2px;
 }
+/* External generation section */
+.external-generation {
+    background: var(--bg-secondary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 12px;
+    padding: 30px;
+    margin-top: 30px;
+}
+
+.external-generation h2 {
+    color: var(--accent-primary);
+    margin-top: 0;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 20px;
+    font-style: italic;
+}
+
+.job-id {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: monospace;
+    margin-top: 5px;
+}
+
+/* Preview image cross-origin handling */
+.preview-image[crossorigin] {
+    max-width: 100%;
+    height: auto;
+}

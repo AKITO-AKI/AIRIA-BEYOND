@@ -10,10 +10,20 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "npm --workspace apps/web run dev",
+    "dev": "concurrently \"npm --workspace apps/web run dev\" \"vercel dev --listen 3000\"",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:api": "vercel dev --listen 3000",
     "build": "npm --workspace apps/web run build",
     "preview": "npm --workspace apps/web run preview",
     "lint": "echo \"TODO: add lint\"",
     "format": "echo \"TODO: add format\""
+  },
+  "dependencies": {
+    "@vercel/node": "^5.5.26",
+    "replicate": "^1.4.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "vercel": "^50.4.9"
   }
 }
