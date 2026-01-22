@@ -1,0 +1,147 @@
+/* Phase C-4: Global button micro-interactions and accessibility */
+
+/* Enhanced button interactions */
+.button,
+button:not(.unstyled) {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Ripple effect on click */
+.button::after,
+button:not(.unstyled)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+  pointer-events: none;
+}
+
+.button:active::after,
+button:not(.unstyled):active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Hover glow and lift */
+.button:hover,
+button:not(.unstyled):hover {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  transform: translateY(-2px);
+}
+
+.button:active,
+button:not(.unstyled):active {
+  transform: translateY(0);
+}
+
+/* Focus ring for accessibility */
+.button:focus-visible,
+button:not(.unstyled):focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 4px;
+}
+
+/* Disabled state */
+.button:disabled,
+button:not(.unstyled):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Hide purely decorative animations */
+  .geometric-pattern,
+  .visual-decoration {
+    display: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .button,
+  button:not(.unstyled) {
+    border: 2px solid currentColor;
+  }
+  
+  .button:focus-visible,
+  button:not(.unstyled):focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* Skip to main content link (accessibility) */
+.skip-to-main {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #D4AF37;
+  color: #000;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 100000;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
+
+/* Focus indicators for keyboard navigation */
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* Ensure sufficient color contrast */
+:root {
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-background: #ffffff;
+  --color-surface: #f5f5f5;
+  --color-accent: #D4AF37;
+  --color-accent-dark: #B8941E;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #cccccc;
+    --color-background: #1a1a1a;
+    --color-surface: #2a2a2a;
+  }
+}
