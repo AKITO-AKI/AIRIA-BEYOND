@@ -233,6 +233,58 @@ export function buildPrompt(params: {
 }
 
 /**
+ * P5: Generate reasoning for why this prompt/style was chosen
+ */
+export function generatePromptReasoning(params: {
+  valence?: number;
+  arousal?: number;
+  focus?: number;
+  stylePreset?: string;
+  motifTags?: string[];
+}): string {
+  const { valence, arousal, focus, stylePreset, motifTags = [] } = params;
+  
+  const reasons: string[] = [];
+  
+  // Explain valence choice
+  if (valence !== undefined) {
+    if (valence < -0.3) {
+      reasons.push('低いvalence（不快な感情）から暗めの雰囲気を選択');
+    } else if (valence > 0.3) {
+      reasons.push('高いvalence（快適な感情）から明るく希望的な雰囲気を選択');
+    } else {
+      reasons.push('中程度のvalenceからバランスの取れた雰囲気を選択');
+    }
+  }
+  
+  // Explain arousal choice
+  if (arousal !== undefined) {
+    if (arousal < 0.3) {
+      reasons.push('低いarousal（穏やか）から静的で柔らかな表現を選択');
+    } else if (arousal > 0.7) {
+      reasons.push('高いarousal（興奮）からダイナミックで力強い表現を選択');
+    } else {
+      reasons.push('中程度のarrousalから適度なエネルギーの表現を選択');
+    }
+  }
+  
+  // Explain style choice
+  if (stylePreset) {
+    const presetInfo = STYLE_PRESETS[stylePreset];
+    if (presetInfo) {
+      reasons.push(`${presetInfo.name}スタイルを選択し、感情に合った芸術的表現を実現`);
+    }
+  }
+  
+  // Mention motif tags
+  if (motifTags.length > 0) {
+    reasons.push(`モチーフタグ（${motifTags.join('、')}）を使用して具体的なイメージを生成`);
+  }
+  
+  return reasons.join('。') + '。';
+}
+
+/**
  * Translate Japanese motif tags to English for SDXL
  * (P2 analysis returns Japanese tags like 光, 霧, etc.)
  */

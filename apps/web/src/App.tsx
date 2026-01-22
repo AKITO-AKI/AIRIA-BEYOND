@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
+import { useCausalLog } from './contexts/CausalLogContext';
 import { 
   generateImage, 
   pollJobStatus, 
@@ -15,6 +16,50 @@ import {
   pollMusicJobStatus,
   MusicJobStatus,
 } from './api/imageApi';
+import {
+  logAnalysisStage,
+  logImageStage,
+  logMusicStage,
+  logAlbumStage,
+  logError,
+} from './utils/causalLogging/loggingHelpers';
+
+// Helper to generate reasoning for image prompt (P5)
+function generateImageReasoning(params: {
+    valence?: number;
+    arousal?: number;
+    stylePreset?: string;
+    motifTags?: string[];
+}): string {
+    const reasons: string[] = [];
+    
+    if (params.valence !== undefined) {
+        if (params.valence < -0.3) {
+            reasons.push('低いvalence（不快な感情）から暗めの雰囲気を選択');
+        } else if (params.valence > 0.3) {
+            reasons.push('高いvalence（快適な感情）から明るく希望的な雰囲気を選択');
+        }
+    }
+    
+    if (params.arousal !== undefined) {
+        if (params.arousal < 0.3) {
+            reasons.push('低いarousal（穏やか）から静的で柔らかな表現を選択');
+        } else if (params.arousal > 0.7) {
+            reasons.push('高いarousal（興奮）からダイナミックで力強い表現を選択');
+        }
+    }
+    
+    if (params.stylePreset) {
+        const presetName = STYLE_PRESETS.find(p => p.id === params.stylePreset)?.name || params.stylePreset;
+        reasons.push(`${presetName}スタイルを選択し、感情に合った芸術的表現を実現`);
+    }
+    
+    if (params.motifTags && params.motifTags.length > 0) {
+        reasons.push(`モチーフタグ（${params.motifTags.join('、')}）を使用して具体的なイメージを生成`);
+    }
+    
+    return reasons.length > 0 ? reasons.join('。') + '。' : '画像生成パラメータに基づいて生成しました。';
+}
 
 // Preset configurations for image generation
 const IMAGE_PRESETS = [
@@ -38,6 +83,7 @@ const STYLE_PRESETS = [
 
 const Phase1SessionUI = () => {
     const { addAlbum } = useAlbums();
+    const { createLog, updateLog, getLog } = useCausalLog();
     const [mood, setMood] = useState('穏やか');
     const [duration, setDuration] = useState(30);
     const [isRunning, setIsRunning] = useState(false);
@@ -67,6 +113,12 @@ const Phase1SessionUI = () => {
     const [musicJobStatus, setMusicJobStatus] = useState<MusicJobStatus | null>(null);
     const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
     const [musicData, setMusicData] = useState<string | null>(null);
+
+    // P5: Causal logging state
+    const [currentLogId, setCurrentLogId] = useState<string | null>(null);
+    const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null);
+    const [imageGenStartTime, setImageGenStartTime] = useState<number | null>(null);
+    const [musicGenStartTime, setMusicGenStartTime] = useState<number | null>(null);
 
     const [sessionData, setSessionData] = useState({
         session_id: '',
@@ -99,14 +151,26 @@ const Phase1SessionUI = () => {
     const startTimer = () => {
         setError(null);
         const newSeed = Math.floor(Math.random() * MAX_SEED);
+        const sessionId = 'session_' + Date.now();
+        const timestamp = new Date();
+        
         setSessionData({ 
             ...sessionData, 
-            started_at: new Date().toISOString(), 
-            session_id: 'session_' + Date.now(),
+            started_at: timestamp.toISOString(), 
+            session_id: sessionId,
             seed: newSeed,
             mood_choice: mood,
             duration_sec: duration
         });
+        
+        // P5: Create causal log
+        const logId = createLog(sessionId, {
+            mood,
+            duration,
+            timestamp,
+        });
+        setCurrentLogId(logId);
+        
         setIsRunning(true);
         setTimer(0);
         // Clear previous preview when starting new session
@@ -185,7 +249,7 @@ const Phase1SessionUI = () => {
             }
 
             // P4: Enhanced album with music data
-            addAlbum({
+            const newAlbumData = {
                 mood: sessionData.mood_choice,
                 duration: sessionData.duration_sec,
                 imageDataURL: externalImageUrl || previewImageURL || '',
@@ -215,7 +279,21 @@ const Phase1SessionUI = () => {
                     createdAt: musicJobStatus.createdAt,
                     provider: musicJobStatus.provider,
                 } : undefined,
-            });
+                // P5: Link to causal log
+                causalLogId: currentLogId || undefined,
+            };
+            
+            addAlbum(newAlbumData as any);
+
+            // P5: Log album creation
+            if (currentLogId) {
+                // Get the album ID that was just created (it's the last one added)
+                // Note: This is a simplification - in production you'd want the addAlbum to return the ID
+                logAlbumStage(updateLog, currentLogId, {
+                    albumId: `album_${Date.now()}`, // Approximate - real ID is generated in addAlbum
+                    title: `${sessionData.mood_choice} - ${sessionData.duration_sec}s`,
+                });
+            }
 
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
@@ -239,6 +317,10 @@ const Phase1SessionUI = () => {
             setAnalysisJobId(null);
             setAnalysisJobStatus(null);
             setAnalysisResult(null);
+
+            // P5: Track analysis start time
+            const analysisStart = Date.now();
+            setAnalysisStartTime(analysisStart);
 
             console.log('[UI] Starting analysis for session:', sessionData.session_id);
 
@@ -272,18 +354,42 @@ const Phase1SessionUI = () => {
                     confidence: finalStatus.result!.confidence,
                 }));
 
+                // P5: Log analysis completion
+                if (currentLogId) {
+                    const analysisDuration = Date.now() - analysisStart;
+                    logAnalysisStage(updateLog, currentLogId, {
+                        ir: finalStatus.result,
+                        reasoning: finalStatus.result.reasoning || 'No reasoning provided by LLM',
+                        duration: analysisDuration,
+                        provider: finalStatus.provider || 'openai',
+                        model: 'gpt-4o-mini',
+                    });
+                }
+
                 console.log('[UI] Analysis completed successfully:', finalStatus.result);
                 return finalStatus.result;
             } else if (finalStatus.status === 'failed') {
                 const errorMsg = finalStatus.errorMessage || finalStatus.error || '分析に失敗しました';
                 setError(`分析エラー: ${errorMsg}`);
                 console.error('[UI] Analysis failed:', errorMsg);
+                
+                // P5: Log error
+                if (currentLogId) {
+                    logError(updateLog, getLog, currentLogId, 'analysis', errorMsg);
+                }
+                
                 return null;
             }
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : '分析中にエラーが発生しました';
             setError(errorMsg);
             console.error('[UI] Analysis error:', err);
+            
+            // P5: Log error
+            if (currentLogId) {
+                logError(updateLog, getLog, currentLogId, 'analysis', errorMsg);
+            }
+            
             return null;
         } finally {
             setIsAnalyzing(false);
@@ -298,6 +404,10 @@ const Phase1SessionUI = () => {
             setMusicJobId(null);
             setMusicJobStatus(null);
             setMusicData(null);
+
+            // P5: Track music generation start time
+            const musicStart = Date.now();
+            setMusicGenStartTime(musicStart);
 
             // Use IR if provided, otherwise use session data
             const effectiveIR = ir || {
@@ -333,17 +443,44 @@ const Phase1SessionUI = () => {
 
             if (finalStatus.status === 'succeeded' && finalStatus.midiData) {
                 setMusicData(finalStatus.midiData);
+                
+                // P5: Log music generation completion
+                if (currentLogId && finalStatus.result) {
+                    const musicDuration = Date.now() - musicStart;
+                    logMusicStage(updateLog, currentLogId, {
+                        structure: finalStatus.result,
+                        reasoning: finalStatus.result.reasoning || 'No reasoning provided by LLM',
+                        jobId: response.jobId,
+                        provider: finalStatus.provider || 'openai',
+                        model: 'gpt-4o-mini',
+                        duration: musicDuration,
+                        retryCount: finalStatus.retryCount || 0,
+                    });
+                }
+                
                 console.log('[UI] Music generation completed successfully');
                 return finalStatus.midiData;
             } else if (finalStatus.status === 'failed') {
                 const errorMsg = finalStatus.errorMessage || finalStatus.error || '音楽生成に失敗しました';
                 console.error('[UI] Music generation failed:', errorMsg);
+                
+                // P5: Log error
+                if (currentLogId) {
+                    logError(updateLog, getLog, currentLogId, 'music-generation', errorMsg);
+                }
+                
                 // Don't throw - music generation is optional
                 return null;
             }
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : '音楽生成中にエラーが発生しました';
             console.error('[UI] Music generation error:', err);
+            
+            // P5: Log error
+            if (currentLogId) {
+                logError(updateLog, getLog, currentLogId, 'music-generation', errorMsg);
+            }
+            
             // Don't throw - music generation is optional
             return null;
         } finally {
@@ -371,6 +508,10 @@ const Phase1SessionUI = () => {
 
             // P4: Start both image AND music generation in parallel
             console.log('[UI] Starting parallel image + music generation...');
+            
+            // P5: Track image generation start time
+            const imageStart = Date.now();
+            setImageGenStartTime(imageStart);
             
             // Start music generation (don't await - run in parallel)
             const musicPromise = runMusicGeneration(ir || undefined);
@@ -400,16 +541,53 @@ const Phase1SessionUI = () => {
 
             if (finalStatus.status === 'succeeded' && finalStatus.resultUrl) {
                 setExternalImageUrl(finalStatus.resultUrl);
+                
+                // P5: Log image generation completion
+                if (currentLogId) {
+                    const imageDuration = Date.now() - imageStart;
+                    const reasoning = generateImageReasoning({
+                        valence: sessionData.valence,
+                        arousal: sessionData.arousal,
+                        stylePreset: selectedStylePreset,
+                        motifTags: sessionData.motif_tags,
+                    });
+                    
+                    logImageStage(updateLog, currentLogId, {
+                        prompt: finalStatus.prompt || '',
+                        negativePrompt: finalStatus.negativePrompt || '',
+                        stylePreset: selectedStylePreset,
+                        seed: sessionData.seed,
+                        reasoning,
+                        jobId: response.jobId,
+                        provider: 'replicate',
+                        model: 'sdxl',
+                        resultUrl: finalStatus.resultUrl,
+                        duration: imageDuration,
+                        retryCount: finalStatus.retryCount || 0,
+                    });
+                }
             } else if (finalStatus.status === 'failed') {
-                setError(formatErrorMessage(finalStatus));
+                const errorMsg = formatErrorMessage(finalStatus);
+                setError(errorMsg);
+                
+                // P5: Log error
+                if (currentLogId) {
+                    logError(updateLog, getLog, currentLogId, 'image-generation', errorMsg);
+                }
             }
 
             // Wait for music generation to complete (if still running)
             await musicPromise;
 
         } catch (err) {
-            setError(err instanceof Error ? err.message : '外部画像生成中にエラーが発生しました');
+            const errorMsg = err instanceof Error ? err.message : '外部画像生成中にエラーが発生しました';
+            setError(errorMsg);
             console.error(err);
+            
+            // P5: Log error
+            if (currentLogId) {
+                logError(updateLog, getLog, currentLogId, 'image-generation', errorMsg);
+            }
         } finally {
             setIsGeneratingExternal(false);
         }

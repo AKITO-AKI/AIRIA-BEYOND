@@ -42,6 +42,8 @@ export interface Album {
   musicData?: string; // Base64 encoded MIDI data
   musicFormat?: 'midi'; // Format of the music file
   musicMetadata?: MusicMetadata; // Music-specific metadata
+  // P5: Causal log reference
+  causalLogId?: string; // Reference to the causal log for this album
 }
 
 interface AlbumContextType {

@@ -63,7 +63,8 @@ Output ONLY valid JSON with this exact structure:
     }
   ],
   "instrumentation": "piano",
-  "character": "string describing emotional character"
+  "character": "string describing emotional character",
+  "reasoning": "brief explanation of why you chose this key, tempo, form, and other musical decisions"
 }`;
 
   const userPrompt = `Generate a classical piano composition with the following emotional parameters:
