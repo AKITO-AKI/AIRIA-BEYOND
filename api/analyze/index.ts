@@ -7,7 +7,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createAnalysisJob, updateAnalysisJob } from '../analysisJobStore';
-import { checkRateLimit, checkConcurrency, releaseJob } from '../rateLimiter';
+import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
 import { generateIR } from '../llmService';
 import type { AnalyzeRequest, SessionInput } from '../types';
 

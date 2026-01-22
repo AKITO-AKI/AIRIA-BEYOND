@@ -8,7 +8,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Replicate from 'replicate';
 import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore';
-import { checkRateLimit, checkConcurrency, releaseJob } from '../rateLimiter';
+import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
 import { buildPrompt } from '../promptBuilder';
 
 // SDXL model on Replicate
