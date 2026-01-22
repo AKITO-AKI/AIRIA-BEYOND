@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { calculateBookPosition, calculateThickness, getSimpleDominantColor } from '../utils/galleryHelpers';
 
 // P3: Enhanced Album metadata
 export interface AlbumMetadata {
@@ -29,6 +30,14 @@ export interface MusicMetadata {
   provider?: 'openai' | 'rule-based';
 }
 
+// C-2: Gallery-specific data
+export interface GalleryData {
+  shelfIndex: number;      // 0-4 (top to bottom)
+  positionIndex: number;   // 0-9 (left to right)
+  thickness: number;       // Calculated from music duration (20-60px)
+  spineColor: string;      // Extracted dominant color from image
+}
+
 export interface Album {
   id: string;
   createdAt: string;
@@ -44,6 +53,8 @@ export interface Album {
   musicMetadata?: MusicMetadata; // Music-specific metadata
   // P5: Causal log reference
   causalLogId?: string; // Reference to the causal log for this album
+  // C-2: Gallery-specific fields
+  gallery?: GalleryData;
 }
 
 interface AlbumContextType {
@@ -90,7 +101,28 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       id: `album_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       createdAt: new Date().toISOString(),
     };
-    setAlbums((prev) => [...prev, newAlbum]);
+    
+    setAlbums((prev) => {
+      // C-2: New albums are added at the beginning (index 0)
+      const updatedAlbums = [newAlbum, ...prev];
+      
+      // Recalculate positions for all albums
+      return updatedAlbums.map((album, index) => {
+        const position = calculateBookPosition(index);
+        const thickness = calculateThickness(album.musicMetadata?.duration);
+        const spineColor = album.gallery?.spineColor || getSimpleDominantColor(album.imageDataURL);
+        
+        return {
+          ...album,
+          gallery: {
+            shelfIndex: position.shelfIndex,
+            positionIndex: position.positionIndex,
+            thickness,
+            spineColor,
+          },
+        };
+      });
+    });
   };
 
   const selectAlbum = (id: string | null) => {
