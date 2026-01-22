@@ -32,12 +32,24 @@ const Phase1SessionUI = () => {
     }, [isRunning, timer]);
 
     const startTimer = () => {
-        setSessionData({ ...sessionData, started_at: new Date().toISOString(), session_id: 'session_' + Date.now() });
+        // Reset timer and session duration so each session measures independently
+        setTimer(0);
+        setSessionData((prev) => ({
+            ...prev,
+            session_id: 'session_' + Date.now(),
+            started_at: new Date().toISOString(),
+            ended_at: '',
+            duration_sec: 0,
+        }));
         setIsRunning(true);
     };
 
     const stopTimer = () => {
-        setSessionData({ ...sessionData, ended_at: new Date().toISOString(), duration_sec: timer });
+        setSessionData((prev) => ({
+            ...prev,
+            ended_at: new Date().toISOString(),
+            duration_sec: timer,
+        }));
         setIsRunning(false);
     };
 
