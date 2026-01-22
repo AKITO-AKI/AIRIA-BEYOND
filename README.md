@@ -160,7 +160,53 @@ This serves the production build locally for testing.
 - Duration influences visual complexity
 - On-screen preview and PNG download
 
-### Phase P0: External Image Generation (Replicate SDXL) 🆕
+### Phase P1: Robust Generation Flow (NEW! 🎉)
+- **Enhanced Job State Management**:
+  - Retry tracking with `retryCount` and `maxRetries` (default: 3)
+  - Error tracking with standardized error codes (TIMEOUT, NETWORK_ERROR, API_ERROR, etc.)
+  - Complete lifecycle logging (created → running → succeeded/failed)
+  - Full input parameter storage for retry capability
+
+- **Timeout Handling**:
+  - 120-second timeout for API calls to prevent hung requests
+  - Automatic job failure on timeout with TIMEOUT error code
+  - Comprehensive timeout event logging
+
+- **Server-Side Automatic Retry**:
+  - Automatic retry on transient errors (network issues, 5xx server errors)
+  - Exponential backoff between retries (2s → 4s → 8s, max 30s)
+  - Stops after 3 retries and marks as permanently failed
+  - All retry attempts logged with context
+
+- **Client-Side Manual Retry**:
+  - Retry button appears on failed jobs in the UI
+  - Creates new job with same input parameters
+  - Clear user feedback during retry process
+
+- **Fallback Mechanism**:
+  - Option to fall back to local Canvas generation on external failure
+  - Clear Japanese prompt: "外部生成に失敗しました。ローカル生成に切り替えますか？"
+  - Seamless transition to deterministic local generation
+
+- **Enhanced UI Status Display**:
+  - Clear display for all job states (queued/running/succeeded/failed)
+  - Animated progress indicator with spinner
+  - Detailed error information with error codes and messages
+  - Retry count display (e.g., "リトライ回数: 1/3")
+  - Job ID display for tracking
+
+- **Error Logging & Monitoring**:
+  - All job lifecycle events logged with timestamps
+  - Context includes provider, model, input summary, error details
+  - Standardized error codes for consistent monitoring
+
+- **Job Cleanup**:
+  - Admin endpoints for job management (`GET/DELETE /api/admin/jobs`)
+  - Auto-cleanup of old jobs after 1 hour
+
+**User Experience**: Never leaves users stuck! Always provides clear feedback, automatic recovery from transient errors, manual retry options, and fallback to local generation when needed.
+
+### Phase P0: External Image Generation (Replicate SDXL)
 - High-quality AI image generation using Replicate's SDXL model
 - Style presets for classic aesthetics:
   - **抽象油絵** (Abstract Oil Painting): Thick brushstrokes, rich textures
@@ -232,7 +278,12 @@ The onboarding data is stored locally and can be used to personalize your sessio
 5. **Generate with external AI (Replicate SDXL):**
    - Select a style preset (抽象油絵, 印象派風景, etc.)
    - Click "外部生成(Replicate)" to generate a high-quality AI image
+   - Watch the status: "生成待機中..." → "生成中... (replicate)"
+   - View retry count if automatic retries occur
    - Wait 30-60 seconds for generation to complete
+   - If it fails:
+     - Click "🔄 再試行" to manually retry
+     - Or click "🎨 ローカル生成に切り替え" to use local generation
    - View the result and save to album
    - Note: Requires `REPLICATE_API_TOKEN` to be set in `.env`
 
@@ -240,7 +291,9 @@ The generated PNG is deterministic - generating from the same session data (incl
 
 ## Project Status
 
-**Phase P0 (Prototype)**: External image generation integration complete - Replicate SDXL with style presets, job tracking, rate limiting, and fallback support.
+**Phase P1 (Prototype)**: ✅ Robust generation flow complete - Timeout handling, automatic retry with exponential backoff, manual retry UI, fallback mechanism, enhanced error display, and comprehensive logging.
+
+**Phase P0 (Prototype)**: ✅ External image generation integration complete - Replicate SDXL with style presets, job tracking, rate limiting, and fallback support.
 
 **Phase B**: Onboarding deep-life questions complete - 4-step questionnaire capturing emotional patterns, triggers, and goals with localStorage persistence.
 
@@ -249,6 +302,55 @@ The generated PNG is deterministic - generating from the same session data (incl
 **Phase 1-2**: Session management and PNG generation complete - abstract generative art from session IR.
 
 **Phase 3**: GitHub Pages deployment configured - automatic deployment on push to main branch.
+
+## Testing
+
+### Running Tests
+
+See `TESTING.md` for comprehensive test scenarios covering:
+- Normal generation flow
+- Automatic retry on transient errors
+- Permanent failure handling
+- Timeout scenarios
+- Manual retry
+- Fallback to local generation
+- Error code validation
+- Admin endpoints
+
+### Quick Test
+
+1. Start the development server:
+```bash
+npm run dev
+```
+
+2. Create a session in Main room
+
+3. Try external generation (with or without API token to test fallback)
+
+4. Verify status updates and retry/fallback options
+
+## Security
+
+See `SECURITY_SUMMARY.md` for security analysis.
+
+**Key Security Features:**
+- Rate limiting (5 requests/min per IP)
+- Concurrency limiting (3 concurrent jobs per IP)
+- 120-second timeout protection
+- Input validation
+- No SQL injection risk (in-memory storage)
+- Environment variable protection for API tokens
+
+**Pre-existing Dependency Vulnerabilities:**
+- 3 vulnerabilities in @vercel/node dependencies
+- Recommend upgrading in a separate maintenance task
+
+## Documentation
+
+- **TESTING.md**: Comprehensive test scenarios for P0 and P1
+- **P1_IMPLEMENTATION.md**: Detailed implementation summary
+- **SECURITY_SUMMARY.md**: Security analysis and recommendations
 
 ## Deployment
 
