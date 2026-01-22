@@ -41,7 +41,11 @@ export function useAudioAnalyser(
     const initAudio = async () => {
       try {
         // Create audio context
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioContext = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+        if (!AudioContext) {
+          console.warn('AudioContext not supported');
+          return;
+        }
         const audioContext = new AudioContext();
         audioContextRef.current = audioContext;
 

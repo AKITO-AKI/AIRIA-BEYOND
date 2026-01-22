@@ -104,6 +104,8 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
   // Update visualization data when playing
   useEffect(() => {
     if (state.playbackState === PlaybackState.PLAYING && analyserRef.current) {
+      let animationFrameId: number;
+      
       const updateVisualization = () => {
         if (!analyserRef.current || !frequencyDataRef.current || !timeDataRef.current) return;
         
@@ -112,10 +114,17 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
         
         setFrequencyData(new Uint8Array(frequencyDataRef.current));
         setTimeDomainData(new Uint8Array(timeDataRef.current));
+        
+        animationFrameId = requestAnimationFrame(updateVisualization);
       };
 
-      const interval = setInterval(updateVisualization, 16); // ~60fps
-      return () => clearInterval(interval);
+      animationFrameId = requestAnimationFrame(updateVisualization);
+      
+      return () => {
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+      };
     }
   }, [state.playbackState]);
 
@@ -192,14 +201,22 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
 
   const handleNext = () => {
     next();
-    // Playback will auto-start from useEffect
-    setTimeout(() => startPlayback(), 100);
+    // Allow state update to propagate before starting playback
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        startPlayback();
+      });
+    });
   };
 
   const handlePrevious = () => {
     previous();
-    // Playback will auto-start from useEffect
-    setTimeout(() => startPlayback(), 100);
+    // Allow state update to propagate before starting playback
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        startPlayback();
+      });
+    });
   };
 
   const seekTo = (time: number) => {
@@ -216,7 +233,12 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
 
   const handleSkipToIndex = (index: number) => {
     skipToIndex(index);
-    setTimeout(() => startPlayback(), 100);
+    // Allow state update to propagate before starting playback
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        startPlayback();
+      });
+    });
   };
 
   const canPrevious = state.queueIndex > 0 || state.repeat === 'all';
