@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { AlbumProvider, useAlbums } from './contexts/AlbumContext';
 import { CausalLogProvider } from './contexts/CausalLogContext';
 import { MusicPlayerProvider, useMusicPlayer } from './contexts/MusicPlayerContext';
+import { ToastProvider } from './components/visual/feedback/ToastContainer';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import MainRoom from './components/rooms/MainRoom';
@@ -13,7 +14,10 @@ import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
 import DebugPanel from './components/DebugPanel';
 import BackgroundDyeSystem from './components/visual/BackgroundDyeSystem';
+import ClickRipple from './components/visual/interactions/ClickRipple';
+import FrequencyGeometry from './components/visual/patterns/FrequencyGeometry';
 import './styles.css';
+import './components/visual/globalInteractions.css';
 
 const rooms = [
   { id: 'onboarding' as const, name: 'Onboarding', component: <OnboardingRoom /> },
@@ -42,6 +46,13 @@ const AppContent = () => {
             albumImageUrl={musicState.currentAlbumImage || selectedAlbum?.imageUrl}
             isPlaying={musicState.isPlaying}
           />
+          {/* Phase C-4: Global click ripples */}
+          <ClickRipple />
+          {/* Phase C-4: Frequency spectrum geometry (ambient audio visualization) */}
+          <FrequencyGeometry 
+            audioData={null}
+            enabled={musicState.isPlaying}
+          />
           <RoomNavigator rooms={rooms} initialRoom="main" />
           {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
           <EnhancedMiniPlayer 
@@ -62,7 +73,9 @@ const App = () => {
       <CausalLogProvider>
         <AlbumProvider>
           <MusicPlayerProvider>
-            <AppContent />
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
           </MusicPlayerProvider>
         </AlbumProvider>
       </CausalLogProvider>
