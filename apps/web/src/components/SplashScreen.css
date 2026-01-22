@@ -92,9 +92,9 @@
     rgba(74, 144, 226, 0.8) 50%, 
     rgba(0, 0, 0, 0.9) 100%
   );
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
   animation: logoShimmer 3s ease-in-out infinite;
   background-size: 200% auto;
 }
@@ -128,9 +128,9 @@
   .splash-logo {
     animation: none;
     background: rgba(0, 0, 0, 0.9);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
   
   .spectrum-bar {

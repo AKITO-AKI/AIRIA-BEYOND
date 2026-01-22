@@ -21,7 +21,12 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle = 'Ambient Mood' }) 
 
   const startAudio = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) {
+        console.warn('AudioContext not supported');
+        return;
+      }
+      const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
 
       // Create oscillator for ambient tone

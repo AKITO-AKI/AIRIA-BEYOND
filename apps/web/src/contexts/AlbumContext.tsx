@@ -50,7 +50,7 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const addAlbum = (albumData: Omit<Album, 'id' | 'createdAt'>) => {
     const newAlbum: Album = {
       ...albumData,
-      id: `album_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `album_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       createdAt: new Date().toISOString(),
     };
     setAlbums((prev) => [...prev, newAlbum]);
