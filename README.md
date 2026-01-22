@@ -66,13 +66,26 @@ This serves the production build locally for testing.
 
 ## MVP Flow
 
+### Phase A: Room Navigation (NEW!)
+- Multi-room layout with 5 distinct rooms:
+  - **Onboarding**: Welcome and introduction
+  - **Main**: Session management and PNG generation
+  - **Gallery**: Content placeholder
+  - **Album**: Content placeholder
+  - **Music**: Content placeholder
+- Smooth horizontal swipe navigation between rooms
+- Touch and mouse drag support for intuitive room switching
+- Click navigation buttons at the top for direct room access
+- Minimal white + transparency styling
+- Internal routing without external dependencies
+
 ### Phase 1: Session Management & JSON Export
 - Japanese UI with session start/stop
 - 4-choice mood selection (穏やか, 嬉しい, 不安, 疲れ)
 - 30s-3m duration
 - Intermediate representation JSON download
 
-### Phase 2: PNG Generation (NEW!)
+### Phase 2: PNG Generation
 - Generate abstract generative art from session data
 - Deterministic image generation (same session data → same PNG)
 - Mood-based color palettes:
@@ -85,13 +98,22 @@ This serves the production build locally for testing.
 
 ## Usage
 
-### Running a Session and Generating Images
+### Navigating Between Rooms
 
 1. **Start the development server:**
    ```bash
    npm run dev
    ```
    Navigate to `http://localhost:5173/AIRIA-BEYOND/`
+
+2. **Navigate between rooms:**
+   - Click on room buttons at the top (Onboarding, Main, Gallery, Album, Music)
+   - Swipe left/right or drag with mouse to move between rooms
+   - The active room is highlighted in the navigation bar
+
+### Running a Session and Generating Images (Main Room)
+
+1. **Navigate to the Main room** using the navigation buttons
 
 2. **Create a session:**
    - Select a mood (穏やか, 嬉しい, 不安, or 疲れ)
@@ -111,7 +133,9 @@ The generated PNG is deterministic - generating from the same session data (incl
 
 ## Project Status
 
-**Phase 2**: PNG generation complete - abstract generative art from session IR.
+**Phase A**: Room navigation complete - multi-room layout with smooth swipe/touch navigation.
+
+**Phase 1-2**: Session management and PNG generation complete - abstract generative art from session IR.
 
 **Phase 3**: GitHub Pages deployment configured - automatic deployment on push to main branch.
 
