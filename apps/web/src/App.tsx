@@ -83,7 +83,7 @@ const STYLE_PRESETS = [
 
 const Phase1SessionUI = () => {
     const { addAlbum } = useAlbums();
-    const { createLog, updateLog } = useCausalLog();
+    const { createLog, updateLog, getLog } = useCausalLog();
     const [mood, setMood] = useState('穏やか');
     const [duration, setDuration] = useState(30);
     const [isRunning, setIsRunning] = useState(false);
@@ -375,7 +375,7 @@ const Phase1SessionUI = () => {
                 
                 // P5: Log error
                 if (currentLogId) {
-                    logError(updateLog, currentLogId, 'analysis', errorMsg);
+                    logError(updateLog, getLog, currentLogId, 'analysis', errorMsg);
                 }
                 
                 return null;
@@ -387,7 +387,7 @@ const Phase1SessionUI = () => {
             
             // P5: Log error
             if (currentLogId) {
-                logError(updateLog, currentLogId, 'analysis', errorMsg);
+                logError(updateLog, getLog, currentLogId, 'analysis', errorMsg);
             }
             
             return null;
@@ -466,7 +466,7 @@ const Phase1SessionUI = () => {
                 
                 // P5: Log error
                 if (currentLogId) {
-                    logError(updateLog, currentLogId, 'music-generation', errorMsg);
+                    logError(updateLog, getLog, currentLogId, 'music-generation', errorMsg);
                 }
                 
                 // Don't throw - music generation is optional
@@ -478,7 +478,7 @@ const Phase1SessionUI = () => {
             
             // P5: Log error
             if (currentLogId) {
-                logError(updateLog, currentLogId, 'music-generation', errorMsg);
+                logError(updateLog, getLog, currentLogId, 'music-generation', errorMsg);
             }
             
             // Don't throw - music generation is optional
@@ -572,7 +572,7 @@ const Phase1SessionUI = () => {
                 
                 // P5: Log error
                 if (currentLogId) {
-                    logError(updateLog, currentLogId, 'image-generation', errorMsg);
+                    logError(updateLog, getLog, currentLogId, 'image-generation', errorMsg);
                 }
             }
 
@@ -586,7 +586,7 @@ const Phase1SessionUI = () => {
             
             // P5: Log error
             if (currentLogId) {
-                logError(updateLog, currentLogId, 'image-generation', errorMsg);
+                logError(updateLog, getLog, currentLogId, 'image-generation', errorMsg);
             }
         } finally {
             setIsGeneratingExternal(false);

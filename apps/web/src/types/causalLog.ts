@@ -51,7 +51,7 @@ export interface CausalLog {
   
   // Music generation stage (P4)
   musicGeneration?: {
-    structure: object;  // The LLM-generated music JSON
+    structure: any;  // The LLM-generated music JSON - use any for flexibility
     reasoning: string;  // Why this structure (key, tempo, form, etc.)
     midiUrl?: string;
     audioUrl?: string;

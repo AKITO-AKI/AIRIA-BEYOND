@@ -182,13 +182,18 @@ export function logAlbumStage(
  */
 export function logError(
   updateLog: (logId: string, updates: Partial<CausalLog>) => void,
+  getLog: (logId: string) => CausalLog | undefined,
   logId: string,
   stage: string,
   error: string
 ): void {
   try {
+    const log = getLog(logId);
+    const existingErrors = log?.errors || [];
+    
     updateLog(logId, {
       errors: [
+        ...existingErrors,
         {
           stage,
           error,
