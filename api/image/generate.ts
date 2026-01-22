@@ -7,7 +7,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Replicate from 'replicate';
-import { createJob, updateJob } from '../jobStore';
+import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../rateLimiter';
 import { buildPrompt } from '../promptBuilder';
 
@@ -22,6 +22,23 @@ const SDXL_PARAMS = {
   guidance_scale: 7.5,
 } as const;
 
+// Timeout for image generation (120 seconds)
+const GENERATION_TIMEOUT_MS = 120 * 1000;
+
+// Retry configuration
+const INITIAL_RETRY_DELAY_MS = 2000; // 2 seconds
+const MAX_RETRY_DELAY_MS = 30000; // 30 seconds
+
+// Error codes
+const ERROR_CODES = {
+  TIMEOUT: 'TIMEOUT',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  API_ERROR: 'API_ERROR',
+  RATE_LIMIT: 'RATE_LIMIT',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
+} as const;
+
 // Helper to get client identifier (IP address)
 function getClientIdentifier(req: VercelRequest): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -29,6 +46,176 @@ function getClientIdentifier(req: VercelRequest): string {
     return forwarded.split(',')[0].trim();
   }
   return req.headers['x-real-ip'] as string || 'unknown';
+}
+
+/**
+ * Check if error is transient and should be retried
+ */
+function isTransientError(error: any): boolean {
+  const errorMessage = error?.message || '';
+  const errorStatus = error?.response?.status || error?.status;
+  
+  // Network errors
+  if (errorMessage.includes('ECONNREFUSED') || 
+      errorMessage.includes('ETIMEDOUT') ||
+      errorMessage.includes('ENOTFOUND') ||
+      errorMessage.includes('network')) {
+    return true;
+  }
+  
+  // 5xx server errors from Replicate
+  if (errorStatus && errorStatus >= 500 && errorStatus < 600) {
+    return true;
+  }
+  
+  // Rate limit errors (429)
+  if (errorStatus === 429) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Calculate exponential backoff delay
+ */
+function getRetryDelay(retryCount: number): number {
+  const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount);
+  return Math.min(delay, MAX_RETRY_DELAY_MS);
+}
+
+/**
+ * Run Replicate prediction with timeout
+ */
+async function runWithTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  jobId: string
+): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout;
+  
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`Generation timeout after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+  });
+  
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutHandle);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutHandle);
+    throw error;
+  }
+}
+
+/**
+ * Execute image generation with retry logic
+ */
+async function executeGeneration(
+  replicate: Replicate,
+  jobId: string,
+  prompt: string,
+  negativePrompt: string,
+  seed: number,
+  clientId: string
+): Promise<string> {
+  const job = getJob(jobId);
+  if (!job) {
+    throw new Error('Job not found');
+  }
+  
+  const maxRetries = job.maxRetries;
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Generation] Job ${jobId} attempt ${attempt + 1}/${maxRetries + 1}`);
+      
+      // Update job status to running on first attempt
+      if (attempt === 0) {
+        updateJob(jobId, {
+          status: 'running',
+          startedAt: new Date().toISOString(),
+        });
+      }
+      
+      // Run prediction with timeout
+      const prediction = await runWithTimeout(
+        replicate.run(SDXL_MODEL, {
+          input: {
+            prompt,
+            negative_prompt: negativePrompt,
+            ...SDXL_PARAMS,
+            seed,
+          },
+        }),
+        GENERATION_TIMEOUT_MS,
+        jobId
+      );
+      
+      // Get result URL
+      const resultUrl = Array.isArray(prediction) ? prediction[0] : prediction;
+      
+      if (!resultUrl || typeof resultUrl !== 'string') {
+        throw new Error('Invalid result from Replicate');
+      }
+      
+      console.log(`[Generation] Job ${jobId} succeeded on attempt ${attempt + 1}`);
+      return resultUrl;
+      
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if timeout
+      if (error.message?.includes('timeout')) {
+        console.error(`[Generation] Job ${jobId} timeout on attempt ${attempt + 1}:`, error.message);
+        
+        updateJob(jobId, {
+          errorCode: ERROR_CODES.TIMEOUT,
+          errorMessage: error.message,
+        });
+        
+        // Don't retry on timeout - it's unlikely to succeed
+        if (attempt >= maxRetries) {
+          break;
+        }
+      }
+      // Check if transient error and should retry
+      else if (isTransientError(error) && attempt < maxRetries) {
+        console.error(`[Generation] Job ${jobId} transient error on attempt ${attempt + 1}:`, error.message);
+        
+        // Increment retry count
+        incrementRetryCount(jobId);
+        
+        // Wait with exponential backoff before retry
+        const delay = getRetryDelay(attempt);
+        console.log(`[Generation] Job ${jobId} retrying in ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        continue;
+      }
+      // Non-transient error or max retries reached
+      else {
+        console.error(`[Generation] Job ${jobId} permanent error on attempt ${attempt + 1}:`, error.message);
+        
+        const errorCode = error.response?.status === 429 ? ERROR_CODES.RATE_LIMIT :
+                          isTransientError(error) ? ERROR_CODES.NETWORK_ERROR :
+                          ERROR_CODES.API_ERROR;
+        
+        updateJob(jobId, {
+          errorCode,
+          errorMessage: error.message,
+        });
+        
+        break;
+      }
+    }
+  }
+  
+  // If we get here, all retries failed
+  throw lastError;
 }
 
 export default async function handler(
@@ -97,10 +284,21 @@ export default async function handler(
       stylePreset,
     });
 
-    // Create job
+    // Create job with full input data
     const job = createJob({
       provider: 'replicate',
       model: SDXL_MODEL,
+      input: {
+        mood,
+        duration,
+        motifTags,
+        stylePreset,
+        seed,
+        valence,
+        arousal,
+        focus,
+        confidence,
+      },
       inputSummary: {
         mood,
         duration,
@@ -109,44 +307,40 @@ export default async function handler(
       },
     });
 
-    // Start async generation
+    // Start async generation with retry logic
     (async () => {
       try {
-        const replicate = new Replicate({
-          auth: apiToken,
-        });
-
-        // Update job status to running
-        updateJob(job.id, {
-          status: 'running',
-          startedAt: new Date().toISOString(),
-        });
-
-        // Run prediction
-        const prediction = await replicate.run(SDXL_MODEL, {
-          input: {
-            prompt,
-            negative_prompt: negativePrompt,
-            ...SDXL_PARAMS,
-            seed: seed || Math.floor(Math.random() * 1000000),
-          },
-        });
-
-        // Get result URL (output is an array of URLs for SDXL)
-        const resultUrl = Array.isArray(prediction) ? prediction[0] : prediction;
+        const resultUrl = await executeGeneration(
+          new Replicate({ auth: apiToken }),
+          job.id,
+          prompt,
+          negativePrompt,
+          seed || Math.floor(Math.random() * 1000000),
+          clientId
+        );
 
         // Update job as succeeded
         updateJob(job.id, {
           status: 'succeeded',
           finishedAt: new Date().toISOString(),
-          resultUrl: resultUrl as string,
+          result: resultUrl,
+          resultUrl: resultUrl,
         });
+        
+        console.log(`[Generation] Job ${job.id} completed successfully`);
       } catch (error) {
-        console.error('Image generation error:', error);
+        console.error(`[Generation] Job ${job.id} failed permanently:`, error);
+        
+        const jobData = getJob(job.id);
+        const errorCode = jobData?.errorCode || ERROR_CODES.API_ERROR;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
         updateJob(job.id, {
           status: 'failed',
           finishedAt: new Date().toISOString(),
-          error: error instanceof Error ? error.message : 'Unknown error',
+          errorCode,
+          errorMessage,
+          error: errorMessage,
         });
       } finally {
         // Release concurrency slot

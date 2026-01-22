@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
-import { generateImage, pollJobStatus, JobStatus } from './api/imageApi';
+import { generateImage, pollJobStatus, retryJob, JobStatus } from './api/imageApi';
 
 // Preset configurations for image generation
 const IMAGE_PRESETS = [
@@ -174,6 +174,12 @@ const Phase1SessionUI = () => {
         }
     };
 
+    // Helper to format error message with error code
+    const formatErrorMessage = (status: JobStatus): string => {
+        const errorMsg = status.errorMessage || status.error || '外部画像生成に失敗しました';
+        return status.errorCode ? `[${status.errorCode}] ${errorMsg}` : errorMsg;
+    };
+
     // External image generation with Replicate
     const generateExternalImage = async () => {
         try {
@@ -209,7 +215,7 @@ const Phase1SessionUI = () => {
             if (finalStatus.status === 'succeeded' && finalStatus.resultUrl) {
                 setExternalImageUrl(finalStatus.resultUrl);
             } else if (finalStatus.status === 'failed') {
-                setError(finalStatus.error || '外部画像生成に失敗しました');
+                setError(formatErrorMessage(finalStatus));
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : '外部画像生成中にエラーが発生しました');
@@ -220,8 +226,53 @@ const Phase1SessionUI = () => {
     };
 
     // Retry external generation
-    const retryExternalGeneration = () => {
-        generateExternalImage();
+    const retryExternalGeneration = async () => {
+        try {
+            setError(null);
+            
+            if (!externalJobStatus) {
+                // If no previous job, just start fresh
+                await generateExternalImage();
+                return;
+            }
+            
+            setIsGeneratingExternal(true);
+            setExternalJobId(null);
+            setExternalImageUrl(null);
+            
+            // Retry by creating new job with same input
+            const response = await retryJob(externalJobStatus.id);
+            setExternalJobId(response.jobId);
+            
+            // Poll for status
+            const finalStatus = await pollJobStatus(
+                response.jobId,
+                (status) => {
+                    setExternalJobStatus(status);
+                }
+            );
+            
+            if (finalStatus.status === 'succeeded' && finalStatus.resultUrl) {
+                setExternalImageUrl(finalStatus.resultUrl);
+            } else if (finalStatus.status === 'failed') {
+                setError(formatErrorMessage(finalStatus));
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'リトライ中にエラーが発生しました');
+            console.error(err);
+        } finally {
+            setIsGeneratingExternal(false);
+        }
+    };
+    
+    // Fallback to local generation
+    const fallbackToLocal = () => {
+        setError(null);
+        setExternalJobStatus(null);
+        setExternalJobId(null);
+        setExternalImageUrl(null);
+        // Trigger local PNG generation
+        generatePNG();
     };
 
     return (
@@ -425,11 +476,18 @@ const Phase1SessionUI = () => {
                         <div className="loading-indicator" role="status" aria-live="polite">
                             <div className="spinner"></div>
                             <p>
-                                ステータス: {externalJobStatus.status === 'queued' ? 'キュー待ち' : 
-                                            externalJobStatus.status === 'running' ? '生成中' : 
-                                            externalJobStatus.status}
+                                ステータス: {
+                                    externalJobStatus.status === 'queued' ? '生成待機中...' : 
+                                    externalJobStatus.status === 'running' ? `生成中... (${externalJobStatus.provider})` : 
+                                    externalJobStatus.status
+                                }
                             </p>
                             {externalJobId && <p className="job-id">Job ID: {externalJobId}</p>}
+                            {externalJobStatus.retryCount > 0 && (
+                                <p className="retry-info">
+                                    リトライ回数: {externalJobStatus.retryCount}/{externalJobStatus.maxRetries}
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -445,15 +503,41 @@ const Phase1SessionUI = () => {
                         </div>
                     )}
 
-                    {externalJobStatus?.status === 'failed' && (
-                        <div className="error-message" role="alert">
-                            <p>❌ 生成失敗: {externalJobStatus.error || '不明なエラー'}</p>
-                            <button 
-                                onClick={retryExternalGeneration}
-                                className="btn btn-secondary"
-                            >
-                                🔄 再試行
-                            </button>
+                    {externalJobStatus?.status === 'failed' && !isGeneratingExternal && (
+                        <div className="error-container" role="alert">
+                            <div className="error-details">
+                                <p className="error-title">❌ 外部生成に失敗しました</p>
+                                {externalJobStatus.errorCode && (
+                                    <p className="error-code">エラーコード: {externalJobStatus.errorCode}</p>
+                                )}
+                                <p className="error-message">
+                                    {externalJobStatus.errorMessage || externalJobStatus.error || '不明なエラー'}
+                                </p>
+                                {externalJobStatus.retryCount > 0 && (
+                                    <p className="retry-count">
+                                        {externalJobStatus.retryCount}回リトライしましたが失敗しました
+                                    </p>
+                                )}
+                            </div>
+                            <div className="button-group error-actions">
+                                <button 
+                                    onClick={retryExternalGeneration}
+                                    className="btn btn-secondary"
+                                    aria-label="再試行"
+                                >
+                                    🔄 再試行
+                                </button>
+                                <button 
+                                    onClick={fallbackToLocal}
+                                    className="btn btn-outline"
+                                    aria-label="ローカル生成に切り替え"
+                                >
+                                    🎨 ローカル生成に切り替え
+                                </button>
+                            </div>
+                            <p className="fallback-help">
+                                外部生成がうまくいかない場合は、ローカル生成をお試しください。
+                            </p>
                         </div>
                     )}
                 </section>

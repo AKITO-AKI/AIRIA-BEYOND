@@ -5,7 +5,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getJob } from '../jobStore';
+import { getJob } from '../../jobStore';
 
 export default async function handler(
   req: VercelRequest,
