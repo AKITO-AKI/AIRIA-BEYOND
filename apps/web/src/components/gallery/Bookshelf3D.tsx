@@ -22,23 +22,46 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   const shelfCount = 5;
   const shelfWidth = 12;
   const shelfDepth = 3;
-  const shelfHeight = 0.1;
+  const shelfHeight = 0.08;
   const shelfSpacing = 2.5;
 
   return (
     <group>
+      {/* Background wall */}
+      <mesh position={[0, 3, -1.5]} receiveShadow>
+        <planeGeometry args={[shelfWidth + 2, 14]} />
+        <meshStandardMaterial
+          color="#f5f5f5"
+          roughness={0.9}
+          metalness={0.0}
+        />
+      </mesh>
+
       {/* Render shelves */}
       {Array.from({ length: shelfCount }).map((_, i) => {
         const y = 5 - i * shelfSpacing;
         return (
-          <mesh key={`shelf-${i}`} position={[0, y - 0.9, 0]}>
-            <boxGeometry args={[shelfWidth, shelfHeight, shelfDepth]} />
-            <meshStandardMaterial
-              color="#e0e0e0"
-              roughness={0.8}
-              metalness={0.1}
-            />
-          </mesh>
+          <group key={`shelf-${i}`}>
+            {/* Shelf surface */}
+            <mesh position={[0, y - 0.9, 0]} castShadow receiveShadow>
+              <boxGeometry args={[shelfWidth, shelfHeight, shelfDepth]} />
+              <meshStandardMaterial
+                color="#d8d8d8"
+                roughness={0.7}
+                metalness={0.1}
+              />
+            </mesh>
+            
+            {/* Shelf front edge (trim) */}
+            <mesh position={[0, y - 0.9, shelfDepth / 2]} receiveShadow>
+              <boxGeometry args={[shelfWidth, shelfHeight * 1.5, 0.05]} />
+              <meshStandardMaterial
+                color="#c0c0c0"
+                roughness={0.6}
+                metalness={0.2}
+              />
+            </mesh>
+          </group>
         );
       })}
 
@@ -76,18 +99,42 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         enabled={constellationEnabled}
       />
 
-      {/* Ambient light */}
-      <ambientLight intensity={0.6} />
+      {/* Ambient light for overall illumination */}
+      <ambientLight intensity={0.5} />
 
-      {/* Directional light */}
+      {/* Main directional light (sun-like) */}
       <directionalLight
-        position={[5, 10, 5]}
+        position={[8, 12, 8]}
         intensity={0.8}
         castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
       />
 
-      {/* Point light for highlights */}
-      <pointLight position={[0, 5, 5]} intensity={0.4} />
+      {/* Fill light from the side */}
+      <directionalLight
+        position={[-5, 5, 3]}
+        intensity={0.3}
+      />
+
+      {/* Point light for highlights on books */}
+      <pointLight
+        position={[0, 8, 6]}
+        intensity={0.4}
+        distance={15}
+        decay={2}
+      />
+
+      {/* Rim light from behind */}
+      <pointLight
+        position={[0, 4, -2]}
+        intensity={0.2}
+        color="#ffffff"
+      />
     </group>
   );
 };

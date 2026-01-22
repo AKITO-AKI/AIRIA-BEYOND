@@ -16,8 +16,9 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
   constellationEnabled,
 }) => {
   return (
-    <div style={{ width: '100%', height: '600px', background: 'transparent' }}>
+    <div style={{ width: '100%', height: '700px', background: 'transparent' }}>
       <Canvas
+        shadows
         camera={{
           position: [0, 5, 15],
           fov: 50,
@@ -39,10 +40,11 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
             enableDamping
             dampingFactor={0.05}
             minPolarAngle={Math.PI / 6}
-            maxPolarAngle={Math.PI / 2}
+            maxPolarAngle={Math.PI / 2.2}
             minDistance={8}
             maxDistance={25}
             target={[0, 3, 0]}
+            enablePan={false}
           />
         </Suspense>
       </Canvas>
