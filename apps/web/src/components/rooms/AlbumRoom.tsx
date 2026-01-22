@@ -230,6 +230,54 @@ const AlbumRoom: React.FC = () => {
                 )}
               </div>
 
+              {/* P4: Music metadata section */}
+              {album.musicMetadata && (
+                <div className="metadata-section">
+                  <h3 className="metadata-section-title">音楽メタデータ</h3>
+                  
+                  <div className="metadata-item">
+                    <span className="metadata-label">調</span>
+                    <span className="metadata-value">{album.musicMetadata.key}</span>
+                  </div>
+
+                  <div className="metadata-item">
+                    <span className="metadata-label">テンポ</span>
+                    <span className="metadata-value">{album.musicMetadata.tempo} BPM</span>
+                  </div>
+
+                  <div className="metadata-item">
+                    <span className="metadata-label">拍子</span>
+                    <span className="metadata-value">{album.musicMetadata.timeSignature}</span>
+                  </div>
+
+                  <div className="metadata-item">
+                    <span className="metadata-label">形式</span>
+                    <span className="metadata-value">{album.musicMetadata.form}</span>
+                  </div>
+
+                  <div className="metadata-item">
+                    <span className="metadata-label">性格</span>
+                    <span className="metadata-value">{album.musicMetadata.character}</span>
+                  </div>
+
+                  <div className="metadata-item">
+                    <span className="metadata-label">生成方法</span>
+                    <span className="metadata-value">
+                      {album.musicMetadata.provider === 'openai' ? 'OpenAI (GPT-4)' : 
+                       album.musicMetadata.provider === 'rule-based' ? 'ルールベース' : 
+                       album.musicMetadata.provider}
+                    </span>
+                  </div>
+
+                  {album.musicData && (
+                    <div className="metadata-item">
+                      <span className="metadata-label">フォーマット</span>
+                      <span className="metadata-value">MIDI ({Math.round(album.musicData.length / 1024)} KB)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* P3: Regenerate button */}
               {album.metadata.provider === 'replicate' && (
                 <div className="album-actions">

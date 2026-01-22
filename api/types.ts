@@ -89,3 +89,67 @@ export interface AnalyzeResponse {
   status: string;
   message: string;
 }
+
+/**
+ * Music generation types (P4)
+ */
+export interface MusicStructure {
+  key: string; // e.g., "d minor"
+  tempo: number; // BPM
+  timeSignature: string; // e.g., "3/4"
+  form: string; // e.g., "ABA", "theme-variation", "rondo"
+  sections: MusicSection[];
+  instrumentation: string; // e.g., "piano"
+  character: string; // e.g., "melancholic and introspective"
+}
+
+export interface MusicSection {
+  name: string; // e.g., "A", "B"
+  measures: number;
+  chordProgression: string[]; // Roman numeral analysis, e.g., ["i", "iv", "V", "i"]
+  melody: {
+    motifs: MusicMotif[];
+  };
+  dynamics: string; // pp, p, mp, mf, f, ff
+  texture: string; // simple, contrapuntal, homophonic
+}
+
+export interface MusicMotif {
+  degrees: number[]; // scale degrees, e.g., [1, 3, 5, 3]
+  rhythm: number[]; // durations in beats, e.g., [0.5, 0.5, 1, 1]
+}
+
+export interface GenerateMusicRequest {
+  // Intermediate representation
+  valence: number;
+  arousal: number;
+  focus: number;
+  motif_tags: string[];
+  confidence: number;
+  // Optional parameters
+  duration?: number; // in seconds, default 60-90
+  seed?: number;
+}
+
+export interface GenerateMusicResponse {
+  jobId: string;
+  status: string;
+  message: string;
+}
+
+export interface MusicJobData {
+  id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  retryCount: number;
+  maxRetries: number;
+  provider: 'openai';
+  input: GenerateMusicRequest;
+  result?: MusicStructure;
+  midiData?: string; // Base64 encoded MIDI data
+}

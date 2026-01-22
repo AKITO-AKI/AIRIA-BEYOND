@@ -17,6 +17,18 @@ export interface AlbumMetadata {
   negativePrompt?: string;
 }
 
+// P4: Music metadata
+export interface MusicMetadata {
+  key: string; // e.g., "d minor"
+  tempo: number; // BPM
+  timeSignature: string; // e.g., "3/4"
+  form: string; // e.g., "ABA", "theme-variation"
+  character: string; // e.g., "melancholic and introspective"
+  duration: number; // in seconds
+  createdAt: string;
+  provider?: 'openai' | 'rule-based';
+}
+
 export interface Album {
   id: string;
   createdAt: string;
@@ -26,6 +38,10 @@ export interface Album {
   thumbnailUrl?: string; // P3: Optional thumbnail for performance
   sessionData?: any;
   metadata?: AlbumMetadata; // P3: Enhanced metadata
+  // P4: Music fields
+  musicData?: string; // Base64 encoded MIDI data
+  musicFormat?: 'midi'; // Format of the music file
+  musicMetadata?: MusicMetadata; // Music-specific metadata
 }
 
 interface AlbumContextType {
