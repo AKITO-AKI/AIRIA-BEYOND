@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
+import { useCausalLog } from '../../contexts/CausalLogContext';
 import { generateImage, pollJobStatus } from '../../api/imageApi';
 import { MAX_SEED } from '../../utils/prng';
+import ExplainabilityPanel from '../ExplainabilityPanel';
 import './AlbumRoom.css';
 
 const AlbumRoom: React.FC = () => {
   const { getSelectedAlbum, selectAlbum, addAlbum } = useAlbums();
+  const { getLog } = useCausalLog();
   const album = getSelectedAlbum();
+  
+  // P5: Get causal log for this album
+  const causalLog = album?.causalLogId ? getLog(album.causalLogId) : undefined;
   
   // P3: Regenerate state
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -306,6 +312,9 @@ const AlbumRoom: React.FC = () => {
             <span className="metadata-value metadata-id">{album.id}</span>
           </div>
         </div>
+
+        {/* P5: Explainability Panel */}
+        <ExplainabilityPanel log={causalLog} />
       </div>
     </div>
   );
