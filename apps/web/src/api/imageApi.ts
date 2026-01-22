@@ -2,6 +2,55 @@
  * Client API utilities for communicating with the backend
  */
 
+/**
+ * Analysis request/response types
+ */
+export interface AnalyzeRequest {
+  mood: string;
+  duration: number;
+  onboardingData?: {
+    emotionalProfile?: string;
+    preferences?: Record<string, any>;
+  };
+  freeText?: string;
+  timestamp?: string;
+}
+
+export interface AnalyzeResponse {
+  jobId: string;
+  status: string;
+  message: string;
+}
+
+export interface IntermediateRepresentation {
+  valence: number;
+  arousal: number;
+  focus: number;
+  motif_tags: string[];
+  confidence: number;
+  classical_profile?: {
+    tempo?: string;
+    dynamics?: string;
+    harmony?: string;
+  };
+}
+
+export interface AnalysisJobStatus {
+  id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  retryCount: number;
+  maxRetries: number;
+  provider: 'openai' | 'rule-based';
+  input: AnalyzeRequest;
+  result?: IntermediateRepresentation;
+}
+
 export interface GenerateImageRequest {
   mood: string;
   duration: number;
@@ -152,4 +201,65 @@ export async function retryJob(failedJobId: string): Promise<GenerateImageRespon
     focus: failedJob.input.focus,
     confidence: failedJob.input.confidence,
   });
+}
+
+/**
+ * Analyze session data to generate intermediate representation
+ */
+export async function analyzeSession(request: AnalyzeRequest): Promise<AnalyzeResponse> {
+  const response = await fetch(`${API_BASE}/api/analyze`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to analyze session');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get analysis job status
+ */
+export async function getAnalysisJobStatus(jobId: string): Promise<AnalysisJobStatus> {
+  const response = await fetch(`${API_BASE}/api/analyze/${jobId}`);
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to get analysis job status');
+  }
+
+  return response.json();
+}
+
+/**
+ * Poll analysis job status until completion
+ */
+export async function pollAnalysisJobStatus(
+  jobId: string,
+  onUpdate?: (status: AnalysisJobStatus) => void,
+  maxAttempts: number = 30,
+  intervalMs: number = 1000
+): Promise<AnalysisJobStatus> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await getAnalysisJobStatus(jobId);
+    
+    if (onUpdate) {
+      onUpdate(status);
+    }
+
+    if (status.status === 'succeeded' || status.status === 'failed') {
+      return status;
+    }
+
+    // Wait before next poll
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error('Analysis job polling timeout');
 }
