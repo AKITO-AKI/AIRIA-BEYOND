@@ -276,6 +276,14 @@ button:disabled,
     100% { transform: rotate(360deg); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation: none;
+        border-top-color: var(--accent-primary);
+        border-right-color: var(--accent-primary);
+    }
+}
+
 /* Preview container */
 .preview-container {
     margin-top: 30px;

@@ -10,6 +10,9 @@ const IMAGE_PRESETS = [
     { name: '高解像度', width: 1920, height: 1080 }
 ];
 
+// Timeout to allow UI to update before heavy image generation
+const IMAGE_GENERATION_DELAY_MS = 100;
+
 const Phase1SessionUI = () => {
     const [mood, setMood] = useState('穏やか');
     const [duration, setDuration] = useState(30);
@@ -73,7 +76,7 @@ const Phase1SessionUI = () => {
     const downloadJSON = () => {
         try {
             setError(null);
-            const dataStr = JSON.stringify(sessionData, null, 2);
+            const dataStr = JSON.stringify(sessionData);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -105,7 +108,7 @@ const Phase1SessionUI = () => {
                 } finally {
                     setIsGenerating(false);
                 }
-            }, 100);
+            }, IMAGE_GENERATION_DELAY_MS);
         } catch (err) {
             setError('画像生成中にエラーが発生しました');
             console.error(err);
