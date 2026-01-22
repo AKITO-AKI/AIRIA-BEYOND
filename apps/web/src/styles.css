@@ -621,3 +621,84 @@ footer {
         font-size: 18px;
     }
 }
+
+/* P4: Music Room styles */
+.music-info {
+  padding: 20px;
+}
+
+.current-track {
+  background: rgba(74, 144, 226, 0.05);
+  border: 1px solid rgba(74, 144, 226, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.current-track h2 {
+  margin-top: 0;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.track-details {
+  margin: 15px 0;
+}
+
+.track-details p {
+  margin: 8px 0;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.music-hint {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+  font-style: italic;
+  margin-top: 15px;
+}
+
+.no-selection {
+  padding: 40px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.music-library {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.music-library h2 {
+  margin-top: 0;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.music-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0 0;
+}
+
+.music-list li {
+  padding: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.music-list li.selected {
+  background: rgba(74, 144, 226, 0.1);
+  border-left: 3px solid rgba(74, 144, 226, 1);
+}
+
+.music-title {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.music-meta {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.6);
+}
