@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as Tone from 'tone';
 import { getGlobalPlayer } from '../../utils/midiPlayer';
 import type { Album } from '../../contexts/AlbumContext';
 import { useMusicPlayer, PlaybackState } from '../../contexts/MusicPlayerContext';
-import { useAudioAnalyser } from './hooks/useAudioAnalyser';
 import { MiniPlayerBar } from './MiniPlayerBar';
 import { ExpandedPlayer } from './ExpandedPlayer';
 import './EnhancedMiniPlayer.css';
@@ -37,20 +37,50 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
   } = useMusicPlayer();
 
   const playerRef = useRef(getGlobalPlayer());
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const frequencyDataRef = useRef<Uint8Array | null>(null);
+  const timeDataRef = useRef<Uint8Array | null>(null);
   const progressIntervalRef = useRef<number | null>(null);
-
-  // Audio analysis
-  const { 
-    getFrequencyData, 
-    getTimeDomainData, 
-    isInitialized 
-  } = useAudioAnalyser(audioElementRef.current, {
-    enabled: state.playbackState === PlaybackState.PLAYING,
-  });
 
   const [frequencyData, setFrequencyData] = useState<Uint8Array | null>(null);
   const [timeDomainData, setTimeDomainData] = useState<Uint8Array | null>(null);
+
+  // Initialize Tone.js analyser
+  useEffect(() => {
+    const initAnalyser = async () => {
+      try {
+        // Ensure Tone.js context is started
+        await Tone.start();
+        
+        // Create analyser node
+        const analyser = Tone.context.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.8;
+        
+        // Connect Tone.js destination to analyser
+        Tone.getDestination().connect(analyser);
+        
+        analyserRef.current = analyser;
+        frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+        timeDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+      } catch (error) {
+        console.error('Failed to initialize analyser:', error);
+      }
+    };
+
+    initAnalyser();
+
+    return () => {
+      // Cleanup
+      if (analyserRef.current) {
+        try {
+          analyserRef.current.disconnect();
+        } catch (e) {
+          // Already disconnected
+        }
+      }
+    };
+  }, []);
 
   // Initialize queue when albums change
   useEffect(() => {
@@ -73,19 +103,21 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
 
   // Update visualization data when playing
   useEffect(() => {
-    if (state.playbackState === PlaybackState.PLAYING && isInitialized) {
+    if (state.playbackState === PlaybackState.PLAYING && analyserRef.current) {
       const updateVisualization = () => {
-        const freqData = getFrequencyData();
-        const timeData = getTimeDomainData();
+        if (!analyserRef.current || !frequencyDataRef.current || !timeDataRef.current) return;
         
-        if (freqData) setFrequencyData(new Uint8Array(freqData));
-        if (timeData) setTimeDomainData(new Uint8Array(timeData));
+        analyserRef.current.getByteFrequencyData(frequencyDataRef.current);
+        analyserRef.current.getByteTimeDomainData(timeDataRef.current);
+        
+        setFrequencyData(new Uint8Array(frequencyDataRef.current));
+        setTimeDomainData(new Uint8Array(timeDataRef.current));
       };
 
       const interval = setInterval(updateVisualization, 16); // ~60fps
       return () => clearInterval(interval);
     }
-  }, [state.playbackState, isInitialized, getFrequencyData, getTimeDomainData]);
+  }, [state.playbackState]);
 
   const loadMIDI = async (albumToLoad: Album) => {
     try {
@@ -255,12 +287,6 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
           onClose={toggleExpanded}
         />
       )}
-
-      {/* Hidden audio element for Web Audio API */}
-      <audio
-        ref={audioElementRef}
-        style={{ display: 'none' }}
-      />
     </>
   );
 };
