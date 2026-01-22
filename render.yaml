@@ -12,7 +12,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: ADMIN_TOKEN
-        generateValue: true
+        sync: false
       - key: DISABLE_LLM_ANALYSIS
         value: false
     healthCheckPath: /api/health

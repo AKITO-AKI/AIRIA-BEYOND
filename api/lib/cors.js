@@ -1,5 +1,4 @@
 const ALLOWED_ORIGINS = [
-  'https://airia-beyond.vercel.app',
   'https://akito-aki.github.io',
   process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : null,
   process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
