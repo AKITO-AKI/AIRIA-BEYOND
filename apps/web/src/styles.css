@@ -1,16 +1,30 @@
 :root {
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
-    --bg-primary: #0b0f17;
-    --bg-secondary: #0e1524;
-    --bg-tertiary: #1a2235;
-    --border-color: #2a395f;
-    --text-primary: #e7eefc;
-    --text-secondary: #a0b3d6;
+    /* C-1: Updated color system for classical visual metaphors */
+    font-family: 'Noto Sans JP', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    
+    /* Base colors - white background with dynamic tinting */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #FAFAFA;
+    --bg-tertiary: #F5F5F5;
+    --border-color: rgba(0, 0, 0, 0.1);
+    
+    /* Text colors - soft black */
+    --text-primary: #1A1A1A;
+    --text-secondary: rgba(0, 0, 0, 0.6);
+    
+    /* Accent colors */
     --accent-primary: #4a90e2;
     --accent-hover: #5ba3f5;
-    --accent-success: #4caf50;
-    --accent-danger: #f44336;
-    --shadow: rgba(0, 0, 0, 0.3);
+    
+    /* System colors - pale and elegant */
+    --accent-success: #F4E5C2; /* Pale gold */
+    --accent-danger: #D4C5B9; /* Pale sepia */
+    --accent-processing: #E8E8E8; /* Pale silver */
+    
+    /* Gold accent for geometric patterns */
+    --gold: #D4AF37;
+    
+    --shadow: rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -20,7 +34,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
@@ -71,11 +85,12 @@ main {
 }
 
 section {
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 25px;
-    box-shadow: 0 4px 6px var(--shadow);
+    box-shadow: 0 4px 12px var(--shadow);
+    backdrop-filter: blur(10px);
 }
 
 @media (max-width: 767px) {
@@ -173,14 +188,15 @@ button,
     padding: 12px 24px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
+    background: rgba(255, 255, 255, 0.8);
     color: var(--text-primary);
     font-size: 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
     font-weight: 500;
     flex: 1;
     min-width: fit-content;
+    backdrop-filter: blur(10px);
 }
 
 @media (max-width: 480px) {
@@ -193,10 +209,10 @@ button,
 
 button:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-    background: var(--accent-primary);
+    background: rgba(74, 144, 226, 0.1);
     border-color: var(--accent-primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px var(--shadow);
+    box-shadow: 0 4px 12px var(--shadow);
 }
 
 button:active:not(:disabled),
@@ -235,12 +251,12 @@ button:disabled,
 .btn-success {
     background: var(--accent-success);
     border-color: var(--accent-success);
-    color: white;
+    color: var(--text-primary);
 }
 
 .btn-success:hover:not(:disabled) {
-    background: #45a049;
-    border-color: #45a049;
+    background: #E8D5A8;
+    border-color: #E8D5A8;
 }
 
 .btn-outline {
@@ -249,12 +265,12 @@ button:disabled,
 
 /* Error message */
 .error-message {
-    background: rgba(244, 67, 54, 0.1);
+    background: rgba(212, 197, 185, 0.2);
     border: 1px solid var(--accent-danger);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
-    color: #ff8a80;
+    color: var(--text-primary);
     text-align: center;
 }
 
@@ -312,14 +328,14 @@ button:disabled,
 
 /* Success message */
 .success-message {
-    background: rgba(76, 175, 80, 0.1);
+    background: rgba(244, 229, 194, 0.3);
     border: 1px solid var(--accent-success);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
-    color: #4caf50;
+    color: var(--text-primary);
     text-align: center;
-    animation: slideIn 0.3s ease-out;
+    animation: slideIn 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 @keyframes slideIn {
@@ -462,6 +478,50 @@ footer {
     padding: 15px;
     margin: 15px 0;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* C-1: Ripple effect during analysis */
+.analysis-status::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: analysisRipple 2s ease-out infinite;
+}
+
+.analysis-status::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: analysisRipple 2s ease-out infinite 1s;
+}
+
+@keyframes analysisRipple {
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 0.6;
+    }
+    100% {
+        width: 300px;
+        height: 300px;
+        opacity: 0;
+    }
 }
 
 .analysis-result {

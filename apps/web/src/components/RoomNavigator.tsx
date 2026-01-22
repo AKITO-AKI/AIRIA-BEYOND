@@ -130,7 +130,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
         onMouseLeave={handleMouseLeave}
         style={{
           transform: `translateX(${translateX}%)`,
-          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          transition: isDragging ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)',
         }}
       >
         {rooms.map((room) => (

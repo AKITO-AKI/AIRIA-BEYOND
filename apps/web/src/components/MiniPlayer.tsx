@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getGlobalPlayer } from '../utils/midiPlayer';
 import type { Album } from '../contexts/AlbumContext';
+import { useMusicPlayer } from '../contexts/MusicPlayerContext';
 import './MiniPlayer.css';
 
 interface MiniPlayerProps {
@@ -14,6 +15,9 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  
+  // C-1: Music player context for background dye system
+  const { setPlaying, setCurrentAlbum } = useMusicPlayer();
   
   // Legacy oscillator refs (for backwards compatibility when no album)
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -35,8 +39,9 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
   useEffect(() => {
     if (album?.musicData) {
       loadMIDI(album.musicData);
+      setCurrentAlbum(album.imageUrl, album.title);
     }
-  }, [album?.musicData]);
+  }, [album?.musicData, album?.imageUrl, album?.title]);
 
   const loadMIDI = async (midiData: string) => {
     try {
@@ -64,6 +69,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
         const player = playerRef.current;
         await player.play();
         setIsPlaying(true);
+        setPlaying(true); // C-1: Update context for background dye
         
         // Track progress
         const progressInterval = window.setInterval(() => {
@@ -76,6 +82,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
             // Playback ended
             clearInterval(progressInterval);
             setIsPlaying(false);
+            setPlaying(false); // C-1: Update context
             setProgress(0);
           }
         }, 100);
@@ -108,6 +115,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
 
         oscillator.start();
         setIsPlaying(true);
+        setPlaying(true); // C-1: Update context
 
         let currentProgress = 0;
         progressIntervalRef.current = window.setInterval(() => {
@@ -155,6 +163,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
     }
 
     setIsPlaying(false);
+    setPlaying(false); // C-1: Update context
     if (!album?.musicData) {
       setProgress(0);
     }

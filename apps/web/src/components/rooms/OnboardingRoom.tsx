@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import OnboardingForm, { OnboardingData } from '../OnboardingForm';
+import GeometricCanvas from '../visual/GeometricCanvas';
 import '../OnboardingForm.css';
 
 const OnboardingRoom: React.FC = () => {
@@ -17,7 +18,10 @@ const OnboardingRoom: React.FC = () => {
   };
 
   return (
-    <div className="room-content">
+    <div className="room-content" style={{ position: 'relative' }}>
+      {/* C-1: Spiral pattern for introspection */}
+      <GeometricCanvas pattern="spiral" isActive={!isCompleted} />
+      
       <h1 className="room-title">ONBOARDING</h1>
       <p className="room-subtitle">ようこそ AIRIA BEYOND へ</p>
       

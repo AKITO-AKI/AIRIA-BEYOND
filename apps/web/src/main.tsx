@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AlbumProvider, useAlbums } from './contexts/AlbumContext';
 import { CausalLogProvider } from './contexts/CausalLogContext';
+import { MusicPlayerProvider, useMusicPlayer } from './contexts/MusicPlayerContext';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import MainRoom from './components/rooms/MainRoom';
@@ -11,6 +12,7 @@ import MusicRoom from './components/rooms/MusicRoom';
 import SplashScreen from './components/SplashScreen';
 import MiniPlayer from './components/MiniPlayer';
 import DebugPanel from './components/DebugPanel';
+import BackgroundDyeSystem from './components/visual/BackgroundDyeSystem';
 import './styles.css';
 
 const rooms = [
@@ -24,6 +26,7 @@ const rooms = [
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
   const { getSelectedAlbum } = useAlbums();
+  const { state: musicState } = useMusicPlayer();
   const selectedAlbum = getSelectedAlbum();
 
   return (
@@ -31,6 +34,11 @@ const AppContent = () => {
       {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
       {!showSplash && (
         <>
+          {/* Phase C-1: Background dye system */}
+          <BackgroundDyeSystem 
+            albumImageUrl={musicState.currentAlbumImage || selectedAlbum?.imageUrl}
+            isPlaying={musicState.isPlaying}
+          />
           <RoomNavigator rooms={rooms} initialRoom="main" />
           {/* P4: Pass selected album to MiniPlayer for music playback */}
           <MiniPlayer album={selectedAlbum || undefined} />
@@ -47,7 +55,9 @@ const App = () => {
     <React.StrictMode>
       <CausalLogProvider>
         <AlbumProvider>
-          <AppContent />
+          <MusicPlayerProvider>
+            <AppContent />
+          </MusicPlayerProvider>
         </AlbumProvider>
       </CausalLogProvider>
     </React.StrictMode>
