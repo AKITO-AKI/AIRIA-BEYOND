@@ -1,0 +1,45 @@
+/* Enhanced Mini Player - Global styles and transitions */
+
+/* Smooth transition between minimized and expanded states */
+@keyframes playerExpand {
+  from {
+    transform: scale(0.3) translateY(50vh);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes playerMinimize {
+  from {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.3) translateY(50vh);
+    opacity: 0.5;
+  }
+}
+
+/* Ensure proper z-index stacking */
+body.player-expanded {
+  overflow: hidden;
+}
+
+/* Focus trap for expanded player */
+.expanded-player-modal *:focus {
+  outline: 2px solid rgba(74, 144, 226, 0.6);
+  outline-offset: 2px;
+}
+
+/* Prevent flash of unstyled content */
+.mini-player-loading {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mini-player-loaded {
+  opacity: 1;
+}

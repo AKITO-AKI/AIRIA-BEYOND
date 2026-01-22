@@ -10,7 +10,7 @@ import GalleryRoom from './components/rooms/GalleryRoom';
 import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
 import SplashScreen from './components/SplashScreen';
-import MiniPlayer from './components/MiniPlayer';
+import { EnhancedMiniPlayer } from './components/music';
 import DebugPanel from './components/DebugPanel';
 import BackgroundDyeSystem from './components/visual/BackgroundDyeSystem';
 import './styles.css';
@@ -25,9 +25,12 @@ const rooms = [
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
-  const { getSelectedAlbum } = useAlbums();
+  const { getSelectedAlbum, albums } = useAlbums();
   const { state: musicState } = useMusicPlayer();
   const selectedAlbum = getSelectedAlbum();
+  
+  // Create queue from all albums with music data
+  const musicQueue = albums.filter(album => album.musicData);
 
   return (
     <>
@@ -40,8 +43,11 @@ const AppContent = () => {
             isPlaying={musicState.isPlaying}
           />
           <RoomNavigator rooms={rooms} initialRoom="main" />
-          {/* P4: Pass selected album to MiniPlayer for music playback */}
-          <MiniPlayer album={selectedAlbum || undefined} />
+          {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
+          <EnhancedMiniPlayer 
+            album={selectedAlbum || undefined} 
+            queue={musicQueue}
+          />
           {/* P5: Debug panel for developers */}
           <DebugPanel />
         </>
