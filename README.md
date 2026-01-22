@@ -66,9 +66,9 @@ This serves the production build locally for testing.
 
 ## MVP Flow
 
-### Phase A: Room Navigation (NEW!)
+### Phase A: Room Navigation
 - Multi-room layout with 5 distinct rooms:
-  - **Onboarding**: Welcome and introduction
+  - **Onboarding**: Welcome and deep-life questions
   - **Main**: Session management and PNG generation
   - **Gallery**: Content placeholder
   - **Album**: Content placeholder
@@ -78,6 +78,19 @@ This serves the production build locally for testing.
 - Click navigation buttons at the top for direct room access
 - Minimal white + transparency styling
 - Internal routing without external dependencies
+
+### Phase B: Onboarding Deep-Life Questions (NEW!)
+- 4-step questionnaire capturing foundational emotional data:
+  1. **Recent Emotional Moment**: When, what emotion, and why it happened
+  2. **Daily Emotional Pattern**: Time of day and associated emotions
+  3. **Emotional Triggers**: Key factors that influence emotions and their importance
+  4. **Emotional Goals**: Desired emotional state and timeline for achievement
+- Mix of dropdowns and minimal free-text inputs for easy answering
+- Data stored in localStorage for persistence
+- Progress indicator showing current step
+- Blend-mode text effects for elegant minimal design
+- Exportable profile data as JSON
+- Designed to capture life data that an LLM cannot infer later
 
 ### Phase 1: Session Management & JSON Export
 - Japanese UI with session start/stop
@@ -97,6 +110,29 @@ This serves the production build locally for testing.
 - On-screen preview and PNG download
 
 ## Usage
+
+### Completing the Onboarding (Onboarding Room)
+
+1. **Navigate to the Onboarding room** using the navigation buttons
+
+2. **Answer 4 deep-life questions:**
+   - **Step 1**: Describe a recent emotional moment (when, what emotion, why)
+   - **Step 2**: Identify your daily emotional patterns (time and emotion)
+   - **Step 3**: Specify your main emotional triggers (what and why)
+   - **Step 4**: Set emotional goals (what you want to achieve and when)
+
+3. **Progress through the questions:**
+   - Each step requires all fields to be filled before proceeding
+   - Use the "次へ →" button to advance to the next step
+   - Use the "← 戻る" button to go back and edit previous answers
+   - Click "✓ 完了" on the final step to complete
+
+4. **After completion:**
+   - Your answers are automatically saved in your browser
+   - Download your profile as JSON using "プロフィールをダウンロード"
+   - Edit your answers anytime with "回答を編集"
+
+The onboarding data is stored locally and can be used to personalize your session experience.
 
 ### Navigating Between Rooms
 
@@ -132,6 +168,8 @@ This serves the production build locally for testing.
 The generated PNG is deterministic - generating from the same session data (including seed) will always produce the same image.
 
 ## Project Status
+
+**Phase B**: Onboarding deep-life questions complete - 4-step questionnaire capturing emotional patterns, triggers, and goals with localStorage persistence.
 
 **Phase A**: Room navigation complete - multi-room layout with smooth swipe/touch navigation.
 
