@@ -15,7 +15,7 @@ let jobIdCounter = 0;
  * Create a new music generation job
  */
 export function createMusicJob(data: {
-  provider: 'openai';
+  provider: 'openai' | 'rule-based';
   input: GenerateMusicRequest;
   maxRetries?: number;
 }): MusicJobData {
