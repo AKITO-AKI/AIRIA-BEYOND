@@ -2,6 +2,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as Vibrant from 'node-vibrant';
 import './BackgroundDyeSystem.css';
 
+// Constants for background dye behavior
+const COLOR_INTENSIFY_STEP = 0.01;
+const COLOR_INTENSIFY_INTERVAL_MS = 1000;
+const INITIAL_OPACITY = 0.85;
+const MIN_OPACITY_PLAYING = 0.75;
+const REVERBERATION_OPACITY = 0.05;
+
 interface BackgroundDyeSystemProps {
   albumImageUrl?: string;
   isPlaying: boolean;
@@ -13,16 +20,24 @@ const BackgroundDyeSystem: React.FC<BackgroundDyeSystemProps> = ({
 }) => {
   const [dominantColor, setDominantColor] = useState<string | null>(null);
   const [previousColor, setPreviousColor] = useState<string | null>(null);
-  const [opacity, setOpacity] = useState(0.85);
+  const [opacity, setOpacity] = useState(INITIAL_OPACITY);
   const [isVisible, setIsVisible] = useState(false);
   const [isReverberating, setIsReverberating] = useState(false);
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reverberationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const colorCacheRef = useRef<Map<string, string>>(new Map()); // C-1: Cache for extracted colors
 
   // Extract dominant color from album image
   useEffect(() => {
     if (!albumImageUrl) {
       setDominantColor(null);
+      return;
+    }
+
+    // Check cache first
+    const cachedColor = colorCacheRef.current.get(albumImageUrl);
+    if (cachedColor) {
+      setDominantColor(cachedColor);
       return;
     }
 
@@ -44,12 +59,17 @@ const BackgroundDyeSystem: React.FC<BackgroundDyeSystemProps> = ({
         const color = palette.Vibrant || palette.Muted || palette.LightMuted;
         
         if (color) {
-          setDominantColor(color.hex);
+          const hexColor = color.hex;
+          setDominantColor(hexColor);
+          // Cache the extracted color
+          colorCacheRef.current.set(albumImageUrl, hexColor);
         }
       } catch (error) {
         console.error('Failed to extract color:', error);
         // Fallback to a default elegant color
-        setDominantColor('#D4AF37'); // Gold
+        const fallbackColor = '#D4AF37'; // Gold
+        setDominantColor(fallbackColor);
+        colorCacheRef.current.set(albumImageUrl, fallbackColor);
       }
     };
 
@@ -69,7 +89,7 @@ const BackgroundDyeSystem: React.FC<BackgroundDyeSystemProps> = ({
       // Music starts - transition in (3-5 seconds)
       setIsReverberating(false);
       setIsVisible(true);
-      setOpacity(0.85);
+      setOpacity(INITIAL_OPACITY);
       
       // Store previous color for blending on track change
       if (previousColor !== dominantColor) {
@@ -80,7 +100,7 @@ const BackgroundDyeSystem: React.FC<BackgroundDyeSystemProps> = ({
       setIsReverberating(true);
       
       reverberationTimeoutRef.current = setTimeout(() => {
-        setOpacity(0.05); // Leave subtle trace
+        setOpacity(REVERBERATION_OPACITY); // Leave subtle trace
         
         fadeTimeoutRef.current = setTimeout(() => {
           setIsVisible(false);
@@ -100,8 +120,8 @@ const BackgroundDyeSystem: React.FC<BackgroundDyeSystemProps> = ({
     if (!isPlaying || !isVisible || isReverberating) return;
 
     const interval = setInterval(() => {
-      setOpacity((prev) => Math.max(0.75, prev - 0.01));
-    }, 1000);
+      setOpacity((prev) => Math.max(MIN_OPACITY_PLAYING, prev - COLOR_INTENSIFY_STEP));
+    }, COLOR_INTENSIFY_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [isPlaying, isVisible, isReverberating]);

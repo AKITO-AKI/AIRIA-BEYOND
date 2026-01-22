@@ -10,6 +10,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
   const [phase, setPhase] = useState<'fade-in' | 'title' | 'subtitle' | 'hold' | 'fade-out'>('fade-in');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isAnimatingRef = useRef(true); // C-1: Flag to control animation loop
 
   // Golden spiral animation
   useEffect(() => {
@@ -31,6 +32,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
     let pulse = 0;
 
     const drawGoldenSpiral = () => {
+      if (!isAnimatingRef.current) return; // Stop if not animating
+      
       ctx.clearRect(0, 0, 600, 600);
       ctx.save();
       
@@ -83,6 +86,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
     drawGoldenSpiral();
 
     return () => {
+      isAnimatingRef.current = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
