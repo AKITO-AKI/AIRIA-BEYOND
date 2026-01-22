@@ -188,14 +188,15 @@ button,
     padding: 12px 24px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
+    background: rgba(255, 255, 255, 0.8);
     color: var(--text-primary);
     font-size: 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
     font-weight: 500;
     flex: 1;
     min-width: fit-content;
+    backdrop-filter: blur(10px);
 }
 
 @media (max-width: 480px) {
@@ -208,10 +209,10 @@ button,
 
 button:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-    background: var(--accent-primary);
+    background: rgba(74, 144, 226, 0.1);
     border-color: var(--accent-primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px var(--shadow);
+    box-shadow: 0 4px 12px var(--shadow);
 }
 
 button:active:not(:disabled),
@@ -250,12 +251,12 @@ button:disabled,
 .btn-success {
     background: var(--accent-success);
     border-color: var(--accent-success);
-    color: white;
+    color: var(--text-primary);
 }
 
 .btn-success:hover:not(:disabled) {
-    background: #45a049;
-    border-color: #45a049;
+    background: #E8D5A8;
+    border-color: #E8D5A8;
 }
 
 .btn-outline {
@@ -264,12 +265,12 @@ button:disabled,
 
 /* Error message */
 .error-message {
-    background: rgba(244, 67, 54, 0.1);
+    background: rgba(212, 197, 185, 0.2);
     border: 1px solid var(--accent-danger);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
-    color: #ff8a80;
+    color: var(--text-primary);
     text-align: center;
 }
 
@@ -327,14 +328,14 @@ button:disabled,
 
 /* Success message */
 .success-message {
-    background: rgba(76, 175, 80, 0.1);
+    background: rgba(244, 229, 194, 0.3);
     border: 1px solid var(--accent-success);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
-    color: #4caf50;
+    color: var(--text-primary);
     text-align: center;
-    animation: slideIn 0.3s ease-out;
+    animation: slideIn 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 @keyframes slideIn {
@@ -477,6 +478,50 @@ footer {
     padding: 15px;
     margin: 15px 0;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* C-1: Ripple effect during analysis */
+.analysis-status::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: analysisRipple 2s ease-out infinite;
+}
+
+.analysis-status::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    animation: analysisRipple 2s ease-out infinite 1s;
+}
+
+@keyframes analysisRipple {
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 0.6;
+    }
+    100% {
+        width: 300px;
+        height: 300px;
+        opacity: 0;
+    }
 }
 
 .analysis-result {
