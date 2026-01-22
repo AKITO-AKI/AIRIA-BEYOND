@@ -20,16 +20,16 @@ const Phase1SessionUI = () => {
     });
 
     useEffect(() => {
-        let interval = null;
-        if (isRunning) {
-            interval = setInterval(() => {
-                setTimer((prev) => prev + 1);
-            }, 1000);
-        } else if (!isRunning && timer !== 0) {
-            clearInterval(interval);
+        if (!isRunning) {
+            return;
         }
+
+        const interval = setInterval(() => {
+            setTimer((prev) => prev + 1);
+        }, 1000);
+
         return () => clearInterval(interval);
-    }, [isRunning, timer]);
+    }, [isRunning]);
 
     const startTimer = () => {
         // Reset timer and session duration so each session measures independently
