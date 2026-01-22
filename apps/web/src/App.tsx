@@ -532,6 +532,32 @@ const Phase1SessionUI = () => {
                     <h2>外部生成 (Replicate SDXL)</h2>
                     <p className="section-description">高品質なAI画像生成 - 完了まで30-60秒かかります</p>
                     
+                    {/* P3: Comprehensive progress flow indicator */}
+                    {(isAnalyzing || isGeneratingExternal || externalImageUrl) && (
+                        <div className="progress-flow">
+                            <div className={`progress-step ${isAnalyzing ? 'active' : analysisResult ? 'completed' : ''}`}>
+                                <div className="step-icon">
+                                    {analysisResult ? '✓' : isAnalyzing ? '⏳' : '1'}
+                                </div>
+                                <div className="step-label">解析中...</div>
+                            </div>
+                            <div className="progress-arrow">→</div>
+                            <div className={`progress-step ${isGeneratingExternal ? 'active' : externalImageUrl ? 'completed' : ''}`}>
+                                <div className="step-icon">
+                                    {externalImageUrl ? '✓' : isGeneratingExternal ? '⏳' : '2'}
+                                </div>
+                                <div className="step-label">画像生成中...</div>
+                            </div>
+                            <div className="progress-arrow">→</div>
+                            <div className={`progress-step ${externalImageUrl && !isGeneratingExternal ? 'completed' : ''}`}>
+                                <div className="step-icon">
+                                    {externalImageUrl && !isGeneratingExternal ? '✓' : '3'}
+                                </div>
+                                <div className="step-label">完了</div>
+                            </div>
+                        </div>
+                    )}
+                    
                     {/* Analysis status display (P2) */}
                     {isAnalyzing && analysisJobStatus && (
                         <div className="analysis-status" role="status" aria-live="polite">

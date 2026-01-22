@@ -212,6 +212,25 @@
   letter-spacing: 0.5px;
 }
 
+/* P3: Provider badge */
+.book-spine-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  background: rgba(74, 144, 226, 0.15);
+  border: 1px solid rgba(74, 144, 226, 0.3);
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(74, 144, 226, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transform: rotate(90deg);
+  transform-origin: center;
+  white-space: nowrap;
+}
+
 .book-spine-preview {
   position: absolute;
   top: 0;

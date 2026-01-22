@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAlbums } from '../../contexts/AlbumContext';
+import { useAlbums, Album } from '../../contexts/AlbumContext';
 import './GalleryRoom.css';
 
 const GalleryRoom: React.FC = () => {
@@ -8,6 +8,26 @@ const GalleryRoom: React.FC = () => {
   const handleAlbumClick = (albumId: string) => {
     selectAlbum(albumId);
     // Navigation will be handled by clicking on the Album room indicator
+  };
+
+  // P3: Format metadata for tooltip
+  const formatMetadata = (album: Album): string => {
+    const parts: string[] = [];
+    
+    if (album.metadata) {
+      if (album.metadata.motif_tags && album.metadata.motif_tags.length > 0) {
+        parts.push(album.metadata.motif_tags.slice(0, 3).join(', '));
+      }
+      if (album.metadata.stylePreset) {
+        parts.push(`Style: ${album.metadata.stylePreset}`);
+      }
+      if (album.metadata.provider) {
+        const providerLabel = album.metadata.provider === 'replicate' ? 'AI生成' : 'ローカル';
+        parts.push(providerLabel);
+      }
+    }
+    
+    return parts.length > 0 ? parts.join(' • ') : '';
   };
 
   return (
@@ -36,6 +56,7 @@ const GalleryRoom: React.FC = () => {
                   }
                 }}
                 aria-label={`Album: ${album.mood} - ${new Date(album.createdAt).toLocaleDateString()}`}
+                title={formatMetadata(album)}
               >
                 <div className="book-spine-content">
                   <div className="book-spine-title">{album.mood}</div>
@@ -45,6 +66,12 @@ const GalleryRoom: React.FC = () => {
                       day: 'numeric',
                     })}
                   </div>
+                  {/* P3: Show provider badge */}
+                  {album.metadata?.provider && (
+                    <div className="book-spine-badge">
+                      {album.metadata.provider === 'replicate' ? 'AI' : 'ローカル'}
+                    </div>
+                  )}
                 </div>
                 <div className="book-spine-preview">
                   <img src={album.imageDataURL} alt="" />
