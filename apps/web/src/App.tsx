@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
-import { generateImage, pollJobStatus, JobStatus } from './api/imageApi';
+import { generateImage, pollJobStatus, retryJob, JobStatus } from './api/imageApi';
 
 // Preset configurations for image generation
 const IMAGE_PRESETS = [
@@ -174,6 +174,12 @@ const Phase1SessionUI = () => {
         }
     };
 
+    // Helper to format error message with error code
+    const formatErrorMessage = (status: JobStatus): string => {
+        const errorMsg = status.errorMessage || status.error || '外部画像生成に失敗しました';
+        return status.errorCode ? `[${status.errorCode}] ${errorMsg}` : errorMsg;
+    };
+
     // External image generation with Replicate
     const generateExternalImage = async () => {
         try {
@@ -209,9 +215,7 @@ const Phase1SessionUI = () => {
             if (finalStatus.status === 'succeeded' && finalStatus.resultUrl) {
                 setExternalImageUrl(finalStatus.resultUrl);
             } else if (finalStatus.status === 'failed') {
-                const errorMsg = finalStatus.errorMessage || finalStatus.error || '外部画像生成に失敗しました';
-                const detailedMsg = finalStatus.errorCode ? `[${finalStatus.errorCode}] ${errorMsg}` : errorMsg;
-                setError(detailedMsg);
+                setError(formatErrorMessage(finalStatus));
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : '外部画像生成中にエラーが発生しました');
@@ -232,9 +236,6 @@ const Phase1SessionUI = () => {
                 return;
             }
             
-            // Import retryJob function
-            const { retryJob } = await import('./api/imageApi');
-            
             setIsGeneratingExternal(true);
             setExternalJobId(null);
             setExternalImageUrl(null);
@@ -254,9 +255,7 @@ const Phase1SessionUI = () => {
             if (finalStatus.status === 'succeeded' && finalStatus.resultUrl) {
                 setExternalImageUrl(finalStatus.resultUrl);
             } else if (finalStatus.status === 'failed') {
-                const errorMsg = finalStatus.errorMessage || finalStatus.error || '外部画像生成に失敗しました';
-                const detailedMsg = finalStatus.errorCode ? `[${finalStatus.errorCode}] ${errorMsg}` : errorMsg;
-                setError(detailedMsg);
+                setError(formatErrorMessage(finalStatus));
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'リトライ中にエラーが発生しました');

@@ -7,7 +7,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Replicate from 'replicate';
-import { createJob, updateJob, incrementRetryCount } from '../jobStore';
+import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../rateLimiter';
 import { buildPrompt } from '../promptBuilder';
 
@@ -102,10 +102,10 @@ async function runWithTimeout<T>(
   
   try {
     const result = await Promise.race([promise, timeoutPromise]);
-    clearTimeout(timeoutHandle!);
+    clearTimeout(timeoutHandle);
     return result;
   } catch (error) {
-    clearTimeout(timeoutHandle!);
+    clearTimeout(timeoutHandle);
     throw error;
   }
 }
@@ -121,7 +121,7 @@ async function executeGeneration(
   seed: number,
   clientId: string
 ): Promise<string> {
-  const job = await import('../jobStore').then(m => m.getJob(jobId));
+  const job = getJob(jobId);
   if (!job) {
     throw new Error('Job not found');
   }
@@ -331,7 +331,7 @@ export default async function handler(
       } catch (error) {
         console.error(`[Generation] Job ${job.id} failed permanently:`, error);
         
-        const jobData = await import('../jobStore').then(m => m.getJob(job.id));
+        const jobData = getJob(job.id);
         const errorCode = jobData?.errorCode || ERROR_CODES.API_ERROR;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         
