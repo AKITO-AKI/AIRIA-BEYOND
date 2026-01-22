@@ -2,19 +2,39 @@ import React, { useEffect, useState } from 'react';
 import Spiral from './patterns/Spiral';
 import LissajousCurve from './patterns/LissajousCurve';
 import Ripples from './patterns/Ripples';
+import Polyhedron from './patterns/Polyhedron';
+import StringVibration from './patterns/StringVibration';
 
-export type GeometricPatternType = 'spiral' | 'lissajous' | 'ripples' | 'none';
+export type GeometricPatternType = 'spiral' | 'lissajous' | 'ripples' | 'polyhedron' | 'stringVibration' | 'none';
 
 interface GeometricCanvasProps {
   pattern: GeometricPatternType;
   isActive?: boolean;
   triggerRipple?: number;
+  progress?: number; // For polyhedron loading
+  dominantColor?: string; // For polyhedron color
+  audioData?: {
+    bass: number;
+    midLow: number;
+    mid: number;
+    midHigh: number;
+    treble: number;
+  } | null; // For string vibration
+  valence?: number;
+  arousal?: number;
+  onComplete?: () => void; // For polyhedron completion
 }
 
 const GeometricCanvas: React.FC<GeometricCanvasProps> = ({ 
   pattern, 
   isActive = false,
-  triggerRipple 
+  triggerRipple,
+  progress = 0,
+  dominantColor = '#D4AF37',
+  audioData = null,
+  valence = 0,
+  arousal = 0.5,
+  onComplete,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -53,6 +73,22 @@ const GeometricCanvas: React.FC<GeometricCanvasProps> = ({
       {pattern === 'spiral' && <Spiral isActive={isActive} />}
       {pattern === 'lissajous' && <LissajousCurve isActive={isActive} />}
       {pattern === 'ripples' && <Ripples isActive={isActive} triggerRipple={triggerRipple} />}
+      {pattern === 'polyhedron' && (
+        <Polyhedron
+          isActive={isActive}
+          progress={progress}
+          dominantColor={dominantColor}
+          onComplete={onComplete}
+        />
+      )}
+      {pattern === 'stringVibration' && (
+        <StringVibration
+          isActive={isActive}
+          audioData={audioData}
+          valence={valence}
+          arousal={arousal}
+        />
+      )}
     </>
   );
 };

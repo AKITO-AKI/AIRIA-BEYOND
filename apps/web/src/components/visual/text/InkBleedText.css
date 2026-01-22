@@ -1,0 +1,19 @@
+.ink-bleed-text {
+  animation: inkBleed 1.2s cubic-bezier(0.4, 0.0, 0.6, 1) forwards;
+}
+
+@keyframes inkBleed {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(1.1);
+  }
+}
