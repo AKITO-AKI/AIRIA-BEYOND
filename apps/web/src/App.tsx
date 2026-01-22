@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
-import { generateImage, pollJobStatus, retryJob, JobStatus } from './api/imageApi';
+import { 
+  generateImage, 
+  pollJobStatus, 
+  retryJob, 
+  JobStatus,
+  analyzeSession,
+  pollAnalysisJobStatus,
+  AnalysisJobStatus,
+  IntermediateRepresentation
+} from './api/imageApi';
 
 // Preset configurations for image generation
 const IMAGE_PRESETS = [
@@ -43,6 +52,12 @@ const Phase1SessionUI = () => {
     const [selectedStylePreset, setSelectedStylePreset] = useState('abstract-oil');
     const [externalImageUrl, setExternalImageUrl] = useState<string | null>(null);
 
+    // Analysis state (P2)
+    const [analysisJobId, setAnalysisJobId] = useState<string | null>(null);
+    const [analysisJobStatus, setAnalysisJobStatus] = useState<AnalysisJobStatus | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<IntermediateRepresentation | null>(null);
+
     const [sessionData, setSessionData] = useState({
         session_id: '',
         started_at: '',
@@ -53,7 +68,7 @@ const Phase1SessionUI = () => {
         valence: 0,
         arousal: 0,
         focus: 0,
-        motif_tags: [],
+        motif_tags: [] as string[],
         confidence: 0
     });
 
@@ -180,7 +195,66 @@ const Phase1SessionUI = () => {
         return status.errorCode ? `[${status.errorCode}] ${errorMsg}` : errorMsg;
     };
 
-    // External image generation with Replicate
+    // Run analysis before image generation (P2)
+    const runAnalysis = async () => {
+        try {
+            setError(null);
+            setIsAnalyzing(true);
+            setAnalysisJobId(null);
+            setAnalysisJobStatus(null);
+            setAnalysisResult(null);
+
+            console.log('[UI] Starting analysis for session:', sessionData.session_id);
+
+            // Call analysis API
+            const response = await analyzeSession({
+                mood: sessionData.mood_choice,
+                duration: sessionData.duration_sec,
+                timestamp: sessionData.ended_at || new Date().toISOString(),
+            });
+
+            setAnalysisJobId(response.jobId);
+
+            // Poll for status
+            const finalStatus = await pollAnalysisJobStatus(
+                response.jobId,
+                (status) => {
+                    setAnalysisJobStatus(status);
+                }
+            );
+
+            if (finalStatus.status === 'succeeded' && finalStatus.result) {
+                setAnalysisResult(finalStatus.result);
+                
+                // Update session data with IR
+                setSessionData(prev => ({
+                    ...prev,
+                    valence: finalStatus.result!.valence,
+                    arousal: finalStatus.result!.arousal,
+                    focus: finalStatus.result!.focus,
+                    motif_tags: finalStatus.result!.motif_tags,
+                    confidence: finalStatus.result!.confidence,
+                }));
+
+                console.log('[UI] Analysis completed successfully:', finalStatus.result);
+                return finalStatus.result;
+            } else if (finalStatus.status === 'failed') {
+                const errorMsg = finalStatus.errorMessage || finalStatus.error || '分析に失敗しました';
+                setError(`分析エラー: ${errorMsg}`);
+                console.error('[UI] Analysis failed:', errorMsg);
+                return null;
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : '分析中にエラーが発生しました';
+            setError(errorMsg);
+            console.error('[UI] Analysis error:', err);
+            return null;
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    // External image generation with Replicate (now with analysis)
     const generateExternalImage = async () => {
         try {
             setError(null);
@@ -189,7 +263,16 @@ const Phase1SessionUI = () => {
             setExternalJobStatus(null);
             setExternalImageUrl(null);
 
-            // Start generation
+            // First, run analysis to get IR (P2)
+            console.log('[UI] Running analysis before image generation...');
+            const ir = await runAnalysis();
+            
+            if (!ir) {
+                // Analysis failed, but we can still generate with existing session data
+                console.warn('[UI] Analysis failed, using existing session data');
+            }
+
+            // Start image generation with IR data
             const response = await generateImage({
                 mood: sessionData.mood_choice,
                 duration: sessionData.duration_sec,
@@ -434,6 +517,34 @@ const Phase1SessionUI = () => {
                 <section className="external-generation" aria-label="外部画像生成">
                     <h2>外部生成 (Replicate SDXL)</h2>
                     <p className="section-description">高品質なAI画像生成 - 完了まで30-60秒かかります</p>
+                    
+                    {/* Analysis status display (P2) */}
+                    {isAnalyzing && analysisJobStatus && (
+                        <div className="analysis-status" role="status" aria-live="polite">
+                            <div className="spinner"></div>
+                            <p>
+                                🔍 分析中: {
+                                    analysisJobStatus.status === 'queued' ? '待機中...' : 
+                                    analysisJobStatus.status === 'running' ? `実行中... (${analysisJobStatus.provider})` : 
+                                    analysisJobStatus.status
+                                }
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Display analysis result */}
+                    {analysisResult && !isAnalyzing && (
+                        <div className="analysis-result">
+                            <h3>📊 分析結果</h3>
+                            <div className="analysis-details">
+                                <p><strong>感情価:</strong> {analysisResult.valence.toFixed(2)} (-1～+1)</p>
+                                <p><strong>興奮度:</strong> {analysisResult.arousal.toFixed(2)} (0～1)</p>
+                                <p><strong>集中度:</strong> {analysisResult.focus.toFixed(2)} (0～1)</p>
+                                <p><strong>モチーフ:</strong> {analysisResult.motif_tags.join(', ')}</p>
+                                <p><strong>確信度:</strong> {(analysisResult.confidence * 100).toFixed(0)}%</p>
+                            </div>
+                        </div>
+                    )}
                     
                     <div className="control-group">
                         <label htmlFor="style-preset-select">スタイルプリセット</label>
