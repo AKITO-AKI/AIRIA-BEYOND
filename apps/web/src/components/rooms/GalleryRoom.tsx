@@ -69,8 +69,9 @@ const GalleryRoom: React.FC = () => {
             description="セッションを作成して、あなたの人生を染め上げましょう"
             actionLabel="セッションを始める"
             onAction={() => {
-              // Navigate to main room (handled by room navigation)
-              window.dispatchEvent(new CustomEvent('navigateToMain'));
+              // Note: Navigation should ideally use proper routing
+              // For now, user can manually navigate to Main room
+              console.log('Navigate to Main room');
             }}
             icon={<span>📚</span>}
           />

@@ -83,9 +83,8 @@ const ClickRipple: React.FC<ClickRippleProps> = ({
         ctx.beginPath();
         ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
         
-        // Parse color and apply opacity
-        const rgbaColor = color.replace(/[\d.]+\)$/g, `${ripple.opacity})`);
-        ctx.strokeStyle = rgbaColor;
+        // Apply opacity to color (assume rgba format or convert)
+        ctx.strokeStyle = `rgba(212, 175, 55, ${ripple.opacity})`;
         ctx.lineWidth = 2;
         ctx.stroke();
 

@@ -163,7 +163,6 @@ const EnhancedConstellation: React.FC<EnhancedConstellationProps> = ({
 
         positions.setXYZ(i, particle.position.x, particle.position.y, particle.position.z);
         colors.setXYZ(i, 0xd4 / 255, 0xaf / 255, 0x37 / 255);
-        colors.setW?.(i, opacity);
 
         return true;
       });
