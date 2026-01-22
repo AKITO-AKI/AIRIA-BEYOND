@@ -63,6 +63,9 @@ const Book3D: React.FC<Book3DProps> = ({
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
     
+    // Create texture first
+    const texture = new THREE.CanvasTexture(canvas);
+    
     if (ctx) {
       // Background color
       ctx.fillStyle = spineColor;
@@ -93,7 +96,6 @@ const Book3D: React.FC<Book3DProps> = ({
       };
     }
     
-    const texture = new THREE.CanvasTexture(canvas);
     return texture;
   }, [album.imageDataURL, spineColor, album.metadata?.provider]);
 

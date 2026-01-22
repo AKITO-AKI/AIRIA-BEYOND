@@ -93,6 +93,8 @@ const Constellation: React.FC<ConstellationProps> = ({
         vertexColors
         transparent
         opacity={0.5}
+        // Note: linewidth is not widely supported in WebGL and will default to 1 on most systems
+        // For thicker lines, consider using cylinder geometries or instanced meshes in future
         linewidth={2}
         blending={THREE.AdditiveBlending}
       />
