@@ -4,8 +4,8 @@
  */
 
 import OpenAI from 'openai';
-import { IntermediateRepresentationSchema } from './types';
-import { trackUsage } from './lib/usage-tracker';
+import { IntermediateRepresentationSchema } from './types.js';
+import { trackUsage } from './lib/usage-tracker.js';
 
 // System prompt for LLM
 const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。セッションデータから感情と芸術的な中間表現を生成します。

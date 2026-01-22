@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUsage, getJobs, deleteJobs } from '../controllers/admin.js';
+import { getUsage, getJobs } from '../controllers/admin.js';
 
 const router = express.Router();
 
@@ -23,6 +23,6 @@ router.get('/usage', authMiddleware, getUsage);
 
 router.get('/jobs', authMiddleware, getJobs);
 
-router.delete('/jobs', authMiddleware, deleteJobs);
+router.delete('/jobs', authMiddleware, getJobs);
 
 export default router;
