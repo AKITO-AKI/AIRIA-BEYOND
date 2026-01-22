@@ -1,1 +1,1 @@
-{"name":"core-types","version":"1.0.0","scripts":{"dev":"echo \"TODO: add dev script\"","build":"echo \"TODO: add build script\"","lint":"echo \"TODO: add lint script\"","format":"echo \"TODO: add format script\""}}
+{"name":"core-types","version":"1.0.0","main":"index.js","scripts":{"dev":"// dev script here","build":"// build script here","lint":"// lint script here","format":"// format script here"}}
