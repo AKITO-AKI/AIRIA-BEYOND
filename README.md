@@ -271,13 +271,48 @@ This serves the production build locally for testing.
 
 **User Experience**: Get AI-powered emotional insights before image generation! The system analyzes your session and displays artistic interpretation with classical music vocabulary, then generates images that reflect your analyzed emotional state.
 
+### Phase P3: Full Image Generation Pipeline (NEW! 🎉)
+- **Enhanced Prompt Generation from IR**:
+  - Valence (-1 to +1) → atmosphere keywords (dark/bright, melancholic/uplifting)
+  - Arousal (0 to 1) → energy keywords (calm/intense, peaceful/dynamic)
+  - Focus (0 to 1) → composition clarity (diffuse/sharp, ethereal/crisp)
+  - Automatic translation of Japanese motif tags to English for SDXL
+  - Rich classical aesthetic vocabulary integration
+
+- **Auto-Style Preset Selection**:
+  - Intelligent style choice based on valence/arousal values
+  - Low arousal + positive valence → watercolor (calm, soft)
+  - High arousal → romantic landscape (dramatic, intense)
+  - Customizable manual selection available
+
+- **Updated Style Presets**:
+  - **油絵** (Oil Painting): Thick brushstrokes, rich texture, classical
+  - **水彩画** (Watercolor): Soft edges, translucent layers, delicate
+  - **印象派** (Impressionism): Light-focused, natural scenery, atmospheric
+  - **抽象ミニマル** (Abstract Minimal): Monochrome gradient, geometric calm
+  - **ロマン派風景** (Romantic Landscape): Dramatic sky, sublime nature
+
+- **Enhanced Album System**:
+  - Full metadata storage: IR data, generation parameters, style, seed, provider
+  - Beautiful organized metadata display in Album view
+  - Provider badges in Gallery (AI / ローカル)
+  - Regenerate function: same parameters, new seed for variations
+
+- **Progress Flow Visualization**:
+  - 3-step visual indicator: 解析中 → 画像生成中 → 完了
+  - Animated states with pulse effects
+  - Clear feedback through entire pipeline
+
+- **Complete Pipeline Integration**:
+  - Session → Analysis (P2) → Prompt (P3) → Image (P0/P1) → Album → Gallery
+  - Seamless metadata flow through all stages
+  - Fallback to local generation on failures
+
+**User Experience**: Complete journey from session to gallery! Create sessions, watch AI analyze your emotions, generate beautiful classical-style art, save to albums with full metadata, and explore your emotional collection in the 3D gallery bookshelf. Regenerate variations with a single click!
+
 ### Phase P0: External Image Generation (Replicate SDXL)
 - High-quality AI image generation using Replicate's SDXL model
-- Style presets for classic aesthetics:
-  - **抽象油絵** (Abstract Oil Painting): Thick brushstrokes, rich textures
-  - **印象派風景** (Impressionist Landscape): Soft brushwork, natural light
-  - **ロマン派風景** (Romantic Landscape): Dramatic sky, sublime nature
-  - **ミニマル抽象** (Minimal Abstract): Monochromatic, geometric shapes
+- Style presets for classic aesthetics (see P3 for updated presets)
 - Automatic prompt generation from session IR data (mood, duration, tags)
 - Asynchronous job processing with real-time status updates
 - Fallback to local generation when API token is not configured
@@ -340,21 +375,42 @@ The onboarding data is stored locally and can be used to personalize your sessio
    - View the preview on screen
    - Click "Download PNG" to save the generated image
 
-5. **Generate with external AI (Replicate SDXL):**
-   - Select a style preset (抽象油絵, 印象派風景, etc.)
+5. **Generate with external AI (Replicate SDXL) - P3 Enhanced:**
+   - Select a style preset (油絵, 水彩画, 印象派, etc.) or let auto-select based on your mood
    - Click "外部生成(Replicate)" to generate a high-quality AI image
-   - Watch the status: "生成待機中..." → "生成中... (replicate)"
+   - **Watch the progress flow:**
+     - Step 1: "解析中..." - AI analyzes your session (2-5 seconds)
+     - See your emotional analysis (valence, arousal, focus, motif tags)
+     - Step 2: "画像生成中..." - Replicate SDXL generates image (30-60 seconds)
+     - Step 3: "完了" - Generation complete!
    - View retry count if automatic retries occur
    - Wait 30-60 seconds for generation to complete
    - If it fails:
      - Click "🔄 再試行" to manually retry
      - Or click "🎨 ローカル生成に切り替え" to use local generation
-   - View the result and save to album
+   - Click "📚 アルバムに保存" to save to album with full metadata
    - Note: Requires `REPLICATE_API_TOKEN` to be set in `.env`
 
-The generated PNG is deterministic - generating from the same session data (including seed) will always produce the same image.
+6. **View your albums in Gallery:**
+   - Navigate to Gallery room
+   - See your saved images as 3D book spines
+   - Notice "AI" or "ローカル" badges showing generation method
+   - Hover over books to see metadata tooltip
+   - Click a book to view full details in Album room
+
+7. **Album details and regeneration:**
+   - In Album room, view organized metadata:
+     - Basic info (mood, duration, creation date)
+     - Emotional analysis (valence, arousal, focus, motifs, confidence)
+     - Generation parameters (style, seed, provider)
+   - For AI-generated images, click "🔄 再生成 (新しいシード)" to create a variation
+   - New variation saved as separate album with new seed
+
+The generated images reflect your emotional state through intelligent prompt generation combining mood, analysis results, and classical aesthetic vocabulary.
 
 ## Project Status
+
+**Phase P3 (Prototype)**: ✅ Full image generation pipeline complete - Enhanced prompt generation from IR, auto-style selection, complete album system with metadata, gallery integration, regeneration, and visual progress flow.
 
 **Phase P2 (Prototype)**: ✅ LLM-based analysis complete - OpenAI integration, intermediate representation generation, rule-based fallback, JSON validation, and beautiful UI display of emotional insights.
 
@@ -374,14 +430,37 @@ The generated PNG is deterministic - generating from the same session data (incl
 
 ### Running Tests
 
-See `TESTING.md` for comprehensive test scenarios covering:
-- Normal generation flow
-- Automatic retry on transient errors
-- Permanent failure handling
-- Timeout scenarios
-- Manual retry
-- Fallback to local generation
-- Error code validation
+See `TESTING.md` for comprehensive test scenarios covering P0/P1/P2.
+
+See `P3_IMPLEMENTATION.md` for P3 feature documentation and examples.
+
+### P3 Test Scenarios
+
+1. **End-to-End Flow:**
+   - Create session → Watch analysis → See IR results → Image generation → Save to album → View in gallery → Open album details
+   
+2. **Auto-Style Selection:**
+   - Create sessions with different moods
+   - Observe different style auto-selection based on emotional analysis
+   
+3. **Progress Flow:**
+   - Watch 3-step progress indicator during generation
+   - Verify animated states and completion markers
+
+4. **Album Metadata:**
+   - Save album and verify all metadata is stored
+   - Check IR values, style preset, seed, provider
+   
+5. **Gallery Features:**
+   - Verify provider badges appear on book spines
+   - Hover to see metadata tooltips
+   
+6. **Regeneration:**
+   - Open AI-generated album
+   - Click regenerate button
+   - Verify new album created with same style but different seed
+
+### Quick Test
 - Admin endpoints
 
 ### Quick Test

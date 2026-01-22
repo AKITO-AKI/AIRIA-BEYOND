@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { generateImage, pollJobStatus } from '../../api/imageApi';
+import { MAX_SEED } from '../../utils/prng';
 import './AlbumRoom.css';
 
 const AlbumRoom: React.FC = () => {
@@ -10,6 +11,7 @@ const AlbumRoom: React.FC = () => {
   // P3: Regenerate state
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const [regenerateSuccess, setRegenerateSuccess] = useState(false);
 
   const handleBackToGallery = () => {
     selectAlbum(null);
@@ -25,9 +27,10 @@ const AlbumRoom: React.FC = () => {
     try {
       setIsRegenerating(true);
       setRegenerateError(null);
+      setRegenerateSuccess(false);
 
-      // Generate new seed
-      const newSeed = Math.floor(Math.random() * 1000000);
+      // Generate new seed (consistent with session seed generation)
+      const newSeed = Math.floor(Math.random() * MAX_SEED);
 
       // Call image generation with same params but new seed
       const response = await generateImage({
@@ -61,7 +64,8 @@ const AlbumRoom: React.FC = () => {
         });
         
         // Show success message
-        alert('再生成が完了しました！Galleryで新しいアルバムを確認できます。');
+        setRegenerateSuccess(true);
+        setTimeout(() => setRegenerateSuccess(false), 3000);
       } else {
         throw new Error(finalStatus.errorMessage || '再生成に失敗しました');
       }
@@ -236,6 +240,11 @@ const AlbumRoom: React.FC = () => {
                   >
                     {isRegenerating ? '再生成中...' : '🔄 再生成 (新しいシード)'}
                   </button>
+                  {regenerateSuccess && (
+                    <div className="regenerate-success">
+                      ✓ 再生成が完了しました！Galleryで新しいアルバムを確認できます。
+                    </div>
+                  )}
                   {regenerateError && (
                     <div className="regenerate-error">{regenerateError}</div>
                   )}

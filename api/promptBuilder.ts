@@ -131,10 +131,17 @@ function getComplexityDescriptor(durationSec: number): string {
  * Auto-select style preset based on valence and arousal
  * This provides intelligent defaults when user doesn't select manually
  */
+
+// Thresholds for auto-style selection
+const AROUSAL_LOW_THRESHOLD = 0.4;
+const AROUSAL_HIGH_THRESHOLD = 0.6;
+const VALENCE_POSITIVE_THRESHOLD = 0.3;
+const VALENCE_NEUTRAL_THRESHOLD = 0.2;
+
 export function autoSelectStylePreset(valence: number, arousal: number): string {
   // Low arousal + neutral/positive valence → watercolor or abstract-minimal
-  if (arousal < 0.4) {
-    if (valence > 0.3) {
+  if (arousal < AROUSAL_LOW_THRESHOLD) {
+    if (valence > VALENCE_POSITIVE_THRESHOLD) {
       return 'watercolor'; // calm, positive → soft watercolor
     } else {
       return 'abstract-minimal'; // calm, neutral/negative → minimal abstract
@@ -142,12 +149,12 @@ export function autoSelectStylePreset(valence: number, arousal: number): string 
   }
   
   // High arousal → romantic-landscape
-  if (arousal > 0.6) {
+  if (arousal > AROUSAL_HIGH_THRESHOLD) {
     return 'romantic-landscape'; // intense, dramatic
   }
   
   // Mid-range arousal
-  if (valence > 0.2) {
+  if (valence > VALENCE_NEUTRAL_THRESHOLD) {
     return 'impressionism'; // moderate energy, positive → impressionist
   } else {
     return 'oil-painting'; // moderate energy, neutral/negative → oil painting

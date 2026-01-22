@@ -2,6 +2,18 @@ import React from 'react';
 import { useAlbums, Album } from '../../contexts/AlbumContext';
 import './GalleryRoom.css';
 
+// P3: Provider label mapping utility
+const getProviderLabel = (provider?: string): string => {
+  if (!provider) return '';
+  return provider === 'replicate' ? 'AI生成' : 'ローカル';
+};
+
+// P3: Provider badge display
+const getProviderBadge = (provider?: string): string => {
+  if (!provider) return '';
+  return provider === 'replicate' ? 'AI' : 'ローカル';
+};
+
 const GalleryRoom: React.FC = () => {
   const { albums, selectAlbum } = useAlbums();
 
@@ -22,8 +34,7 @@ const GalleryRoom: React.FC = () => {
         parts.push(`Style: ${album.metadata.stylePreset}`);
       }
       if (album.metadata.provider) {
-        const providerLabel = album.metadata.provider === 'replicate' ? 'AI生成' : 'ローカル';
-        parts.push(providerLabel);
+        parts.push(getProviderLabel(album.metadata.provider));
       }
     }
     
@@ -69,7 +80,7 @@ const GalleryRoom: React.FC = () => {
                   {/* P3: Show provider badge */}
                   {album.metadata?.provider && (
                     <div className="book-spine-badge">
-                      {album.metadata.provider === 'replicate' ? 'AI' : 'ローカル'}
+                      {getProviderBadge(album.metadata.provider)}
                     </div>
                   )}
                 </div>
