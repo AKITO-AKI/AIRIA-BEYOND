@@ -10,6 +10,7 @@ import Replicate from 'replicate';
 import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
 import { buildPrompt } from '../promptBuilder';
+import { trackUsage } from '../lib/usage-tracker';
 
 // SDXL model on Replicate
 const SDXL_MODEL = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b';
@@ -161,6 +162,13 @@ async function executeGeneration(
       if (!resultUrl || typeof resultUrl !== 'string') {
         throw new Error('Invalid result from Replicate');
       }
+      
+      // Track API usage cost (approximate cost per image)
+      trackUsage('replicate', 0.0055, 'sdxl-image-generation', { 
+        model: SDXL_MODEL,
+        jobId,
+        attempt: attempt + 1
+      });
       
       console.log(`[Generation] Job ${jobId} succeeded on attempt ${attempt + 1}`);
       return resultUrl;
