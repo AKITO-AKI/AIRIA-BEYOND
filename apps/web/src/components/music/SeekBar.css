@@ -1,0 +1,70 @@
+.seek-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 0;
+}
+
+.seek-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+.seek-time.current {
+  text-align: right;
+}
+
+.seek-time.total {
+  text-align: left;
+}
+
+.seek-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: height 0.2s ease;
+}
+
+.seek-track:hover {
+  height: 6px;
+}
+
+.seek-progress {
+  height: 100%;
+  border-radius: 2px;
+  position: relative;
+  transition: width 0.1s linear;
+}
+
+.seek-thumb {
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.seek-track:hover .seek-thumb {
+  opacity: 1;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .seek-track,
+  .seek-progress,
+  .seek-thumb {
+    transition: none;
+  }
+}

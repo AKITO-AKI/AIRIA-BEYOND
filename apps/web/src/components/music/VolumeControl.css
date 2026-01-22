@@ -1,0 +1,89 @@
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume-control.expanded {
+  gap: 12px;
+}
+
+.volume-icon {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  padding: 0;
+}
+
+.volume-icon:hover {
+  transform: scale(1.1);
+}
+
+.volume-icon:active {
+  transform: scale(0.95);
+}
+
+.volume-slider {
+  width: 100px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: height 0.2s ease;
+}
+
+.volume-control.expanded .volume-slider {
+  width: 200px;
+}
+
+.volume-slider:hover {
+  height: 6px;
+}
+
+.volume-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(74, 144, 226, 0.8), rgba(74, 144, 226, 1));
+  border-radius: 2px;
+  position: relative;
+  transition: width 0.1s linear;
+}
+
+.volume-thumb {
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.volume-slider:hover .volume-thumb {
+  opacity: 1;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .volume-icon,
+  .volume-icon:hover,
+  .volume-icon:active,
+  .volume-slider,
+  .volume-fill,
+  .volume-thumb {
+    transition: none;
+    transform: none;
+  }
+}
