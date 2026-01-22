@@ -4,152 +4,152 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(255, 255, 255, 0.98);
+  background: radial-gradient(circle at center, #FFFFFF, #FAFAFA);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 9999;
   cursor: pointer;
-  animation: splashFadeIn 0.3s ease-in;
+  animation: fadeIn 3s ease-in-out;
 }
 
-.splash-screen-fade-out {
-  animation: splashFadeOut 0.3s ease-out forwards;
-}
-
-@keyframes splashFadeIn {
+@keyframes fadeIn {
   from {
     opacity: 0;
+    background: #000;
   }
   to {
     opacity: 1;
-  }
-}
-
-@keyframes splashFadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
   }
 }
 
 .splash-content {
   text-align: center;
   position: relative;
-  padding: 40px;
 }
 
-.splash-spectrum-bg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  height: 200px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 8px;
-  opacity: 0.3;
-  z-index: 0;
+/* Golden spiral canvas */
+.golden-spiral-canvas {
+  display: block;
+  margin: 0 auto 40px;
+  opacity: 0;
+  animation: spiralFadeIn 2s ease-in-out forwards;
 }
 
-.spectrum-bar {
-  width: 40px;
-  background: linear-gradient(180deg, 
-    rgba(74, 144, 226, 0.8), 
-    rgba(160, 179, 214, 0.6),
-    rgba(74, 144, 226, 0.4)
-  );
-  border-radius: 4px 4px 0 0;
-  animation: spectrumPulse 1.5s ease-in-out infinite;
-  transform-origin: bottom;
-}
-
-@keyframes spectrumPulse {
-  0%, 100% {
-    height: 40px;
-    opacity: 0.4;
+@keyframes spiralFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
   }
-  50% {
-    height: 120px;
-    opacity: 0.8;
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-.splash-logo {
-  font-size: clamp(36px, 8vw, 64px);
+/* Title with calligraphy effect */
+.splash-title {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 48px;
+  font-weight: 400;
+  color: #1A1A1A;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.1em;
+}
+
+.splash-char {
+  opacity: 0;
+  animation: charAppear 0.8s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+@keyframes charAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Subtitle */
+.splash-subtitle {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 18px;
   font-weight: 300;
-  letter-spacing: 8px;
-  margin: 0 0 16px 0;
-  color: rgba(0, 0, 0, 0.9);
-  position: relative;
-  z-index: 1;
-  background: linear-gradient(135deg, 
-    rgba(0, 0, 0, 0.9) 0%, 
-    rgba(74, 144, 226, 0.8) 50%, 
-    rgba(0, 0, 0, 0.9) 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: logoShimmer 3s ease-in-out infinite;
-  background-size: 200% auto;
-}
-
-@keyframes logoShimmer {
-  0%, 100% {
-    background-position: 0% center;
-  }
-  50% {
-    background-position: 100% center;
-  }
-}
-
-.splash-tagline {
-  font-size: clamp(14px, 3vw, 18px);
-  color: rgba(0, 0, 0, 0.5);
+  color: #1A1A1A;
   margin: 0;
-  letter-spacing: 2px;
-  font-weight: 300;
-  position: relative;
-  z-index: 1;
+  opacity: 0;
 }
 
-/* Accessibility */
+.splash-subtitle {
+  animation: subtitleAppear 1s ease-in-out 5s forwards;
+}
+
+@keyframes subtitleAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+}
+
+/* Phase-based animations */
+.splash-fade-out {
+  animation: fadeOut 2s ease-in-out forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.splash-screen-fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+  .splash-title {
+    font-size: 32px;
+  }
+  
+  .splash-subtitle {
+    font-size: 14px;
+  }
+  
+  .golden-spiral-canvas {
+    width: 200px !important;
+    height: 200px !important;
+  }
+}
+
+/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   .splash-screen,
-  .splash-screen-fade-out {
-    animation: none;
+  .splash-char,
+  .splash-subtitle,
+  .golden-spiral-canvas {
+    animation: none !important;
   }
   
-  .splash-logo {
-    animation: none;
-    background: rgba(0, 0, 0, 0.9);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  .splash-screen {
+    opacity: 1;
   }
   
-  .spectrum-bar {
-    animation: none;
-    height: 60px;
-  }
-}
-
-@media (max-width: 480px) {
-  .splash-spectrum-bg {
-    width: 300px;
-    height: 150px;
-  }
-  
-  .spectrum-bar {
-    width: 30px;
-  }
-  
-  .splash-logo {
-    letter-spacing: 4px;
+  .splash-char,
+  .splash-subtitle,
+  .golden-spiral-canvas {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

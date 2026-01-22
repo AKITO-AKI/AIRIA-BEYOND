@@ -1,16 +1,30 @@
 :root {
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
-    --bg-primary: #0b0f17;
-    --bg-secondary: #0e1524;
-    --bg-tertiary: #1a2235;
-    --border-color: #2a395f;
-    --text-primary: #e7eefc;
-    --text-secondary: #a0b3d6;
+    /* C-1: Updated color system for classical visual metaphors */
+    font-family: 'Noto Sans JP', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    
+    /* Base colors - white background with dynamic tinting */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #FAFAFA;
+    --bg-tertiary: #F5F5F5;
+    --border-color: rgba(0, 0, 0, 0.1);
+    
+    /* Text colors - soft black */
+    --text-primary: #1A1A1A;
+    --text-secondary: rgba(0, 0, 0, 0.6);
+    
+    /* Accent colors */
     --accent-primary: #4a90e2;
     --accent-hover: #5ba3f5;
-    --accent-success: #4caf50;
-    --accent-danger: #f44336;
-    --shadow: rgba(0, 0, 0, 0.3);
+    
+    /* System colors - pale and elegant */
+    --accent-success: #F4E5C2; /* Pale gold */
+    --accent-danger: #D4C5B9; /* Pale sepia */
+    --accent-processing: #E8E8E8; /* Pale silver */
+    
+    /* Gold accent for geometric patterns */
+    --gold: #D4AF37;
+    
+    --shadow: rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -20,7 +34,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
@@ -71,11 +85,12 @@ main {
 }
 
 section {
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 25px;
-    box-shadow: 0 4px 6px var(--shadow);
+    box-shadow: 0 4px 12px var(--shadow);
+    backdrop-filter: blur(10px);
 }
 
 @media (max-width: 767px) {

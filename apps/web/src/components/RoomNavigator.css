@@ -56,6 +56,7 @@
   width: 100%;
   will-change: transform;
   cursor: grab;
+  transition: transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .rooms-container:active {

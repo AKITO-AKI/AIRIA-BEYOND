@@ -10,7 +10,13 @@
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tone": "^15.1.22"
+    "tone": "^15.1.22",
+    "three": "^0.160.0",
+    "@react-three/fiber": "^8.15.0",
+    "@react-three/drei": "^9.92.0",
+    "gsap": "^3.12.0",
+    "framer-motion": "^10.16.0",
+    "node-vibrant": "^3.2.1-alpha.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
