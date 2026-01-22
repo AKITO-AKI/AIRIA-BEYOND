@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './utils/canvasRenderer';
 import { MAX_SEED } from './utils/prng';
+import { useAlbums } from './contexts/AlbumContext';
 
 // Preset configurations for image generation
 const IMAGE_PRESETS = [
@@ -14,6 +15,7 @@ const IMAGE_PRESETS = [
 const IMAGE_GENERATION_DELAY_MS = 100;
 
 const Phase1SessionUI = () => {
+    const { addAlbum } = useAlbums();
     const [mood, setMood] = useState('穏やか');
     const [duration, setDuration] = useState(30);
     const [isRunning, setIsRunning] = useState(false);
@@ -23,6 +25,7 @@ const Phase1SessionUI = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedPreset, setSelectedPreset] = useState(0);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     const [sessionData, setSessionData] = useState({
         session_id: '',
@@ -128,6 +131,31 @@ const Phase1SessionUI = () => {
         }
     };
 
+    const saveToAlbum = () => {
+        try {
+            setError(null);
+            setSaveSuccess(false);
+            
+            if (!previewImageURL) {
+                setError('画像を先に生成してください');
+                return;
+            }
+
+            addAlbum({
+                mood: sessionData.mood_choice,
+                duration: sessionData.duration_sec,
+                imageDataURL: previewImageURL,
+                sessionData: sessionData,
+            });
+
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err) {
+            setError('アルバムへの保存中にエラーが発生しました');
+            console.error(err);
+        }
+    };
+
     return (
         <div className="app-container">
             <header>
@@ -138,6 +166,12 @@ const Phase1SessionUI = () => {
             {error && (
                 <div className="error-message" role="alert" aria-live="polite">
                     ⚠️ {error}
+                </div>
+            )}
+
+            {saveSuccess && (
+                <div className="success-message" role="alert" aria-live="polite">
+                    ✓ アルバムに保存しました！ Galleryルームで確認できます。
                 </div>
             )}
 
@@ -240,13 +274,22 @@ const Phase1SessionUI = () => {
                             {isGenerating ? '⏳ 生成中...' : '🎨 PNG生成'}
                         </button>
                         {previewImageURL && (
-                            <button 
-                                onClick={downloadPNG}
-                                className="btn btn-success"
-                                aria-label="PNGダウンロード"
-                            >
-                                💾 PNGダウンロード
-                            </button>
+                            <>
+                                <button 
+                                    onClick={downloadPNG}
+                                    className="btn btn-success"
+                                    aria-label="PNGダウンロード"
+                                >
+                                    💾 PNGダウンロード
+                                </button>
+                                <button 
+                                    onClick={saveToAlbum}
+                                    className="btn btn-primary"
+                                    aria-label="アルバムに保存"
+                                >
+                                    📚 アルバムに保存
+                                </button>
+                            </>
                         )}
                     </div>
 
