@@ -34,6 +34,7 @@ export interface IntermediateRepresentation {
     dynamics?: string;
     harmony?: string;
   };
+  reasoning?: string; // P5: LLM's explanation of why these values were chosen
 }
 
 /**
@@ -52,6 +53,7 @@ export const IntermediateRepresentationSchema = z.object({
       harmony: z.string().optional(),
     })
     .optional(),
+  reasoning: z.string().optional(), // P5: reasoning for causal logging
 });
 
 /**
@@ -101,6 +103,7 @@ export interface MusicStructure {
   sections: MusicSection[];
   instrumentation: string; // e.g., "piano"
   character: string; // e.g., "melancholic and introspective"
+  reasoning?: string; // P5: LLM's explanation of musical choices
 }
 
 export interface MusicSection {

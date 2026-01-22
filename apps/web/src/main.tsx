@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AlbumProvider, useAlbums } from './contexts/AlbumContext';
+import { CausalLogProvider } from './contexts/CausalLogContext';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import MainRoom from './components/rooms/MainRoom';
@@ -9,6 +10,7 @@ import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
 import SplashScreen from './components/SplashScreen';
 import MiniPlayer from './components/MiniPlayer';
+import DebugPanel from './components/DebugPanel';
 import './styles.css';
 
 const rooms = [
@@ -32,6 +34,8 @@ const AppContent = () => {
           <RoomNavigator rooms={rooms} initialRoom="main" />
           {/* P4: Pass selected album to MiniPlayer for music playback */}
           <MiniPlayer album={selectedAlbum || undefined} />
+          {/* P5: Debug panel for developers */}
+          <DebugPanel />
         </>
       )}
     </>
@@ -41,9 +45,11 @@ const AppContent = () => {
 const App = () => {
   return (
     <React.StrictMode>
-      <AlbumProvider>
-        <AppContent />
-      </AlbumProvider>
+      <CausalLogProvider>
+        <AlbumProvider>
+          <AppContent />
+        </AlbumProvider>
+      </CausalLogProvider>
     </React.StrictMode>
   );
 };

@@ -21,7 +21,8 @@ const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。
     "tempo": <テンポの文字列 (optional)>,
     "dynamics": <強弱の文字列 (optional)>,
     "harmony": <和声の文字列 (optional)>
-  }
+  },
+  "reasoning": <この分析結果を選んだ理由を簡潔に説明する文字列>
 }
 
 ## motif_tagsの語彙例（クラシック音楽・絵画のテーマ）
@@ -55,7 +56,8 @@ const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。
     "tempo": "Adagio",
     "dynamics": "piano",
     "harmony": "consonant"
-  }
+  },
+  "reasoning": "ユーザーの「穏やか」な気分から、快適で落ち着いた感情（高いvalence、低いarousal）を検出しました。静かな水面や薄明のモチーフで、内省的な雰囲気を表現します。"
 }
 
 入力: { mood: "不安", duration: 45, freeText: "今日は心配事が多い" }
@@ -70,7 +72,8 @@ const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。
     "tempo": "Allegro agitato",
     "dynamics": "forte",
     "harmony": "dissonant"
-  }
+  },
+  "reasoning": "「不安」と「心配事」から、不快で活発な感情（低いvalence、高めのarousal）を分析しました。嵐や緊張のモチーフで、不安定な心理状態を音楽的に表現します。"
 }`;
 
 /**
