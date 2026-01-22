@@ -10,7 +10,7 @@ export function initSentry() {
     return;
   }
   
-  // Use Function constructor to create dynamic import that won't be parsed at build time
+  // Use Function constructor to create dynamic import that won't be bundled at build time
   try {
     const importSentry = new Function('return import("@sentry/react")');
     importSentry()

@@ -22,9 +22,9 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
     
-    // Try to send to Sentry if available - using eval to avoid bundler parsing
+    // Try to send to Sentry if available - using Function constructor to avoid bundler issues
     try {
-      // Use Function constructor to create dynamic import that won't be parsed at build time
+      // Use Function constructor to create dynamic import that won't be bundled at build time
       const importSentry = new Function('return import("@sentry/react")');
       importSentry()
         .then((Sentry: any) => {

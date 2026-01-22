@@ -11,3 +11,7 @@ dist/
 
 # Vercel
 .vercel
+
+# Test files in root
+/test-*.js
+/test-*.ts
