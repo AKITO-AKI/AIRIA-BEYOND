@@ -79,7 +79,15 @@ export class MIDIPlayer {
   }
 
   /**
-   * Parse MIDI bytes to Tone.js note events (simplified)
+   * Parse MIDI bytes to Tone.js note events
+   * 
+   * NOTE: This is a simplified implementation for the prototype phase.
+   * For full production use, integrate a proper MIDI parser library
+   * like @tonejs/midi or midi-parser-js to handle all MIDI file formats.
+   * 
+   * Current limitation: Generates a placeholder melody instead of parsing
+   * the actual MIDI file structure. The MIDI data from our generator should
+   * be parseable, but for the prototype we use this fallback.
    */
   private parseMIDIToNotes(bytes: Uint8Array): Array<{
     time: string;
@@ -87,10 +95,9 @@ export class MIDIPlayer {
     duration: string;
     velocity: number;
   }> {
-    // For prototype, we'll create a simple melody
-    // In production, we'd properly parse the MIDI file
+    // Simplified placeholder for prototype
+    // TODO: Implement proper MIDI parsing for production
     
-    // This is a simplified placeholder - actual MIDI parsing would be more complex
     const notes: Array<{
       time: string;
       name: string;
@@ -99,6 +106,7 @@ export class MIDIPlayer {
     }> = [];
 
     // Generate simple C major scale as fallback
+    // In production, this should parse the MIDI file structure
     const scale = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
     let currentTime = 0;
 
@@ -164,12 +172,11 @@ export class MIDIPlayer {
     // Start progress tracking
     this.startProgressTracking();
 
-    // Set up end callback
-    const endTime = Tone.now() + this.duration;
+    // Set up end callback using transport time
     Tone.getTransport().schedule(() => {
       this.stop();
       this.options.onEnd?.();
-    }, endTime);
+    }, `+${this.duration}`);
   }
 
   /**

@@ -103,10 +103,10 @@ function convertSectionToMIDI(
   const { chordProgression, melody, dynamics } = section;
   const velocity = DYNAMICS_MAP[dynamics] || 90;
 
-  // Simple approach: alternate between chords and melody
-  // In a real implementation, we'd layer them properly
-
-  const beatsPerMeasure = 4; // Simplified, should parse from time signature
+  // Parse time signature to get beats per measure (simplified - assumes denominator is quarter note)
+  // For prototype, we'll use 4 as default but this should be enhanced
+  const beatsPerMeasure = 4; // TODO: Parse from section or structure time signature
+  
   let currentBeat = 0;
 
   // Process each measure
@@ -188,14 +188,21 @@ function addMotifToTrack(
 }
 
 /**
- * Convert numeric duration to MIDI duration string
+ * Convert numeric duration (in beats) to MIDI duration string
+ * Handles common musical durations with reasonable precision
  */
 function getDurationString(beats: number): string {
-  if (beats >= 4) return '1';      // Whole note
-  if (beats >= 2) return '2';      // Half note
-  if (beats >= 1) return '4';      // Quarter note
-  if (beats >= 0.5) return '8';    // Eighth note
-  return '16';                      // Sixteenth note
+  // Map common beat durations to MIDI notation
+  // Using threshold-based mapping for flexibility
+  if (beats >= 3.5) return '1';      // Whole note (4 beats)
+  if (beats >= 1.75) return '2';     // Half note (2 beats)
+  if (beats >= 1.25) return '2n.';   // Dotted half (3 beats)
+  if (beats >= 0.875) return '4';    // Quarter note (1 beat)
+  if (beats >= 0.625) return '4n.';  // Dotted quarter (1.5 beats)
+  if (beats >= 0.4375) return '8';   // Eighth note (0.5 beats)
+  if (beats >= 0.3125) return '8n.'; // Dotted eighth (0.75 beats)
+  if (beats >= 0.21875) return '16'; // Sixteenth note (0.25 beats)
+  return '16';                        // Default to sixteenth
 }
 
 /**
