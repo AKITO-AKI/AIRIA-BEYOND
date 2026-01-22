@@ -14,6 +14,14 @@ import { buildPrompt } from '../promptBuilder';
 // SDXL model on Replicate
 const SDXL_MODEL = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b';
 
+// SDXL generation parameters
+const SDXL_PARAMS = {
+  width: 1024,
+  height: 1024,
+  num_inference_steps: 25,
+  guidance_scale: 7.5,
+} as const;
+
 // Helper to get client identifier (IP address)
 function getClientIdentifier(req: VercelRequest): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -29,6 +37,7 @@ export default async function handler(
 ) {
   // Only accept POST
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -118,10 +127,7 @@ export default async function handler(
           input: {
             prompt,
             negative_prompt: negativePrompt,
-            width: 1024,
-            height: 1024,
-            num_inference_steps: 25,
-            guidance_scale: 7.5,
+            ...SDXL_PARAMS,
             seed: seed || Math.floor(Math.random() * 1000000),
           },
         });

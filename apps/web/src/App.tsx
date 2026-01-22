@@ -58,16 +58,16 @@ const Phase1SessionUI = () => {
     });
 
     useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
+        let interval: number | undefined;
         if (isRunning) {
-            interval = setInterval(() => {
+            interval = window.setInterval(() => {
                 setTimer((prev) => prev + 1);
             }, 1000);
         } else if (!isRunning && timer !== 0) {
-            if (interval) clearInterval(interval);
+            if (interval !== undefined) clearInterval(interval);
         }
         return () => {
-            if (interval) clearInterval(interval);
+            if (interval !== undefined) clearInterval(interval);
         };
     }, [isRunning, timer]);
 

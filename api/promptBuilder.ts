@@ -34,12 +34,20 @@ export const STYLE_PRESETS: Record<string, StylePreset> = {
   },
 };
 
+// Mood keys for consistency
+export const MOOD_KEYS = {
+  CALM: '穏やか',
+  HAPPY: '嬉しい',
+  ANXIOUS: '不安',
+  TIRED: '疲れ',
+} as const;
+
 // Mood to descriptive terms mapping
 const MOOD_DESCRIPTORS: Record<string, string> = {
-  '穏やか': 'calm, peaceful, serene, tranquil, gentle',
-  '嬉しい': 'joyful, vibrant, energetic, bright, uplifting',
-  '不安': 'anxious, turbulent, uncertain, tense, restless',
-  '疲れ': 'tired, muted, subdued, melancholic, quiet',
+  [MOOD_KEYS.CALM]: 'calm, peaceful, serene, tranquil, gentle',
+  [MOOD_KEYS.HAPPY]: 'joyful, vibrant, energetic, bright, uplifting',
+  [MOOD_KEYS.ANXIOUS]: 'anxious, turbulent, uncertain, tense, restless',
+  [MOOD_KEYS.TIRED]: 'tired, muted, subdued, melancholic, quiet',
 };
 
 // Duration to complexity mapping
