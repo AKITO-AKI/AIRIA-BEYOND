@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { AlbumProvider } from './contexts/AlbumContext';
+import { AlbumProvider, useAlbums } from './contexts/AlbumContext';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import MainRoom from './components/rooms/MainRoom';
@@ -19,19 +19,30 @@ const rooms = [
   { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
 ];
 
-const App = () => {
+const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const { getSelectedAlbum } = useAlbums();
+  const selectedAlbum = getSelectedAlbum();
 
+  return (
+    <>
+      {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
+      {!showSplash && (
+        <>
+          <RoomNavigator rooms={rooms} initialRoom="main" />
+          {/* P4: Pass selected album to MiniPlayer for music playback */}
+          <MiniPlayer album={selectedAlbum || undefined} />
+        </>
+      )}
+    </>
+  );
+};
+
+const App = () => {
   return (
     <React.StrictMode>
       <AlbumProvider>
-        {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
-        {!showSplash && (
-          <>
-            <RoomNavigator rooms={rooms} initialRoom="main" />
-            <MiniPlayer />
-          </>
-        )}
+        <AppContent />
       </AlbumProvider>
     </React.StrictMode>
   );
