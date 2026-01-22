@@ -27,14 +27,30 @@ export interface JobStatus {
   startedAt?: string;
   finishedAt?: string;
   error?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  retryCount: number;
+  maxRetries: number;
   provider: string;
   model: string;
+  input: {
+    mood?: string;
+    duration?: number;
+    stylePreset?: string;
+    seed?: number;
+    motifTags?: string[];
+    valence?: number;
+    arousal?: number;
+    focus?: number;
+    confidence?: number;
+  };
   inputSummary: {
     mood?: string;
     duration?: number;
     stylePreset?: string;
     seed?: number;
   };
+  result?: string;
   resultUrl?: string;
 }
 
@@ -111,4 +127,29 @@ export async function pollJobStatus(
   }
 
   throw new Error('Job polling timeout');
+}
+
+/**
+ * Retry a failed job by creating a new generation with the same input
+ */
+export async function retryJob(failedJobId: string): Promise<GenerateImageResponse> {
+  // Get the failed job to extract input parameters
+  const failedJob = await getJobStatus(failedJobId);
+  
+  if (!failedJob.input) {
+    throw new Error('Cannot retry: job input not available');
+  }
+  
+  // Create a new generation with the same input
+  return generateImage({
+    mood: failedJob.input.mood || '',
+    duration: failedJob.input.duration || 60,
+    motifTags: failedJob.input.motifTags,
+    stylePreset: failedJob.input.stylePreset,
+    seed: failedJob.input.seed,
+    valence: failedJob.input.valence,
+    arousal: failedJob.input.arousal,
+    focus: failedJob.input.focus,
+    confidence: failedJob.input.confidence,
+  });
 }
