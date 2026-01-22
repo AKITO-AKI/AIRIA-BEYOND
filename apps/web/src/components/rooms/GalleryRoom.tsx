@@ -1,45 +1,60 @@
-import React from 'react';
-import { useAlbums, Album } from '../../contexts/AlbumContext';
+import React, { useState, useEffect } from 'react';
+import { useAlbums } from '../../contexts/AlbumContext';
+import BookshelfCanvas from '../gallery/BookshelfCanvas';
+import GalleryControls, { SortMode, ViewMode } from '../gallery/GalleryControls';
+import GridView from '../gallery/fallback/GridView';
 import './GalleryRoom.css';
-
-// P3: Provider label mapping utility
-const getProviderLabel = (provider?: string): string => {
-  if (!provider) return '';
-  return provider === 'replicate' ? 'AI生成' : 'ローカル';
-};
-
-// P3: Provider badge display
-const getProviderBadge = (provider?: string): string => {
-  if (!provider) return '';
-  return provider === 'replicate' ? 'AI' : 'ローカル';
-};
 
 const GalleryRoom: React.FC = () => {
   const { albums, selectAlbum } = useAlbums();
+  
+  // C-2: Gallery state
+  const [constellationEnabled, setConstellationEnabled] = useState(true);
+  const [sortMode, setSortMode] = useState<SortMode>('time');
+  const [viewMode, setViewMode] = useState<ViewMode>('3d');
+  
+  // Detect mobile device
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setViewMode('grid'); // Default to grid view on mobile
+    }
+  }, []);
 
   const handleAlbumClick = (albumId: string) => {
     selectAlbum(albumId);
     // Navigation will be handled by clicking on the Album room indicator
   };
 
-  // P3: Format metadata for tooltip
-  const formatMetadata = (album: Album): string => {
-    const parts: string[] = [];
+  // Sort albums based on mode
+  const sortedAlbums = React.useMemo(() => {
+    const albumsCopy = [...albums];
     
-    if (album.metadata) {
-      if (album.metadata.motif_tags && album.metadata.motif_tags.length > 0) {
-        parts.push(album.metadata.motif_tags.slice(0, 3).join(', '));
-      }
-      if (album.metadata.stylePreset) {
-        parts.push(`Style: ${album.metadata.stylePreset}`);
-      }
-      if (album.metadata.provider) {
-        parts.push(getProviderLabel(album.metadata.provider));
-      }
+    switch (sortMode) {
+      case 'time':
+        // Newest first (already in correct order from context)
+        return albumsCopy;
+      
+      case 'mood':
+        // Sort by valence (happy to sad)
+        return albumsCopy.sort((a, b) => {
+          const valenceA = a.metadata?.valence ?? 0;
+          const valenceB = b.metadata?.valence ?? 0;
+          return valenceB - valenceA; // Descending (happy first)
+        });
+      
+      case 'duration':
+        // Sort by music duration
+        return albumsCopy.sort((a, b) => {
+          const durationA = a.musicMetadata?.duration ?? 0;
+          const durationB = b.musicMetadata?.duration ?? 0;
+          return durationB - durationA; // Descending (longest first)
+        });
+      
+      default:
+        return albumsCopy;
     }
-    
-    return parts.length > 0 ? parts.join(' • ') : '';
-  };
+  }, [albums, sortMode]);
 
   return (
     <div className="room-content gallery-room">
@@ -53,43 +68,29 @@ const GalleryRoom: React.FC = () => {
             <p className="empty-shelf-hint">Mainルームでセッションを保存してください</p>
           </div>
         ) : (
-          <div className="bookshelf">
-            {albums.map((album) => (
-              <div
-                key={album.id}
-                className="book-spine"
-                onClick={() => handleAlbumClick(album.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleAlbumClick(album.id);
-                  }
-                }}
-                aria-label={`Album: ${album.mood} - ${new Date(album.createdAt).toLocaleDateString()}`}
-                title={formatMetadata(album)}
-              >
-                <div className="book-spine-content">
-                  <div className="book-spine-title">{album.mood}</div>
-                  <div className="book-spine-date">
-                    {new Date(album.createdAt).toLocaleDateString('ja-JP', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </div>
-                  {/* P3: Show provider badge */}
-                  {album.metadata?.provider && (
-                    <div className="book-spine-badge">
-                      {getProviderBadge(album.metadata.provider)}
-                    </div>
-                  )}
-                </div>
-                <div className="book-spine-preview">
-                  <img src={album.imageDataURL} alt="" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <>
+            <GalleryControls
+              constellationEnabled={constellationEnabled}
+              onConstellationToggle={() => setConstellationEnabled(!constellationEnabled)}
+              sortMode={sortMode}
+              onSortChange={setSortMode}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+            
+            {viewMode === '3d' ? (
+              <BookshelfCanvas
+                albums={sortedAlbums}
+                onBookClick={handleAlbumClick}
+                constellationEnabled={constellationEnabled}
+              />
+            ) : (
+              <GridView
+                albums={sortedAlbums}
+                onAlbumClick={handleAlbumClick}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
