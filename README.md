@@ -38,9 +38,60 @@ npm install
 
 This will install all dependencies for the monorepo workspaces.
 
+## Configuration
+
+### Environment Variables
+
+For external image generation with Replicate SDXL, you need to configure your API token:
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env
+```
+
+2. Get your Replicate API token from [https://replicate.com/account/api-tokens](https://replicate.com/account/api-tokens)
+
+3. Add your token to `.env`:
+```
+REPLICATE_API_TOKEN=your_actual_token_here
+```
+
+**Note:** Without the API token, the application will automatically fall back to local image generation.
+
+### Cost and Rate Limits
+
+- **Rate Limiting**: 5 requests per minute per IP address
+- **Concurrency**: Maximum 3 concurrent image generations per IP
+- **Costs**: Each SDXL image generation on Replicate costs ~$0.0055 (check current pricing at [replicate.com/pricing](https://replicate.com/pricing))
+- **Generation Time**: 30-60 seconds per image
+
 ## Development
 
-### Start Development Server
+### Running Locally (Frontend + API)
+
+To run both the frontend and API together:
+
+```bash
+npm run dev
+```
+
+This starts:
+- Frontend (Vite) at `http://localhost:5173/AIRIA-BEYOND/`
+- API (Vercel serverless functions) at `http://localhost:3000/api/*`
+
+**Alternative: Run separately**
+
+Frontend only:
+```bash
+npm run dev:web
+```
+
+API only:
+```bash
+npm run dev:api
+```
+
+### Start Development Server (Legacy - Frontend Only)
 
 ```bash
 npm run dev
@@ -109,6 +160,19 @@ This serves the production build locally for testing.
 - Duration influences visual complexity
 - On-screen preview and PNG download
 
+### Phase P0: External Image Generation (Replicate SDXL) 🆕
+- High-quality AI image generation using Replicate's SDXL model
+- Style presets for classic aesthetics:
+  - **抽象油絵** (Abstract Oil Painting): Thick brushstrokes, rich textures
+  - **印象派風景** (Impressionist Landscape): Soft brushwork, natural light
+  - **ロマン派風景** (Romantic Landscape): Dramatic sky, sublime nature
+  - **ミニマル抽象** (Minimal Abstract): Monochromatic, geometric shapes
+- Automatic prompt generation from session IR data (mood, duration, tags)
+- Asynchronous job processing with real-time status updates
+- Fallback to local generation when API token is not configured
+- Rate limiting and concurrency guards for cost protection
+- 1024x1024px high-quality output
+
 ## Usage
 
 ### Completing the Onboarding (Onboarding Room)
@@ -165,9 +229,18 @@ The onboarding data is stored locally and can be used to personalize your sessio
    - View the preview on screen
    - Click "Download PNG" to save the generated image
 
+5. **Generate with external AI (Replicate SDXL):**
+   - Select a style preset (抽象油絵, 印象派風景, etc.)
+   - Click "外部生成(Replicate)" to generate a high-quality AI image
+   - Wait 30-60 seconds for generation to complete
+   - View the result and save to album
+   - Note: Requires `REPLICATE_API_TOKEN` to be set in `.env`
+
 The generated PNG is deterministic - generating from the same session data (including seed) will always produce the same image.
 
 ## Project Status
+
+**Phase P0 (Prototype)**: External image generation integration complete - Replicate SDXL with style presets, job tracking, rate limiting, and fallback support.
 
 **Phase B**: Onboarding deep-life questions complete - 4-step questionnaire capturing emotional patterns, triggers, and goals with localStorage persistence.
 
@@ -179,10 +252,28 @@ The generated PNG is deterministic - generating from the same session data (incl
 
 ## Deployment
 
-The application is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment workflow:
+### GitHub Pages (Frontend Only)
+
+The static frontend is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment workflow:
 1. Builds the application using `npm run build`
 2. Uploads the build artifacts from `apps/web/dist/`
 3. Deploys to GitHub Pages at https://akito-aki.github.io/AIRIA-BEYOND/
+
+**Note:** GitHub Pages only hosts the static frontend. External image generation requires the API to be deployed separately.
+
+### Vercel (Full Stack - Recommended)
+
+For the complete experience with external image generation:
+
+1. Install Vercel CLI: `npm install -g vercel`
+2. Link to Vercel: `vercel link`
+3. Add environment variable: `vercel env add REPLICATE_API_TOKEN`
+4. Deploy: `vercel --prod`
+
+The `vercel.json` configuration automatically handles:
+- Frontend build from `apps/web/dist`
+- Serverless API functions from `/api`
+- API routing at `/api/*`
 
 ### Manual Deployment Testing
 
