@@ -42,21 +42,27 @@ This will install all dependencies for the monorepo workspaces.
 
 ### Environment Variables
 
-For external image generation with Replicate SDXL, you need to configure your API token:
+For external image generation with Replicate SDXL and LLM-based analysis, you need to configure API tokens:
 
 1. Copy the example environment file:
 ```bash
 cp .env.example .env
 ```
 
-2. Get your Replicate API token from [https://replicate.com/account/api-tokens](https://replicate.com/account/api-tokens)
+2. Get your API tokens:
+   - **Replicate**: [https://replicate.com/account/api-tokens](https://replicate.com/account/api-tokens)
+   - **OpenAI**: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
-3. Add your token to `.env`:
+3. Add your tokens to `.env`:
 ```
-REPLICATE_API_TOKEN=your_actual_token_here
+REPLICATE_API_TOKEN=your_replicate_token_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-**Note:** Without the API token, the application will automatically fall back to local image generation.
+**Note:** 
+- Without `REPLICATE_API_TOKEN`, the app falls back to local image generation
+- Without `OPENAI_API_KEY`, the app uses rule-based analysis instead of LLM
+- Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control)
 
 ### Cost and Rate Limits
 
@@ -206,6 +212,65 @@ This serves the production build locally for testing.
 
 **User Experience**: Never leaves users stuck! Always provides clear feedback, automatic recovery from transient errors, manual retry options, and fallback to local generation when needed.
 
+### Phase P2: LLM-based Analysis (NEW! 🎉)
+- **Intelligent Session Analysis**:
+  - Uses OpenAI GPT-4o-mini to generate intermediate representation (IR) from session data
+  - Analyzes mood, duration, and optional free text to produce emotional metrics
+  - Returns valence (-1 to +1), arousal (0 to 1), focus (0 to 1), and artistic motif tags
+
+- **Intermediate Representation (IR)**:
+  - **Valence**: Emotional pleasantness (-1=unpleasant, +1=pleasant)
+  - **Arousal**: Energy level (0=calm, 1=excited)
+  - **Focus**: Attention/concentration level (0 to 1)
+  - **Motif Tags**: 3-5 classical/artistic vocabulary terms (e.g., 静寂, 水面, 光, 影)
+  - **Confidence**: Analysis certainty (0 to 1)
+  - **Classical Profile**: Optional hints for music generation (tempo, dynamics, harmony)
+
+- **LLM Prompt Design**:
+  - Japanese-language prompt with classical music and fine art context
+  - Rich vocabulary: light/shadow (光/影), nature (水面/霧/森), emotion (孤独/荘厳/静寂)
+  - Strict JSON output with examples for guidance
+  - Emphasizes classical music and painting aesthetics
+
+- **JSON Validation**:
+  - Zod schema validation ensures type safety and range constraints
+  - Validation failures logged with raw LLM response
+  - One retry attempt with stricter prompt
+  - Falls back to rule-based on persistent validation errors
+
+- **Rule-based Fallback**:
+  - Deterministic generation when LLM unavailable or fails
+  - Mood-based mappings (穏やか→valence:0.6, 嬉しい→valence:0.8, etc.)
+  - Duration influences focus (longer sessions = higher focus, capped at 0.9)
+  - Predefined motif tags per mood category
+  - Always returns confidence: 0.5 for rule-based
+
+- **Privacy-First Design**:
+  - No raw audio or video sent to LLM
+  - Only text-based session metadata (mood, duration, optional freeText)
+  - onboardingData optional and user-controlled
+  - Timestamp for context
+
+- **Analysis API (`/api/analyze`)**:
+  - POST endpoint returns job ID immediately (202 Accepted)
+  - Async processing with status polling
+  - Integrates with P1 job system (retry, timeout, error handling)
+  - Rate limited (5 req/min) and concurrency limited (3 concurrent)
+
+- **Client Integration**:
+  - Analysis runs automatically before image generation
+  - Beautiful gradient UI card displays IR results to user
+  - Shows valence, arousal, focus, motif tags, and confidence
+  - Analysis status indicator with provider (openai/rule-based)
+  - IR data flows seamlessly into SDXL image generation
+
+- **Cost Control**:
+  - `DISABLE_LLM_ANALYSIS=true` env var forces rule-based mode
+  - Token usage logged for monitoring
+  - GPT-4o-mini used for cost efficiency (~$0.15 per 1M tokens)
+
+**User Experience**: Get AI-powered emotional insights before image generation! The system analyzes your session and displays artistic interpretation with classical music vocabulary, then generates images that reflect your analyzed emotional state.
+
 ### Phase P0: External Image Generation (Replicate SDXL)
 - High-quality AI image generation using Replicate's SDXL model
 - Style presets for classic aesthetics:
@@ -291,6 +356,8 @@ The generated PNG is deterministic - generating from the same session data (incl
 
 ## Project Status
 
+**Phase P2 (Prototype)**: ✅ LLM-based analysis complete - OpenAI integration, intermediate representation generation, rule-based fallback, JSON validation, and beautiful UI display of emotional insights.
+
 **Phase P1 (Prototype)**: ✅ Robust generation flow complete - Timeout handling, automatic retry with exponential backoff, manual retry UI, fallback mechanism, enhanced error display, and comprehensive logging.
 
 **Phase P0 (Prototype)**: ✅ External image generation integration complete - Replicate SDXL with style presets, job tracking, rate limiting, and fallback support.
@@ -348,8 +415,10 @@ See `SECURITY_SUMMARY.md` for security analysis.
 
 ## Documentation
 
+- **P2_TESTING.md**: Test scenarios and guide for LLM analysis (P2)
+- **P2_IMPLEMENTATION.md**: Detailed P2 implementation summary
 - **TESTING.md**: Comprehensive test scenarios for P0 and P1
-- **P1_IMPLEMENTATION.md**: Detailed implementation summary
+- **P1_IMPLEMENTATION.md**: Detailed P1 implementation summary
 - **SECURITY_SUMMARY.md**: Security analysis and recommendations
 
 ## Deployment
