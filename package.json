@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@vercel/node": "^5.5.26",
+    "midi-writer-js": "^3.1.1",
     "openai": "^4.77.0",
     "replicate": "^1.4.0",
     "zod": "^3.24.1"
