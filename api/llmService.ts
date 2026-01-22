@@ -5,6 +5,7 @@
 
 import OpenAI from 'openai';
 import { IntermediateRepresentation, IntermediateRepresentationSchema, SessionInput } from './types';
+import { trackUsage } from './lib/usage-tracker';
 
 // System prompt for LLM
 const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。セッションデータから感情と芸術的な中間表現を生成します。
@@ -104,6 +105,20 @@ export async function generateWithLLM(
     temperature: 0.7,
     response_format: { type: 'json_object' },
   });
+
+  // Track API usage
+  if (completion.usage) {
+    const inputCost = (completion.usage.prompt_tokens / 1_000_000) * 0.15;
+    const outputCost = (completion.usage.completion_tokens / 1_000_000) * 0.60;
+    const totalCost = inputCost + outputCost;
+    
+    trackUsage('openai', totalCost, 'gpt4o-mini-analysis', {
+      model: 'gpt-4o-mini',
+      promptTokens: completion.usage.prompt_tokens,
+      completionTokens: completion.usage.completion_tokens,
+      totalTokens: completion.usage.total_tokens
+    });
+  }
 
   const responseText = completion.choices[0]?.message?.content;
   

@@ -7,7 +7,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createMusicJob, updateMusicJob, getMusicJob } from '../musicJobStore';
-import { checkRateLimit, checkConcurrency, releaseJob } from '../rateLimiter';
+import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit';
 import { generateMusicStructureWithFallback } from '../musicLLMService';
 import { musicStructureToMIDI } from '../midiConverter';
 import type { GenerateMusicRequest } from '../types';

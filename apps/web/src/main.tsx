@@ -4,6 +4,8 @@ import { AlbumProvider, useAlbums } from './contexts/AlbumContext';
 import { CausalLogProvider } from './contexts/CausalLogContext';
 import { MusicPlayerProvider, useMusicPlayer } from './contexts/MusicPlayerContext';
 import { ToastProvider } from './components/visual/feedback/ToastContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Footer } from './components/Footer';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import MainRoom from './components/rooms/MainRoom';
@@ -16,8 +18,18 @@ import DebugPanel from './components/DebugPanel';
 import BackgroundDyeSystem from './components/visual/BackgroundDyeSystem';
 import ClickRipple from './components/visual/interactions/ClickRipple';
 import FrequencyGeometry from './components/visual/patterns/FrequencyGeometry';
+import { initSentry } from './lib/sentry';
+import { initWebVitals } from './lib/vitals';
+import { initAnalytics } from './lib/analytics';
 import './styles.css';
 import './components/visual/globalInteractions.css';
+
+// Initialize monitoring in production
+if (import.meta.env.PROD) {
+  initSentry();
+  initWebVitals();
+  initAnalytics();
+}
 
 const rooms = [
   { id: 'onboarding' as const, name: 'Onboarding', component: <OnboardingRoom /> },
@@ -61,6 +73,8 @@ const AppContent = () => {
           />
           {/* P5: Debug panel for developers */}
           <DebugPanel />
+          {/* Phase D: Footer with legal pages */}
+          <Footer />
         </>
       )}
     </>
@@ -70,15 +84,17 @@ const AppContent = () => {
 const App = () => {
   return (
     <React.StrictMode>
-      <CausalLogProvider>
-        <AlbumProvider>
-          <MusicPlayerProvider>
-            <ToastProvider>
-              <AppContent />
-            </ToastProvider>
-          </MusicPlayerProvider>
-        </AlbumProvider>
-      </CausalLogProvider>
+      <ErrorBoundary>
+        <CausalLogProvider>
+          <AlbumProvider>
+            <MusicPlayerProvider>
+              <ToastProvider>
+                <AppContent />
+              </ToastProvider>
+            </MusicPlayerProvider>
+          </AlbumProvider>
+        </CausalLogProvider>
+      </ErrorBoundary>
     </React.StrictMode>
   );
 };
