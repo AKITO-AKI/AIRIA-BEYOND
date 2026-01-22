@@ -15,5 +15,9 @@
     "preview": "npm --workspace apps/web run preview",
     "lint": "echo \"TODO: add lint\"",
     "format": "echo \"TODO: add format\""
+  },
+  "dependencies": {
+    "@vercel/node": "^5.5.26",
+    "replicate": "^1.4.0"
   }
 }
