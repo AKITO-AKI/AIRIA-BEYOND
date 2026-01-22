@@ -2,6 +2,8 @@
 
 An AI-powered session management and mood tracking application.
 
+🚀 **Live Demo**: [https://akito-aki.github.io/AIRIA-BEYOND/](https://akito-aki.github.io/AIRIA-BEYOND/)
+
 ## Repository Structure
 
 ```
@@ -110,6 +112,26 @@ The generated PNG is deterministic - generating from the same session data (incl
 ## Project Status
 
 **Phase 2**: PNG generation complete - abstract generative art from session IR.
+
+**Phase 3**: GitHub Pages deployment configured - automatic deployment on push to main branch.
+
+## Deployment
+
+The application is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment workflow:
+1. Builds the application using `npm run build`
+2. Uploads the build artifacts from `apps/web/dist/`
+3. Deploys to GitHub Pages at https://akito-aki.github.io/AIRIA-BEYOND/
+
+### Manual Deployment Testing
+
+To test the production build locally before deployment:
+
+```bash
+npm run build
+npm run preview
+```
+
+This will build and serve the app at `http://localhost:4173/AIRIA-BEYOND/`
 
 ## Contributing
 
