@@ -151,7 +151,7 @@ export interface MusicJobData {
   errorMessage?: string;
   retryCount: number;
   maxRetries: number;
-  provider: 'openai';
+  provider: 'openai' | 'rule-based';
   input: GenerateMusicRequest;
   result?: MusicStructure;
   midiData?: string; // Base64 encoded MIDI data

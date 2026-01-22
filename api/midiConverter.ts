@@ -74,7 +74,7 @@ export function musicStructureToMIDI(structure: MusicStructure): string {
 
   // Set time signature (parse "3/4" -> [3, 4])
   const [numerator, denominator] = timeSignature.split('/').map(Number);
-  track.setTimeSignature(numerator, denominator);
+  track.setTimeSignature(numerator, denominator, 24, 8);
 
   // Convert each section
   for (const section of sections) {

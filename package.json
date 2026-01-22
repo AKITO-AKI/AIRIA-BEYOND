@@ -26,6 +26,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "concurrently": "^9.2.1",
     "vercel": "^50.4.9"
   }
