@@ -1,36 +1,60 @@
 /**
- * Style Presets and Prompt Builder
+ * Style Presets and Prompt Builder (P3 Enhanced)
  * 
  * Converts intermediate representation (IR) to coherent SDXL prompts
  * with classic aesthetic style presets
+ * 
+ * P3 enhancements:
+ * - Uses valence (-1 to 1) for mood/atmosphere descriptors
+ * - Uses arousal (0 to 1) for energy/intensity descriptors
+ * - Uses focus (0 to 1) for composition clarity
+ * - Auto-selects style preset based on valence/arousal
  */
 
 export interface StylePreset {
   name: string;
   promptSuffix: string;
   negativePrompt: string;
+  // P3: Style preset metadata for auto-selection
+  valenceRange?: [number, number]; // preferred valence range
+  arousalRange?: [number, number]; // preferred arousal range
 }
 
 export const STYLE_PRESETS: Record<string, StylePreset> = {
-  'abstract-oil': {
-    name: '抽象油絵 (Abstract Oil Painting)',
-    promptSuffix: 'abstract oil painting, thick brushstrokes, rich textures, expressive colors, modern art style, museum quality',
-    negativePrompt: 'photorealistic, photography, realistic, detailed faces, text, watermark',
+  'oil-painting': {
+    name: '油絵 (Oil Painting)',
+    promptSuffix: 'oil painting, thick brushstrokes, rich texture, classical oil painting, masterpiece, fine art',
+    negativePrompt: 'modern, digital, 3D render, photo, text, watermark, realistic photograph',
+    valenceRange: [-0.3, 0.7], // moderate to positive
+    arousalRange: [0.3, 0.7], // balanced energy
   },
-  'impressionist': {
-    name: '印象派風景 (Impressionist Landscape)',
-    promptSuffix: 'impressionist landscape painting, soft brushwork, natural light, pastoral scene, claude monet style, plein air',
+  'watercolor': {
+    name: '水彩画 (Watercolor)',
+    promptSuffix: 'watercolor painting, soft edges, translucent layers, watercolor on paper, delicate, flowing colors',
+    negativePrompt: 'harsh lines, digital art, 3D render, photo, text, watermark',
+    valenceRange: [0.2, 1.0], // positive, uplifting
+    arousalRange: [0.0, 0.5], // calm to moderate
+  },
+  'impressionism': {
+    name: '印象派 (Impressionism)',
+    promptSuffix: 'impressionist landscape painting, light-focused, loose brushwork, impressionist style, natural scenery, atmospheric',
     negativePrompt: 'sharp edges, photorealistic, modern, digital art, text, watermark',
+    valenceRange: [0.0, 1.0], // neutral to positive
+    arousalRange: [0.2, 0.6], // gentle to moderate
+  },
+  'abstract-minimal': {
+    name: '抽象ミニマル (Abstract Minimal)',
+    promptSuffix: 'minimal abstract art, monochrome gradient, geometric calm, clean composition, modernist aesthetic',
+    negativePrompt: 'busy, ornate, realistic, detailed faces, text, watermark, cluttered',
+    valenceRange: [-0.5, 0.5], // neutral range
+    arousalRange: [0.0, 0.4], // calm, meditative
   },
   'romantic-landscape': {
-    name: 'ロマン派風景 (Classical Romantic Landscape)',
-    promptSuffix: 'romantic landscape painting, dramatic sky, sublime nature, classical composition, JMW Turner style, oil on canvas',
+    name: 'ロマン派風景 (Romantic Landscape)',
+    promptSuffix: 'romantic landscape painting, dramatic sky, sublime nature, 19th century landscape, classical composition, oil on canvas',
     negativePrompt: 'modern, minimal, abstract, photography, text, watermark',
-  },
-  'minimal-abstract': {
-    name: 'ミニマル抽象 (Monochrome Minimal Abstract)',
-    promptSuffix: 'minimal abstract art, monochromatic, geometric shapes, clean composition, modernist, high contrast',
-    negativePrompt: 'busy, colorful, realistic, detailed, ornate, text, watermark',
+    valenceRange: [-0.5, 0.5], // dramatic range
+    arousalRange: [0.5, 1.0], // intense, dynamic
   },
 };
 
@@ -50,6 +74,52 @@ const MOOD_DESCRIPTORS: Record<string, string> = {
   [MOOD_KEYS.TIRED]: 'tired, muted, subdued, melancholic, quiet',
 };
 
+/**
+ * Map valence (-1 to 1) to atmosphere/mood keywords
+ * valence: -1 = dark/melancholic, 0 = neutral, +1 = bright/uplifting
+ */
+function getValenceDescriptors(valence: number): string {
+  if (valence < -0.5) {
+    return 'dark atmosphere, melancholic, somber tones, shadowy, moody';
+  } else if (valence < -0.2) {
+    return 'subdued, contemplative, muted colors, quiet mood';
+  } else if (valence < 0.2) {
+    return 'balanced, neutral tones, harmonious';
+  } else if (valence < 0.5) {
+    return 'pleasant, warm tones, hopeful, gentle light';
+  } else {
+    return 'bright, uplifting, radiant, luminous, joyful atmosphere';
+  }
+}
+
+/**
+ * Map arousal (0 to 1) to energy/intensity keywords
+ * arousal: 0 = calm/still, 0.5 = moderate, 1 = intense/dynamic
+ */
+function getArousalDescriptors(arousal: number): string {
+  if (arousal < 0.3) {
+    return 'calm, still, peaceful, serene, quiet, gentle';
+  } else if (arousal < 0.6) {
+    return 'moderate energy, flowing, rhythmic, balanced movement';
+  } else {
+    return 'intense, dynamic, energetic, powerful, dramatic, vigorous';
+  }
+}
+
+/**
+ * Map focus (0 to 1) to compositional clarity keywords
+ * focus: 0 = diffuse/abstract, 1 = clear/sharp composition
+ */
+function getFocusDescriptors(focus: number): string {
+  if (focus < 0.3) {
+    return 'soft focus, dreamlike, ethereal, diffused, atmospheric haze';
+  } else if (focus < 0.7) {
+    return 'balanced composition, medium clarity, artistic detail';
+  } else {
+    return 'sharp composition, clear details, well-defined, crisp, focused';
+  }
+}
+
 // Duration to complexity mapping
 function getComplexityDescriptor(durationSec: number): string {
   if (durationSec < 60) return 'simple, minimalist';
@@ -58,32 +128,91 @@ function getComplexityDescriptor(durationSec: number): string {
 }
 
 /**
- * Build a prompt from session IR data
+ * Auto-select style preset based on valence and arousal
+ * This provides intelligent defaults when user doesn't select manually
+ */
+export function autoSelectStylePreset(valence: number, arousal: number): string {
+  // Low arousal + neutral/positive valence → watercolor or abstract-minimal
+  if (arousal < 0.4) {
+    if (valence > 0.3) {
+      return 'watercolor'; // calm, positive → soft watercolor
+    } else {
+      return 'abstract-minimal'; // calm, neutral/negative → minimal abstract
+    }
+  }
+  
+  // High arousal → romantic-landscape
+  if (arousal > 0.6) {
+    return 'romantic-landscape'; // intense, dramatic
+  }
+  
+  // Mid-range arousal
+  if (valence > 0.2) {
+    return 'impressionism'; // moderate energy, positive → impressionist
+  } else {
+    return 'oil-painting'; // moderate energy, neutral/negative → oil painting
+  }
+}
+
+/**
+ * Build a prompt from session IR data (P3 Enhanced)
+ * Now uses valence, arousal, and focus for richer prompt generation
  */
 export function buildPrompt(params: {
   mood?: string;
   duration?: number;
   motifTags?: string[];
   stylePreset?: string;
+  // P3: New IR parameters
+  valence?: number;
+  arousal?: number;
+  focus?: number;
 }): { prompt: string; negativePrompt: string } {
-  const { mood, duration = 60, motifTags = [], stylePreset = 'abstract-oil' } = params;
+  const { 
+    mood, 
+    duration = 60, 
+    motifTags = [], 
+    stylePreset,
+    valence,
+    arousal,
+    focus 
+  } = params;
   
-  const preset = STYLE_PRESETS[stylePreset] || STYLE_PRESETS['abstract-oil'];
+  // Auto-select style if not provided and we have IR data
+  let selectedPreset = stylePreset;
+  if (!selectedPreset && valence !== undefined && arousal !== undefined) {
+    selectedPreset = autoSelectStylePreset(valence, arousal);
+  }
+  
+  const preset = STYLE_PRESETS[selectedPreset || 'oil-painting'] || STYLE_PRESETS['oil-painting'];
   
   // Build prompt components
   const components: string[] = [];
   
-  // Add mood descriptors
-  if (mood && MOOD_DESCRIPTORS[mood]) {
+  // P3: Use IR data if available (takes precedence over mood)
+  if (valence !== undefined) {
+    components.push(getValenceDescriptors(valence));
+  } else if (mood && MOOD_DESCRIPTORS[mood]) {
+    // Fallback to mood descriptors
     components.push(MOOD_DESCRIPTORS[mood]);
+  }
+  
+  if (arousal !== undefined) {
+    components.push(getArousalDescriptors(arousal));
+  }
+  
+  if (focus !== undefined) {
+    components.push(getFocusDescriptors(focus));
   }
   
   // Add complexity based on duration
   components.push(getComplexityDescriptor(duration));
   
-  // Add motif tags if provided
+  // Add motif tags if provided (from P2 analysis)
   if (motifTags.length > 0) {
-    components.push(motifTags.join(', '));
+    // Translate common Japanese motif tags to English for SDXL
+    const translatedTags = motifTags.map(tag => translateMotifTag(tag));
+    components.push(translatedTags.join(', '));
   }
   
   // Combine with style preset
@@ -94,6 +223,39 @@ export function buildPrompt(params: {
     prompt: fullPrompt,
     negativePrompt: preset.negativePrompt,
   };
+}
+
+/**
+ * Translate Japanese motif tags to English for SDXL
+ * (P2 analysis returns Japanese tags like 光, 霧, etc.)
+ */
+function translateMotifTag(tag: string): string {
+  const translations: Record<string, string> = {
+    '光': 'light',
+    '影': 'shadow',
+    '霧': 'mist',
+    '水面': 'water surface',
+    '薄明': 'twilight',
+    '荘厳': 'majestic',
+    '孤独': 'solitude',
+    '凪': 'calm waters',
+    '静寂': 'tranquility',
+    '希望': 'hope',
+    '朝焼け': 'sunrise',
+    '夕暮れ': 'sunset',
+    '森': 'forest',
+    '空': 'sky',
+    '雲': 'clouds',
+    // Music terms
+    'レガート': 'flowing',
+    'スタッカート': 'punctuated',
+    'アレグロ': 'lively',
+    'アダージョ': 'slow tempo',
+    'フォルテ': 'strong',
+    'ピアニシモ': 'very soft',
+  };
+  
+  return translations[tag] || tag;
 }
 
 /**

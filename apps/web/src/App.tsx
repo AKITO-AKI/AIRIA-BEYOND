@@ -24,12 +24,13 @@ const IMAGE_PRESETS = [
 // Timeout to allow UI to update before heavy image generation
 const IMAGE_GENERATION_DELAY_MS = 100;
 
-// Style presets for external generation
+// Style presets for external generation (P3 updated)
 const STYLE_PRESETS = [
-    { id: 'abstract-oil', name: '抽象油絵' },
-    { id: 'impressionist', name: '印象派風景' },
+    { id: 'oil-painting', name: '油絵' },
+    { id: 'watercolor', name: '水彩画' },
+    { id: 'impressionism', name: '印象派' },
+    { id: 'abstract-minimal', name: '抽象ミニマル' },
     { id: 'romantic-landscape', name: 'ロマン派風景' },
-    { id: 'minimal-abstract', name: 'ミニマル抽象' },
 ];
 
 const Phase1SessionUI = () => {
@@ -49,7 +50,7 @@ const Phase1SessionUI = () => {
     const [externalJobId, setExternalJobId] = useState<string | null>(null);
     const [externalJobStatus, setExternalJobStatus] = useState<JobStatus | null>(null);
     const [isGeneratingExternal, setIsGeneratingExternal] = useState(false);
-    const [selectedStylePreset, setSelectedStylePreset] = useState('abstract-oil');
+    const [selectedStylePreset, setSelectedStylePreset] = useState('oil-painting');
     const [externalImageUrl, setExternalImageUrl] = useState<string | null>(null);
 
     // Analysis state (P2)
@@ -174,11 +175,24 @@ const Phase1SessionUI = () => {
                 return;
             }
 
+            // P3: Enhanced album with full metadata
             addAlbum({
                 mood: sessionData.mood_choice,
                 duration: sessionData.duration_sec,
                 imageDataURL: externalImageUrl || previewImageURL || '',
                 sessionData: sessionData,
+                metadata: {
+                    // IR data from P2 analysis
+                    valence: sessionData.valence,
+                    arousal: sessionData.arousal,
+                    focus: sessionData.focus,
+                    motif_tags: sessionData.motif_tags,
+                    confidence: sessionData.confidence,
+                    // Generation parameters
+                    stylePreset: selectedStylePreset,
+                    seed: sessionData.seed,
+                    provider: externalImageUrl ? 'replicate' : 'local',
+                },
             });
 
             setSaveSuccess(true);

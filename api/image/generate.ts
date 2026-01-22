@@ -262,7 +262,7 @@ export default async function handler(
       mood,
       duration,
       motifTags = [],
-      stylePreset = 'abstract-oil',
+      stylePreset,
       seed,
       valence,
       arousal,
@@ -276,12 +276,15 @@ export default async function handler(
       return res.status(400).json({ error: 'mood is required' });
     }
 
-    // Build prompt from IR
+    // Build prompt from IR (P3 Enhanced)
     const { prompt, negativePrompt } = buildPrompt({
       mood,
       duration,
       motifTags,
       stylePreset,
+      valence,
+      arousal,
+      focus,
     });
 
     // Create job with full input data

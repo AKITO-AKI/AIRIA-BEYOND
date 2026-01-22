@@ -1,12 +1,31 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+// P3: Enhanced Album metadata
+export interface AlbumMetadata {
+  // Intermediate Representation (from P2 analysis)
+  valence?: number;
+  arousal?: number;
+  focus?: number;
+  motif_tags?: string[];
+  confidence?: number;
+  // Generation parameters
+  stylePreset?: string;
+  seed?: number;
+  provider?: 'replicate' | 'local' | 'rule-based';
+  // Prompts used
+  prompt?: string;
+  negativePrompt?: string;
+}
+
 export interface Album {
   id: string;
   createdAt: string;
   mood: string;
   duration: number;
   imageDataURL: string;
+  thumbnailUrl?: string; // P3: Optional thumbnail for performance
   sessionData?: any;
+  metadata?: AlbumMetadata; // P3: Enhanced metadata
 }
 
 interface AlbumContextType {
