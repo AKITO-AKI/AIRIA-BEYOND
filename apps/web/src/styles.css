@@ -3,28 +3,34 @@
     font-family: 'Noto Sans JP', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     
     /* Base colors - white background with dynamic tinting */
-    --bg-primary: #FFFFFF;
-    --bg-secondary: #FAFAFA;
-    --bg-tertiary: #F5F5F5;
-    --border-color: rgba(0, 0, 0, 0.1);
+    --bg-primary: #F3F3F3;
+    --bg-secondary: rgba(255, 255, 255, 0.72);
+    --bg-tertiary: rgba(0, 0, 0, 0.04);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --surface-glass: rgba(255, 255, 255, 0.7);
+    --surface-glass-strong: rgba(255, 255, 255, 0.9);
     
     /* Text colors - soft black */
-    --text-primary: #1A1A1A;
-    --text-secondary: rgba(0, 0, 0, 0.6);
+    --text-primary: #0B0B0B;
+    --text-secondary: rgba(0, 0, 0, 0.55);
+    --text-blend: #F6F6F6;
     
     /* Accent colors */
-    --accent-primary: #4a90e2;
-    --accent-hover: #5ba3f5;
+    --accent-primary: #7C8BFF;
+    --accent-hover: #93A0FF;
+    --accent-input: #7C8BFF;
+    --accent-album: #7A9CFF;
+    --accent-music: #70C3B0;
     
     /* System colors - pale and elegant */
-    --accent-success: #F4E5C2; /* Pale gold */
-    --accent-danger: #D4C5B9; /* Pale sepia */
+    --accent-success: #EDE7D8; /* Pale warm */
+    --accent-danger: #D8C9C1; /* Pale sepia */
     --accent-processing: #E8E8E8; /* Pale silver */
     
     /* Gold accent for geometric patterns */
-    --gold: #D4AF37;
+    --gold: #BFA76A;
     
-    --shadow: rgba(0, 0, 0, 0.1);
+    --shadow: rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -34,7 +40,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: var(--bg-primary);
+    background: radial-gradient(circle at top, #F7F7F7 0%, #EFEFEF 60%, #ECECEC 100%);
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
@@ -85,7 +91,7 @@ main {
 }
 
 section {
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--surface-glass);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 25px;
@@ -130,7 +136,7 @@ select {
     padding: 12px 16px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
+    background: var(--surface-glass);
     color: var(--text-primary);
     font-size: 16px;
     cursor: pointer;
@@ -138,11 +144,11 @@ select {
 }
 
 select:hover:not(:disabled) {
-    border-color: var(--accent-primary);
+    border-color: var(--accent-input);
 }
 
 select:focus {
-    outline: 2px solid var(--accent-primary);
+    outline: 2px solid var(--accent-input);
     outline-offset: 2px;
 }
 
@@ -172,7 +178,7 @@ select:disabled {
     display: block;
     font-size: 32px;
     font-weight: bold;
-    color: var(--accent-primary);
+    color: var(--accent-input);
 }
 
 /* Buttons */
@@ -188,7 +194,7 @@ button,
     padding: 12px 24px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--surface-glass);
     color: var(--text-primary);
     font-size: 16px;
     cursor: pointer;
@@ -209,8 +215,8 @@ button,
 
 button:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-    background: rgba(74, 144, 226, 0.1);
-    border-color: var(--accent-primary);
+    background: rgba(124, 139, 255, 0.12);
+    border-color: var(--accent-input);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px var(--shadow);
 }
@@ -222,7 +228,7 @@ button:active:not(:disabled),
 
 button:focus,
 .btn:focus {
-    outline: 2px solid var(--accent-primary);
+    outline: 2px solid var(--accent-input);
     outline-offset: 2px;
 }
 
@@ -234,14 +240,14 @@ button:disabled,
 }
 
 .btn-primary {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
-    color: white;
+    background: rgba(124, 139, 255, 0.18);
+    border-color: rgba(124, 139, 255, 0.4);
+    color: var(--text-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
+    background: rgba(124, 139, 255, 0.3);
+    border-color: rgba(124, 139, 255, 0.55);
 }
 
 .btn-secondary {
@@ -265,7 +271,7 @@ button:disabled,
 
 /* Error message */
 .error-message {
-    background: rgba(212, 197, 185, 0.2);
+    background: rgba(216, 201, 193, 0.2);
     border: 1px solid var(--accent-danger);
     border-radius: 8px;
     padding: 16px;
@@ -328,7 +334,7 @@ button:disabled,
 
 /* Success message */
 .success-message {
-    background: rgba(244, 229, 194, 0.3);
+    background: rgba(237, 231, 216, 0.35);
     border: 1px solid var(--accent-success);
     border-radius: 8px;
     padding: 16px;
@@ -368,7 +374,7 @@ button:disabled,
 
 .spinner {
     border: 4px solid var(--border-color);
-    border-top: 4px solid var(--accent-primary);
+    border-top: 4px solid var(--accent-input);
     border-radius: 50%;
     width: 50px;
     height: 50px;
@@ -384,8 +390,8 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
     .spinner {
         animation: none;
-        border-top-color: var(--accent-primary);
-        border-right-color: var(--accent-primary);
+        border-top-color: var(--accent-input);
+        border-right-color: var(--accent-input);
     }
 }
 
@@ -433,20 +439,22 @@ footer {
 
 /* Focus visible for keyboard navigation */
 *:focus-visible {
-    outline: 2px solid var(--accent-primary);
+    outline: 2px solid var(--accent-input);
     outline-offset: 2px;
 }
 /* External generation section */
 .external-generation {
-    background: var(--bg-secondary);
-    border: 2px solid var(--accent-primary);
+    background: var(--surface-glass);
+    border: 1px solid rgba(124, 139, 255, 0.35);
     border-radius: 12px;
     padding: 30px;
     margin-top: 30px;
 }
 
 .external-generation h2 {
-    color: var(--accent-primary);
+    color: var(--text-primary);
+    mix-blend-mode: difference;
+    letter-spacing: 0.08em;
     margin-top: 0;
 }
 
@@ -473,7 +481,7 @@ footer {
 /* Analysis result display (P2) */
 .analysis-status {
     background: var(--bg-primary);
-    border: 1px solid var(--accent-primary);
+    border: 1px solid rgba(124, 139, 255, 0.35);
     border-radius: 8px;
     padding: 15px;
     margin: 15px 0;
@@ -525,8 +533,8 @@ footer {
 }
 
 .analysis-result {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, rgba(124, 139, 255, 0.2) 0%, rgba(124, 139, 255, 0.05) 100%);
+    color: var(--text-primary);
     border-radius: 12px;
     padding: 20px;
     margin: 20px 0;
@@ -535,7 +543,8 @@ footer {
 
 .analysis-result h3 {
     margin-top: 0;
-    color: white;
+    color: var(--text-primary);
+    mix-blend-mode: difference;
     font-size: 18px;
 }
 
@@ -548,7 +557,7 @@ footer {
 
 .analysis-details p {
     margin: 0;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.35);
     padding: 10px;
     border-radius: 6px;
     font-size: 14px;
@@ -558,7 +567,7 @@ footer {
     display: block;
     margin-bottom: 5px;
     font-size: 12px;
-    opacity: 0.8;
+    opacity: 0.7;
 }
 
 @media (max-width: 600px) {
@@ -575,11 +584,8 @@ footer {
     gap: 16px;
     padding: 24px;
     margin: 20px 0;
-    background: linear-gradient(135deg, 
-        rgba(74, 144, 226, 0.05), 
-        rgba(104, 174, 255, 0.05)
-    );
-    border: 2px solid rgba(74, 144, 226, 0.2);
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 12px;
 }
 
@@ -605,23 +611,23 @@ footer {
     justify-content: center;
     font-size: 20px;
     font-weight: bold;
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(74, 144, 226, 0.3);
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     color: var(--text-secondary);
     transition: all 0.3s ease;
 }
 
 .progress-step.active .step-icon {
-    background: rgba(74, 144, 226, 0.3);
-    border-color: rgba(74, 144, 226, 0.6);
-    color: var(--accent-primary);
+    background: rgba(124, 139, 255, 0.25);
+    border-color: rgba(124, 139, 255, 0.5);
+    color: var(--accent-input);
     animation: pulse 1.5s ease-in-out infinite;
 }
 
 .progress-step.completed .step-icon {
-    background: rgba(76, 175, 80, 0.3);
-    border-color: rgba(76, 175, 80, 0.6);
-    color: var(--accent-success);
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-secondary);
 }
 
 .progress-step .step-label {
@@ -632,17 +638,17 @@ footer {
 }
 
 .progress-step.active .step-label {
-    color: var(--accent-primary);
+    color: var(--accent-input);
     font-weight: 600;
 }
 
 .progress-step.completed .step-label {
-    color: var(--accent-success);
+    color: var(--text-secondary);
 }
 
 .progress-arrow {
     font-size: 24px;
-    color: rgba(74, 144, 226, 0.4);
+    color: rgba(0, 0, 0, 0.25);
     font-weight: bold;
 }
 
@@ -688,8 +694,8 @@ footer {
 }
 
 .current-track {
-  background: rgba(74, 144, 226, 0.05);
-  border: 1px solid rgba(74, 144, 226, 0.2);
+  background: rgba(112, 195, 176, 0.08);
+  border: 1px solid rgba(112, 195, 176, 0.25);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 30px;
@@ -697,7 +703,9 @@ footer {
 
 .current-track h2 {
   margin-top: 0;
-  color: rgba(0, 0, 0, 0.9);
+  color: var(--text-primary);
+  mix-blend-mode: difference;
+  letter-spacing: 0.06em;
 }
 
 .track-details {
@@ -723,15 +731,17 @@ footer {
 }
 
 .music-library {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--surface-glass);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
 }
 
 .music-library h2 {
   margin-top: 0;
-  color: rgba(0, 0, 0, 0.9);
+  color: var(--text-primary);
+  mix-blend-mode: difference;
+  letter-spacing: 0.06em;
 }
 
 .music-list {
@@ -749,13 +759,13 @@ footer {
 }
 
 .music-list li.selected {
-  background: rgba(74, 144, 226, 0.1);
-  border-left: 3px solid rgba(74, 144, 226, 1);
+  background: rgba(112, 195, 176, 0.12);
+  border-left: 3px solid rgba(112, 195, 176, 0.7);
 }
 
 .music-title {
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.9);
+  color: rgba(0, 0, 0, 0.85);
 }
 
 .music-meta {

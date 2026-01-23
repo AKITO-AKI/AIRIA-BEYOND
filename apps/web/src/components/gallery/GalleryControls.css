@@ -3,9 +3,9 @@
   flex-wrap: wrap;
   gap: 24px;
   padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--surface-glass);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px var(--shadow);
   margin-bottom: 20px;
   align-items: center;
 }
@@ -37,13 +37,13 @@
 .control-text {
   font-size: 14px;
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--text-primary);
 }
 
 .control-label-text {
   font-size: 14px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.7);
+  color: var(--text-secondary);
 }
 
 .control-buttons {
@@ -53,26 +53,26 @@
 
 .control-button {
   padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.7);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .control-button:hover {
-  background: rgba(74, 144, 226, 0.1);
-  border-color: rgba(74, 144, 226, 0.3);
-  color: rgba(74, 144, 226, 0.9);
+  background: rgba(124, 139, 255, 0.12);
+  border-color: rgba(124, 139, 255, 0.4);
+  color: rgba(124, 139, 255, 0.9);
 }
 
 .control-button.active {
-  background: rgba(74, 144, 226, 0.15);
-  border-color: rgba(74, 144, 226, 0.4);
-  color: rgba(74, 144, 226, 1);
+  background: rgba(124, 139, 255, 0.18);
+  border-color: rgba(124, 139, 255, 0.45);
+  color: rgba(124, 139, 255, 1);
   font-weight: 600;
 }
 
