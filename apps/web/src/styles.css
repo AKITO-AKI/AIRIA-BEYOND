@@ -772,3 +772,162 @@ footer {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.6);
 }
+
+/* AIRIA atmospheric layers and cursor */
+.airia-stage {
+    position: relative;
+    isolation: isolate;
+}
+
+.airia-stage > header,
+.airia-stage > main,
+.airia-stage > footer,
+.airia-stage > .error-message,
+.airia-stage > .success-message {
+    position: relative;
+    z-index: 2;
+}
+
+.airia-atmosphere {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.airia-atmosphere canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.airia-glass-canvas {
+    mix-blend-mode: soft-light;
+    opacity: 0.7;
+    filter: blur(0.4px);
+}
+
+.airia-dust-canvas {
+    mix-blend-mode: screen;
+    opacity: 0.9;
+}
+
+.airia-stage.idle .airia-dust-canvas {
+    opacity: 0;
+}
+
+.airia-stage.safe-zone .airia-atmosphere {
+    opacity: 0.5;
+    filter: grayscale(0.2);
+}
+
+.darkroom-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.05) 0%, rgba(10, 10, 10, 0.85) 50%, rgba(0, 0, 0, 0.95) 100%);
+    animation: darkroomReveal 2.6s ease-in-out;
+    z-index: 1;
+    pointer-events: none;
+}
+
+@keyframes darkroomReveal {
+    0% {
+        opacity: 0;
+    }
+    35% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 0.55;
+    }
+}
+
+.airia-cursor-active {
+    cursor: none;
+}
+
+.airia-cursor-trail {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.airia-fluid-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+    z-index: 4;
+    transition: transform 0.2s ease-out;
+}
+
+.airia-fluid-cursor .cursor-core {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 12px rgba(180, 210, 255, 0.7);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.airia-fluid-cursor .cursor-ring {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 16px rgba(140, 170, 220, 0.5);
+    animation: cursorBreath 3.6s ease-in-out infinite;
+}
+
+.airia-fluid-cursor.magnetized .cursor-ring {
+    border-color: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 24px rgba(200, 230, 255, 0.8);
+}
+
+@keyframes cursorBreath {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0.7;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.15);
+        opacity: 1;
+    }
+}
+
+.airia-stage button:hover:not(:disabled),
+.airia-stage button:focus-visible,
+.airia-stage select:hover:not(:disabled),
+.airia-stage select:focus-visible {
+    animation: breathePulse 3.8s ease-in-out infinite;
+}
+
+@keyframes breathePulse {
+    0%, 100% {
+        box-shadow: 0 0 0 rgba(124, 139, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(124, 139, 255, 0.45);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .airia-fluid-cursor,
+    .airia-cursor-trail {
+        display: none;
+    }
+    .darkroom-overlay {
+        animation: none;
+    }
+}
