@@ -4,17 +4,26 @@
   left: 0;
   right: 0;
   height: 80px;
-  background: var(--surface-glass-strong);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border-color);
-  box-shadow: 0 -4px 20px var(--shadow);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(24px) saturate(140%);
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 -12px 30px rgba(18, 24, 50, 0.15);
   z-index: 1000;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.mini-player-bar.is-docked {
+  transform: translateY(100%);
+  box-shadow: none;
 }
 
 .mini-player-bar:hover {
   transform: translateY(-2px);
   box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+}
+
+.mini-player-bar.is-docked:hover {
+  transform: translateY(100%);
 }
 
 .mini-player-bar-content {
@@ -30,9 +39,9 @@
 .mini-player-thumbnail {
   width: 60px;
   height: 60px;
-  border-radius: 8px;
+  border-radius: 12px;
   object-fit: cover;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(18, 24, 50, 0.18);
   flex-shrink: 0;
 }
 
@@ -49,6 +58,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.06em;
 }
 
 .mini-player-track-meta {
@@ -80,8 +90,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.5);
   color: var(--text-secondary);
   font-size: 20px;
   cursor: pointer;
@@ -94,12 +104,40 @@
 }
 
 .mini-player-expand-button:hover {
-  background: rgba(112, 195, 176, 0.15);
+  background: rgba(123, 144, 244, 0.18);
   transform: scale(1.1);
 }
 
 .mini-player-expand-button:active {
   transform: scale(0.95);
+}
+
+.mini-player-dock {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  z-index: 1100;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  backdrop-filter: blur(18px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mini-player-dock.is-docked {
+  bottom: 16px;
+}
+
+.mini-player-dock:hover {
+  color: var(--text-primary);
+  border-color: rgba(123, 144, 244, 0.6);
+  background: rgba(123, 144, 244, 0.2);
 }
 
 /* Responsive */
@@ -131,7 +169,9 @@
   .mini-player-bar:hover,
   .mini-player-expand-button,
   .mini-player-expand-button:hover,
-  .mini-player-expand-button:active {
+  .mini-player-expand-button:active,
+  .mini-player-dock,
+  .mini-player-dock:hover {
     transition: none;
     transform: none;
   }

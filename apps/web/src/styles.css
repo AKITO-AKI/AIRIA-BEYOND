@@ -1,26 +1,26 @@
 :root {
     /* C-1: Updated color system for classical visual metaphors */
-    font-family: 'Noto Sans JP', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    font-family: 'Cormorant Garamond', 'Noto Serif JP', 'Times New Roman', serif;
     
     /* Base colors - white background with dynamic tinting */
-    --bg-primary: #F3F3F3;
-    --bg-secondary: rgba(255, 255, 255, 0.72);
-    --bg-tertiary: rgba(0, 0, 0, 0.04);
-    --border-color: rgba(0, 0, 0, 0.08);
-    --surface-glass: rgba(255, 255, 255, 0.7);
-    --surface-glass-strong: rgba(255, 255, 255, 0.9);
+    --bg-primary: rgba(246, 246, 248, 0.82);
+    --bg-secondary: rgba(255, 255, 255, 0.56);
+    --bg-tertiary: rgba(15, 19, 28, 0.05);
+    --border-color: rgba(255, 255, 255, 0.38);
+    --surface-glass: rgba(255, 255, 255, 0.48);
+    --surface-glass-strong: rgba(255, 255, 255, 0.72);
     
     /* Text colors - soft black */
-    --text-primary: #0B0B0B;
-    --text-secondary: rgba(0, 0, 0, 0.55);
-    --text-blend: #F6F6F6;
+    --text-primary: #111318;
+    --text-secondary: rgba(17, 19, 24, 0.62);
+    --text-blend: rgba(255, 255, 255, 0.88);
     
     /* Accent colors */
-    --accent-primary: #7C8BFF;
-    --accent-hover: #93A0FF;
-    --accent-input: #7C8BFF;
-    --accent-album: #7A9CFF;
-    --accent-music: #70C3B0;
+    --accent-primary: #7B90F4;
+    --accent-hover: #96A6FF;
+    --accent-input: #7B90F4;
+    --accent-album: #89A2FF;
+    --accent-music: #7EB9AA;
     
     /* System colors - pale and elegant */
     --accent-success: #EDE7D8; /* Pale warm */
@@ -30,7 +30,7 @@
     /* Gold accent for geometric patterns */
     --gold: #BFA76A;
     
-    --shadow: rgba(0, 0, 0, 0.08);
+    --shadow: rgba(10, 16, 32, 0.08);
 }
 
 * {
@@ -40,11 +40,15 @@
 body {
     margin: 0;
     padding: 0;
-    background: radial-gradient(circle at top, #F7F7F7 0%, #EFEFEF 60%, #ECECEC 100%);
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.9) 0%, rgba(236, 238, 242, 0.85) 35%, rgba(223, 228, 236, 0.8) 70%),
+        linear-gradient(120deg, rgba(240, 244, 250, 0.75), rgba(226, 232, 240, 0.85));
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 .app-container {
@@ -59,14 +63,14 @@ body {
 header {
     text-align: center;
     padding: 40px 20px;
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
     margin-bottom: 30px;
 }
 
 header h1 {
     font-size: clamp(28px, 5vw, 42px);
     margin: 0 0 10px 0;
-    background: linear-gradient(135deg, #4a90e2, #a0b3d6);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(140, 156, 190, 0.9));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -92,11 +96,11 @@ main {
 
 section {
     background: var(--surface-glass);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 18px;
     padding: 25px;
-    box-shadow: 0 4px 12px var(--shadow);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 40px rgba(15, 24, 50, 0.08);
+    backdrop-filter: blur(18px) saturate(130%);
 }
 
 @media (max-width: 767px) {
@@ -109,7 +113,7 @@ section h2 {
     font-size: clamp(20px, 4vw, 24px);
     margin: 0 0 20px 0;
     color: var(--text-primary);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
     padding-bottom: 10px;
 }
 
@@ -134,13 +138,14 @@ section h3 {
 select {
     width: 100%;
     padding: 12px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-glass);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.55);
     color: var(--text-primary);
     font-size: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
+    backdrop-filter: blur(12px);
 }
 
 select:hover:not(:disabled) {
@@ -159,12 +164,13 @@ select:disabled {
 
 /* Timer display */
 .timer-display {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 16px;
     padding: 20px;
     text-align: center;
     margin-bottom: 20px;
+    backdrop-filter: blur(14px);
 }
 
 .timer-label {
@@ -192,9 +198,9 @@ select:disabled {
 button,
 .btn {
     padding: 12px 24px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-glass);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.5);
     color: var(--text-primary);
     font-size: 16px;
     cursor: pointer;
@@ -202,7 +208,8 @@ button,
     font-weight: 500;
     flex: 1;
     min-width: fit-content;
-    backdrop-filter: blur(10px);
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(14px);
 }
 
 @media (max-width: 480px) {
@@ -215,10 +222,10 @@ button,
 
 button:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-    background: rgba(124, 139, 255, 0.12);
-    border-color: var(--accent-input);
+    background: rgba(123, 144, 244, 0.12);
+    border-color: rgba(123, 144, 244, 0.5);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px var(--shadow);
+    box-shadow: 0 10px 24px rgba(28, 40, 80, 0.15);
 }
 
 button:active:not(:disabled),
@@ -240,14 +247,14 @@ button:disabled,
 }
 
 .btn-primary {
-    background: rgba(124, 139, 255, 0.18);
-    border-color: rgba(124, 139, 255, 0.4);
+    background: rgba(123, 144, 244, 0.2);
+    border-color: rgba(123, 144, 244, 0.55);
     color: var(--text-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: rgba(124, 139, 255, 0.3);
-    border-color: rgba(124, 139, 255, 0.55);
+    background: rgba(123, 144, 244, 0.35);
+    border-color: rgba(123, 144, 244, 0.7);
 }
 
 .btn-secondary {
@@ -271,9 +278,9 @@ button:disabled,
 
 /* Error message */
 .error-message {
-    background: rgba(216, 201, 193, 0.2);
-    border: 1px solid var(--accent-danger);
-    border-radius: 8px;
+    background: rgba(216, 201, 193, 0.25);
+    border: 1px solid rgba(216, 201, 193, 0.6);
+    border-radius: 14px;
     padding: 16px;
     margin-bottom: 20px;
     color: var(--text-primary);
@@ -334,9 +341,9 @@ button:disabled,
 
 /* Success message */
 .success-message {
-    background: rgba(237, 231, 216, 0.35);
-    border: 1px solid var(--accent-success);
-    border-radius: 8px;
+    background: rgba(237, 231, 216, 0.45);
+    border: 1px solid rgba(237, 231, 216, 0.7);
+    border-radius: 14px;
     padding: 16px;
     margin-bottom: 20px;
     color: var(--text-primary);
@@ -584,9 +591,10 @@ footer {
     gap: 16px;
     padding: 24px;
     margin: 20px 0;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    backdrop-filter: blur(14px);
 }
 
 .progress-step {
@@ -611,15 +619,15 @@ footer {
     justify-content: center;
     font-size: 20px;
     font-weight: bold;
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     color: var(--text-secondary);
     transition: all 0.3s ease;
 }
 
 .progress-step.active .step-icon {
-    background: rgba(124, 139, 255, 0.25);
-    border-color: rgba(124, 139, 255, 0.5);
+    background: rgba(123, 144, 244, 0.25);
+    border-color: rgba(123, 144, 244, 0.6);
     color: var(--accent-input);
     animation: pulse 1.5s ease-in-out infinite;
 }
@@ -694,11 +702,12 @@ footer {
 }
 
 .current-track {
-  background: rgba(112, 195, 176, 0.08);
-  border: 1px solid rgba(112, 195, 176, 0.25);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
   padding: 20px;
   margin-bottom: 30px;
+  backdrop-filter: blur(16px);
 }
 
 .current-track h2 {
@@ -731,10 +740,11 @@ footer {
 }
 
 .music-library {
-  background: var(--surface-glass);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
   padding: 20px;
+  backdrop-filter: blur(16px);
 }
 
 .music-library h2 {
@@ -752,15 +762,15 @@ footer {
 
 .music-list li {
   padding: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .music-list li.selected {
-  background: rgba(112, 195, 176, 0.12);
-  border-left: 3px solid rgba(112, 195, 176, 0.7);
+  background: rgba(123, 144, 244, 0.15);
+  border-left: 3px solid rgba(123, 144, 244, 0.7);
 }
 
 .music-title {

@@ -20,6 +20,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
+  const [isMenuHidden, setIsMenuHidden] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -104,7 +105,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   return (
     <div className="room-navigator">
       {/* Room indicator dots */}
-      <div className="room-indicators">
+      <div className={`room-indicators ${isMenuHidden ? 'is-hidden' : ''}`}>
         {rooms.map((room, index) => (
           <button
             key={room.id}
@@ -116,6 +117,15 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        className="room-indicator-toggle"
+        onClick={() => setIsMenuHidden((prev) => !prev)}
+        aria-pressed={isMenuHidden}
+        aria-label={isMenuHidden ? 'メニューを表示' : 'メニューを非表示'}
+      >
+        {isMenuHidden ? 'MENU' : 'HIDE'}
+      </button>
 
       {/* Rooms container */}
       <div
