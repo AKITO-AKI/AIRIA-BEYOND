@@ -3,23 +3,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 60vh;
-  padding: 48px;
+  min-height: 40vh;
+  padding: 40px;
   text-align: center;
 }
 
 .empty-icon {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 72px;
+  height: 72px;
   margin-bottom: 24px;
   opacity: 0;
   animation: fadeIn 0.8s ease 0.2s forwards;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 64px;
-  color: #D4AF37;
+  color: #1a1a1a;
 }
 
 .empty-title {
@@ -28,12 +27,12 @@
   margin-bottom: 12px;
   opacity: 0;
   animation: fadeIn 0.8s ease 0.4s forwards;
-  color: #333;
+  color: #1a1a1a;
 }
 
 .empty-description {
   font-size: 16px;
-  color: #666;
+  color: rgba(0, 0, 0, 0.55);
   margin-bottom: 32px;
   opacity: 0;
   animation: fadeIn 0.8s ease 0.6s forwards;
@@ -43,10 +42,10 @@
 .empty-cta-button {
   padding: 12px 24px;
   font-size: 16px;
-  background: linear-gradient(135deg, #D4AF37 0%, #B8941E 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
+  background: rgba(212, 175, 55, 0.18);
+  color: #1a1a1a;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-radius: 999px;
   cursor: pointer;
   opacity: 0;
   animation: fadeIn 0.8s ease 0.8s forwards, float 3s ease infinite;

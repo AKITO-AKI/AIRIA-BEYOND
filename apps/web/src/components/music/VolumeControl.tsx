@@ -19,11 +19,7 @@ export const VolumeControl: React.FC<VolumeControlProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
 
-  const getVolumeIcon = () => {
-    if (isMuted || volume === 0) return '🔇';
-    if (volume < 0.5) return '🔉';
-    return '🔊';
-  };
+  const volumeLevel = isMuted || volume === 0 ? 'muted' : volume < 0.5 ? 'low' : 'high';
 
   const handleVolumeChange = (clientX: number) => {
     if (!sliderRef.current) return;
@@ -67,12 +63,14 @@ export const VolumeControl: React.FC<VolumeControlProps> = ({
   return (
     <div className={`volume-control ${expanded ? 'expanded' : ''}`}>
       <button
-        className="volume-icon"
+        className={`volume-icon ${volumeLevel}`}
         onClick={onMuteToggle}
         aria-label={isMuted ? 'Unmute' : 'Mute'}
         title={isMuted ? 'Unmute' : 'Mute'}
       >
-        {getVolumeIcon()}
+        <span className="volume-core" />
+        <span className="volume-wave wave-1" />
+        <span className="volume-wave wave-2" />
       </button>
       <div
         ref={sliderRef}

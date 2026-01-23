@@ -4,6 +4,7 @@ import BookshelfCanvas from '../gallery/BookshelfCanvas';
 import GalleryControls, { SortMode, ViewMode } from '../gallery/GalleryControls';
 import GridView from '../gallery/fallback/GridView';
 import EmptyState from '../visual/feedback/EmptyState';
+import GeometricCanvas from '../visual/GeometricCanvas';
 import './GalleryRoom.css';
 
 const GalleryRoom: React.FC = () => {
@@ -59,46 +60,58 @@ const GalleryRoom: React.FC = () => {
 
   return (
     <div className="room-content gallery-room">
+      <GeometricCanvas pattern="polyhedron" isActive={true} />
       <h1 className="room-title">GALLERY</h1>
       <p className="room-subtitle">あなたの感情コレクション</p>
       
       <div className="bookshelf-container">
-        {albums.length === 0 ? (
+        <GalleryControls
+          constellationEnabled={constellationEnabled}
+          onConstellationToggle={() => setConstellationEnabled(!constellationEnabled)}
+          sortMode={sortMode}
+          onSortChange={setSortMode}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+        
+        {viewMode === '3d' ? (
+          <div className={`gallery-shelf-stage ${albums.length === 0 ? 'empty' : ''}`}>
+            <BookshelfCanvas
+              albums={sortedAlbums}
+              onBookClick={handleAlbumClick}
+              constellationEnabled={constellationEnabled}
+            />
+            {albums.length === 0 && (
+              <div className="empty-shelf-overlay">
+                <EmptyState
+                  title="まだアルバムがありません"
+                  description="Mainルームでセッションを開始すると、棚にアルバムが生まれます。"
+                  actionLabel="セッションを始める"
+                  onAction={() => {
+                    // Note: Navigation should ideally use proper routing
+                    // For now, user can manually navigate to Main room
+                    console.log('Navigate to Main room');
+                  }}
+                  icon={<span className="empty-icon-shape" aria-hidden="true" />}
+                />
+              </div>
+            )}
+          </div>
+        ) : albums.length === 0 ? (
           <EmptyState
             title="まだアルバムがありません"
-            description="セッションを作成して、あなたの人生を染め上げましょう"
+            description="Mainルームでセッションを開始すると、アルバムが一覧に追加されます。"
             actionLabel="セッションを始める"
             onAction={() => {
-              // Note: Navigation should ideally use proper routing
-              // For now, user can manually navigate to Main room
               console.log('Navigate to Main room');
             }}
-            icon={<span>📚</span>}
+            icon={<span className="empty-icon-shape" aria-hidden="true" />}
           />
         ) : (
-          <>
-            <GalleryControls
-              constellationEnabled={constellationEnabled}
-              onConstellationToggle={() => setConstellationEnabled(!constellationEnabled)}
-              sortMode={sortMode}
-              onSortChange={setSortMode}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-            />
-            
-            {viewMode === '3d' ? (
-              <BookshelfCanvas
-                albums={sortedAlbums}
-                onBookClick={handleAlbumClick}
-                constellationEnabled={constellationEnabled}
-              />
-            ) : (
-              <GridView
-                albums={sortedAlbums}
-                onAlbumClick={handleAlbumClick}
-              />
-            )}
-          </>
+          <GridView
+            albums={sortedAlbums}
+            onAlbumClick={handleAlbumClick}
+          />
         )}
       </div>
     </div>

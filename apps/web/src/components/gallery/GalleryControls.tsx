@@ -30,7 +30,7 @@ const GalleryControls: React.FC<GalleryControlsProps> = ({
             checked={constellationEnabled}
             onChange={onConstellationToggle}
           />
-          <span className="control-icon">🌌</span>
+          <span className="control-icon geometric" aria-hidden="true" />
           <span className="control-text">星座を表示</span>
         </label>
       </div>

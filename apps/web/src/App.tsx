@@ -666,17 +666,43 @@ const Phase1SessionUI = () => {
             <header>
                 <h1>AIRIA BEYOND</h1>
                 <p className="subtitle">セッション管理とムード記録アプリケーション</p>
+                <div className="primary-focus">
+                    <div className="primary-focus-title">作成フロー</div>
+                    <div className="primary-focus-grid">
+                        <div className="focus-card">
+                            <span className="focus-step">01</span>
+                            <div>
+                                <h3>セッションを開始</h3>
+                                <p>ムードと時間を選択して計測</p>
+                            </div>
+                        </div>
+                        <div className="focus-card">
+                            <span className="focus-step">02</span>
+                            <div>
+                                <h3>画像・音楽を生成</h3>
+                                <p>外部生成でアルバムと曲を作成</p>
+                            </div>
+                        </div>
+                        <div className="focus-card">
+                            <span className="focus-step">03</span>
+                            <div>
+                                <h3>アルバムに保存</h3>
+                                <p>Gallery / Music で再生・閲覧</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </header>
 
             {error && (
                 <div className="error-message" role="alert" aria-live="polite">
-                    ⚠️ {error}
+                    注意: {error}
                 </div>
             )}
 
             {saveSuccess && (
                 <div className="success-message" role="alert" aria-live="polite">
-                    ✓ アルバムに保存しました！ Galleryルームで確認できます。
+                    アルバムに保存しました。Galleryルームで確認できます。
                 </div>
             )}
 
@@ -694,10 +720,10 @@ const Phase1SessionUI = () => {
                             aria-label="気分選択"
                             {...interactiveProps}
                         >
-                            <option value="穏やか">😌 穏やか</option>
-                            <option value="嬉しい">😊 嬉しい</option>
-                            <option value="不安">😰 不安</option>
-                            <option value="疲れ">😫 疲れ</option>
+                            <option value="穏やか">○ 穏やか</option>
+                            <option value="嬉しい">△ 嬉しい</option>
+                            <option value="不安">□ 不安</option>
+                            <option value="疲れ">◇ 疲れ</option>
                         </select>
                     </div>
 
@@ -749,7 +775,7 @@ const Phase1SessionUI = () => {
                             aria-label="JSONダウンロード"
                             {...interactiveProps}
                         >
-                            📄 JSONダウンロード
+                            JSONダウンロード
                         </button>
                     </div>
                 </section>
@@ -783,7 +809,7 @@ const Phase1SessionUI = () => {
                             aria-label="PNG生成"
                             {...interactiveProps}
                         >
-                            {isGenerating ? '⏳ 生成中...' : '🎨 PNG生成'}
+                            {isGenerating ? '生成中...' : 'PNG生成'}
                         </button>
                         {previewImageURL && (
                             <>
@@ -793,7 +819,7 @@ const Phase1SessionUI = () => {
                                     aria-label="PNGダウンロード"
                                     {...interactiveProps}
                                 >
-                                    💾 PNGダウンロード
+                                    PNGダウンロード
                                 </button>
                                 <button 
                                     onClick={saveToAlbum}
@@ -801,7 +827,7 @@ const Phase1SessionUI = () => {
                                     aria-label="アルバムに保存"
                                     {...interactiveProps}
                                 >
-                                    📚 アルバムに保存
+                                    アルバムに保存
                                 </button>
                             </>
                         )}
@@ -835,28 +861,28 @@ const Phase1SessionUI = () => {
                         <div className="progress-flow">
                             <div className={`progress-step ${isAnalyzing ? 'active' : analysisResult ? 'completed' : ''}`}>
                                 <div className="step-icon">
-                                    {analysisResult ? '✓' : isAnalyzing ? '⏳' : '1'}
+                                    {analysisResult ? '■' : isAnalyzing ? '◉' : '1'}
                                 </div>
                                 <div className="step-label">解析中...</div>
                             </div>
                             <div className="progress-arrow">→</div>
                             <div className={`progress-step ${isGeneratingExternal ? 'active' : externalImageUrl ? 'completed' : ''}`}>
                                 <div className="step-icon">
-                                    {externalImageUrl ? '✓' : isGeneratingExternal ? '⏳' : '2'}
+                                    {externalImageUrl ? '■' : isGeneratingExternal ? '◉' : '2'}
                                 </div>
                                 <div className="step-label">画像生成中...</div>
                             </div>
                             <div className="progress-arrow">→</div>
                             <div className={`progress-step ${isGeneratingMusic ? 'active' : musicData ? 'completed' : ''}`}>
                                 <div className="step-icon">
-                                    {musicData ? '✓' : isGeneratingMusic ? '⏳' : '3'}
+                                    {musicData ? '■' : isGeneratingMusic ? '◉' : '3'}
                                 </div>
                                 <div className="step-label">音楽生成中...</div>
                             </div>
                             <div className="progress-arrow">→</div>
                             <div className={`progress-step ${externalImageUrl && musicData && !isGeneratingExternal && !isGeneratingMusic ? 'completed' : ''}`}>
                                 <div className="step-icon">
-                                    {externalImageUrl && musicData && !isGeneratingExternal && !isGeneratingMusic ? '✓' : '4'}
+                                    {externalImageUrl && musicData && !isGeneratingExternal && !isGeneratingMusic ? '■' : '4'}
                                 </div>
                                 <div className="step-label">完了</div>
                             </div>
@@ -868,7 +894,7 @@ const Phase1SessionUI = () => {
                         <div className="analysis-status" role="status" aria-live="polite">
                             <div className="spinner"></div>
                             <p>
-                                🔍 分析中: {
+                                分析中: {
                                     analysisJobStatus.status === 'queued' ? '待機中...' : 
                                     analysisJobStatus.status === 'running' ? `実行中... (${analysisJobStatus.provider})` : 
                                     analysisJobStatus.status
@@ -880,7 +906,7 @@ const Phase1SessionUI = () => {
                     {/* Display analysis result */}
                     {analysisResult && !isAnalyzing && (
                         <div className="analysis-result">
-                            <h3>📊 分析結果</h3>
+                            <h3>分析結果</h3>
                             <div className="analysis-details">
                                 <p><strong>感情価:</strong> {analysisResult.valence.toFixed(2)} (-1～+1)</p>
                                 <p><strong>興奮度:</strong> {analysisResult.arousal.toFixed(2)} (0～1)</p>
@@ -917,7 +943,7 @@ const Phase1SessionUI = () => {
                             aria-label="外部生成"
                             {...interactiveProps}
                         >
-                            {isGeneratingExternal ? '⏳ 生成中...' : '🌐 外部生成(Replicate)'}
+                            {isGeneratingExternal ? '生成中...' : '外部生成 (Replicate)'}
                         </button>
                         {externalImageUrl && (
                             <button 
@@ -926,7 +952,7 @@ const Phase1SessionUI = () => {
                                 aria-label="アルバムに保存"
                                 {...interactiveProps}
                             >
-                                📚 アルバムに保存
+                                アルバムに保存
                             </button>
                         )}
                     </div>
@@ -965,7 +991,7 @@ const Phase1SessionUI = () => {
                     {externalJobStatus?.status === 'failed' && !isGeneratingExternal && (
                         <div className="error-container" role="alert">
                             <div className="error-details">
-                                <p className="error-title">❌ 外部生成に失敗しました</p>
+                                <p className="error-title">外部生成に失敗しました</p>
                                 {externalJobStatus.errorCode && (
                                     <p className="error-code">エラーコード: {externalJobStatus.errorCode}</p>
                                 )}
@@ -985,7 +1011,7 @@ const Phase1SessionUI = () => {
                                     aria-label="再試行"
                                     {...interactiveProps}
                                 >
-                                    🔄 再試行
+                                    再試行
                                 </button>
                                 <button 
                                     onClick={fallbackToLocal}
@@ -993,7 +1019,7 @@ const Phase1SessionUI = () => {
                                     aria-label="ローカル生成に切り替え"
                                     {...interactiveProps}
                                 >
-                                    🎨 ローカル生成に切り替え
+                                    ローカル生成に切り替え
                                 </button>
                             </div>
                             <p className="fallback-help">

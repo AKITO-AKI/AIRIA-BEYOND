@@ -40,7 +40,7 @@
   border-radius: 2px;
   position: relative;
   transition: width 0.1s linear;
-  background: rgba(112, 195, 176, 0.8);
+  background: rgba(212, 175, 55, 0.85);
 }
 
 .seek-thumb {
@@ -50,7 +50,7 @@
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  background: rgba(112, 195, 176, 0.9);
+  background: rgba(212, 175, 55, 0.95);
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   opacity: 0;

@@ -14,29 +14,29 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
   min-width: 300px;
   max-width: 500px;
   pointer-events: auto;
 }
 
 .toast-success {
-  background: linear-gradient(135deg, #F4E5C2 0%, #D4AF37 100%);
-  border-left: 4px solid #B8941E;
-  color: #333;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(212, 175, 55, 0.18) 100%);
+  border-left: 4px solid rgba(212, 175, 55, 0.7);
+  color: #1a1a1a;
 }
 
 .toast-error {
-  background: linear-gradient(135deg, #D4C5B9 0%, #A89080 100%);
-  border-left: 4px solid #8B7566;
-  color: #333;
+  background: linear-gradient(135deg, #F5F5F5 0%, #E6E6E6 100%);
+  border-left: 4px solid rgba(0, 0, 0, 0.4);
+  color: #1a1a1a;
 }
 
 .toast-info {
-  background: linear-gradient(135deg, #E8E8E8 0%, #C8C8C8 100%);
-  border-left: 4px solid #A0A0A0;
-  color: #333;
+  background: linear-gradient(135deg, #F5F5F5 0%, #E4E4E4 100%);
+  border-left: 4px solid rgba(0, 0, 0, 0.3);
+  color: #1a1a1a;
 }
 
 .toast-icon {

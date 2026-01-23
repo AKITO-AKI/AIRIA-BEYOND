@@ -20,7 +20,7 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
   frequencyData,
   timeDomainData,
   isPlaying,
-  dominantColor = '#4a90e2',
+  dominantColor = '#D4AF37',
   width = 800,
   height = 200,
   mini = false,

@@ -12,7 +12,7 @@ export const SeekBar: React.FC<SeekBarProps> = ({
   currentTime,
   duration,
   onSeek,
-  color = '#4a90e2',
+  color = '#D4AF37',
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);

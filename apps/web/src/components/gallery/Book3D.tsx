@@ -179,12 +179,12 @@ const Book3D: React.FC<Book3DProps> = ({
                   fontWeight: 600,
                 }}
               >
-                {album.metadata.provider === 'replicate' ? '✨ AI生成' : '📁 ローカル'}
+                {album.metadata.provider === 'replicate' ? 'AI生成' : 'ローカル'}
               </div>
             )}
             {album.musicMetadata?.duration && (
               <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '2px' }}>
-                ♪ {Math.floor(album.musicMetadata.duration)}秒
+                音楽 {Math.floor(album.musicMetadata.duration)}秒
               </div>
             )}
           </div>

@@ -95,8 +95,8 @@ const FluidCursor: React.FC<FluidCursorProps> = ({ onSafeZoneChange, onFocusChan
         const alpha = Math.max(0, 1 - index / TRAIL_LENGTH);
         const radius = 18 - index * 0.8;
         const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius * 2.8);
-        gradient.addColorStop(0, `rgba(255,255,255,${alpha * 0.28})`);
-        gradient.addColorStop(0.4, `rgba(160,200,255,${alpha * 0.18})`);
+        gradient.addColorStop(0, `rgba(255,255,255,${alpha * 0.2})`);
+        gradient.addColorStop(0.4, `rgba(212,175,55,${alpha * 0.2})`);
         gradient.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = gradient;
         ctx.beginPath();
