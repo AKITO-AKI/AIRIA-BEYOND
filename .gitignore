@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.cache/
+*.log
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# Test files in root
+/test-*.js
+/test-*.ts
