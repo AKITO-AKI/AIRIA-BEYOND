@@ -6,8 +6,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "analyze": "vite-bundle-visualizer"
+    "analyze": "vite-bundle-visualizer",
+    "predeploy": "npm run build",
+  "deploy": "gh-pages -d dist"
   },
+  "homepage": "https://akito-aki.github.io/AIRIA-BEYOND/",
   "dependencies": {
     "@react-three/drei": "^9.92.0",
     "@react-three/fiber": "^8.15.0",
