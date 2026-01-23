@@ -3,6 +3,8 @@ import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './u
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
 import { useCausalLog } from './contexts/CausalLogContext';
+import AtmosphericBackdrop from './components/visual/AiriaAtmosphere';
+import FluidCursor from './components/visual/interactions/FluidCursor';
 import { 
   generateImage, 
   pollJobStatus, 
@@ -113,6 +115,8 @@ const Phase1SessionUI = () => {
     const [musicJobStatus, setMusicJobStatus] = useState<MusicJobStatus | null>(null);
     const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
     const [musicData, setMusicData] = useState<string | null>(null);
+    const [isInSafeZone, setIsInSafeZone] = useState(false);
+    const [hasFocusIntent, setHasFocusIntent] = useState(false);
 
     // P5: Causal logging state
     const [currentLogId, setCurrentLogId] = useState<string | null>(null);
@@ -133,6 +137,15 @@ const Phase1SessionUI = () => {
         motif_tags: [] as string[],
         confidence: 0
     });
+
+    const interactiveProps = {
+        'data-magnet': 'true',
+        'data-focus-reactive': 'true',
+    } as const;
+
+    const isImmersive = isRunning || isGenerating || isGeneratingExternal || isAnalyzing || isGeneratingMusic;
+    const isDarkroom = isGenerating || isGeneratingExternal || isAnalyzing || isGeneratingMusic;
+    const focusIntensity = hasFocusIntent ? 1 : 0;
 
     useEffect(() => {
         let interval: number | undefined;
@@ -644,7 +657,12 @@ const Phase1SessionUI = () => {
     };
 
     return (
-        <div className="app-container">
+        <div
+            className={`app-container airia-stage ${isImmersive ? 'immersive' : 'idle'} ${isDarkroom ? 'darkroom' : ''} ${isInSafeZone ? 'safe-zone' : ''}`}
+        >
+            <AtmosphericBackdrop mode={isImmersive ? 'dust' : 'glass'} isPaused={isInSafeZone} focusIntensity={focusIntensity} />
+            <FluidCursor onSafeZoneChange={setIsInSafeZone} onFocusChange={setHasFocusIntent} />
+            {isDarkroom && <div className="darkroom-overlay" aria-hidden />}
             <header>
                 <h1>AIRIA BEYOND</h1>
                 <p className="subtitle">セッション管理とムード記録アプリケーション</p>
@@ -674,6 +692,7 @@ const Phase1SessionUI = () => {
                             onChange={(e) => setMood(e.target.value)}
                             disabled={isRunning}
                             aria-label="気分選択"
+                            {...interactiveProps}
                         >
                             <option value="穏やか">😌 穏やか</option>
                             <option value="嬉しい">😊 嬉しい</option>
@@ -690,6 +709,7 @@ const Phase1SessionUI = () => {
                             onChange={(e) => setDuration(Number(e.target.value))}
                             disabled={isRunning}
                             aria-label="セッション時間選択"
+                            {...interactiveProps}
                         >
                             <option value="30">30秒</option>
                             <option value="60">1分</option>
@@ -709,6 +729,7 @@ const Phase1SessionUI = () => {
                             disabled={isRunning}
                             className="btn btn-primary"
                             aria-label="セッション開始"
+                            {...interactiveProps}
                         >
                             {isRunning ? '実行中...' : '開始'}
                         </button>
@@ -717,6 +738,7 @@ const Phase1SessionUI = () => {
                             disabled={!isRunning}
                             className="btn btn-secondary"
                             aria-label="セッション停止"
+                            {...interactiveProps}
                         >
                             停止
                         </button>
@@ -725,6 +747,7 @@ const Phase1SessionUI = () => {
                             disabled={!sessionData.session_id}
                             className="btn btn-outline"
                             aria-label="JSONダウンロード"
+                            {...interactiveProps}
                         >
                             📄 JSONダウンロード
                         </button>
@@ -742,6 +765,7 @@ const Phase1SessionUI = () => {
                             onChange={(e) => setSelectedPreset(Number(e.target.value))}
                             disabled={isGenerating}
                             aria-label="画像サイズプリセット選択"
+                            {...interactiveProps}
                         >
                             {IMAGE_PRESETS.map((preset, index) => (
                                 <option key={index} value={index}>
@@ -757,6 +781,7 @@ const Phase1SessionUI = () => {
                             disabled={!sessionData.session_id || isGenerating}
                             className="btn btn-primary"
                             aria-label="PNG生成"
+                            {...interactiveProps}
                         >
                             {isGenerating ? '⏳ 生成中...' : '🎨 PNG生成'}
                         </button>
@@ -766,6 +791,7 @@ const Phase1SessionUI = () => {
                                     onClick={downloadPNG}
                                     className="btn btn-success"
                                     aria-label="PNGダウンロード"
+                                    {...interactiveProps}
                                 >
                                     💾 PNGダウンロード
                                 </button>
@@ -773,6 +799,7 @@ const Phase1SessionUI = () => {
                                     onClick={saveToAlbum}
                                     className="btn btn-primary"
                                     aria-label="アルバムに保存"
+                                    {...interactiveProps}
                                 >
                                     📚 アルバムに保存
                                 </button>
@@ -872,6 +899,7 @@ const Phase1SessionUI = () => {
                             onChange={(e) => setSelectedStylePreset(e.target.value)}
                             disabled={isGeneratingExternal}
                             aria-label="スタイルプリセット選択"
+                            {...interactiveProps}
                         >
                             {STYLE_PRESETS.map((preset) => (
                                 <option key={preset.id} value={preset.id}>
@@ -887,6 +915,7 @@ const Phase1SessionUI = () => {
                             disabled={!sessionData.session_id || isGeneratingExternal}
                             className="btn btn-primary"
                             aria-label="外部生成"
+                            {...interactiveProps}
                         >
                             {isGeneratingExternal ? '⏳ 生成中...' : '🌐 外部生成(Replicate)'}
                         </button>
@@ -895,6 +924,7 @@ const Phase1SessionUI = () => {
                                 onClick={saveToAlbum}
                                 className="btn btn-primary"
                                 aria-label="アルバムに保存"
+                                {...interactiveProps}
                             >
                                 📚 アルバムに保存
                             </button>
@@ -953,6 +983,7 @@ const Phase1SessionUI = () => {
                                     onClick={retryExternalGeneration}
                                     className="btn btn-secondary"
                                     aria-label="再試行"
+                                    {...interactiveProps}
                                 >
                                     🔄 再試行
                                 </button>
@@ -960,6 +991,7 @@ const Phase1SessionUI = () => {
                                     onClick={fallbackToLocal}
                                     className="btn btn-outline"
                                     aria-label="ローカル生成に切り替え"
+                                    {...interactiveProps}
                                 >
                                     🎨 ローカル生成に切り替え
                                 </button>
