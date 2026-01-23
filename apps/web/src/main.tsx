@@ -18,6 +18,7 @@ import DebugPanel from './components/DebugPanel';
 import BackgroundDyeSystem from './components/visual/BackgroundDyeSystem';
 import ClickRipple from './components/visual/interactions/ClickRipple';
 import FrequencyGeometry from './components/visual/patterns/FrequencyGeometry';
+import FluidCursor from './components/visual/interactions/FluidCursor';
 import { initSentry } from './lib/sentry';
 import { initWebVitals } from './lib/vitals';
 import { initAnalytics } from './lib/analytics';
@@ -58,6 +59,7 @@ const AppContent = () => {
             albumImageUrl={musicState.currentAlbumImage || selectedAlbum?.imageUrl}
             isPlaying={musicState.isPlaying}
           />
+          <FluidCursor />
           {/* Phase C-4: Global click ripples */}
           <ClickRipple />
           {/* Phase C-4: Frequency spectrum geometry (ambient audio visualization) */}

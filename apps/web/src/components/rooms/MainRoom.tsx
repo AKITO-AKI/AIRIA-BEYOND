@@ -5,8 +5,8 @@ import GeometricCanvas from '../visual/GeometricCanvas';
 const MainRoom: React.FC = () => {
   return (
     <div className="room-content" style={{ maxWidth: '100%', width: '100%', position: 'relative' }}>
-      {/* C-1: Lissajous curve for harmony */}
-      <GeometricCanvas pattern="lissajous" isActive={true} />
+      {/* Geometric 3D backdrop for focus */}
+      <GeometricCanvas pattern="polyhedron" isActive={true} />
       <Phase1SessionUI />
     </div>
   );

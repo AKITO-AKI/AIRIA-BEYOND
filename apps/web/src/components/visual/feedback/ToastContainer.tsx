@@ -70,9 +70,9 @@ const ToastContainer: React.FC<ToastContainerProps> = ({ toasts }) => {
           }}
         >
           <span className="toast-icon" aria-hidden="true">
-            {toast.type === 'success' && '✓'}
-            {toast.type === 'error' && '✕'}
-            {toast.type === 'info' && 'ℹ'}
+            {toast.type === 'success' && '●'}
+            {toast.type === 'error' && '■'}
+            {toast.type === 'info' && '◇'}
           </span>
           <span className="toast-message">{toast.message}</span>
         </div>

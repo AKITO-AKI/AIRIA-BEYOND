@@ -96,7 +96,7 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   }, [currentTime, duration, volume, onClose, onPlayPause, onSeek, onVolumeChange, onMuteToggle, onNext, onPrevious]);
 
   // Get dominant color (simplified)
-  const dominantColor = '#4a90e2';
+  const dominantColor = '#D4AF37';
 
   // Get motif tags
   const motifTags = album?.metadata?.motif_tags || [];
@@ -115,7 +115,7 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           aria-label="Close player"
           title="Close (Esc)"
         >
-          ✕
+          X
         </button>
 
         {/* Minimize button */}
@@ -125,7 +125,7 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           aria-label="Minimize player"
           title="Minimize"
         >
-          ⌄
+          -
         </button>
 
         {/* Main content */}

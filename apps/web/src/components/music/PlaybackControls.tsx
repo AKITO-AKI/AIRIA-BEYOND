@@ -28,11 +28,48 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   onRepeat,
   expanded = false,
 }) => {
-  const getRepeatIcon = () => {
-    if (repeat === 'one') return '🔂';
-    if (repeat === 'all') return '🔁';
-    return '🔁';
-  };
+  const IconPlay = () => (
+    <svg viewBox="0 0 24 24" className="control-icon-svg" aria-hidden="true">
+      <polygon points="8,6 8,18 18,12" />
+    </svg>
+  );
+
+  const IconPause = () => (
+    <svg viewBox="0 0 24 24" className="control-icon-svg" aria-hidden="true">
+      <rect x="7" y="6" width="4" height="12" rx="1" />
+      <rect x="13" y="6" width="4" height="12" rx="1" />
+    </svg>
+  );
+
+  const IconPrev = () => (
+    <svg viewBox="0 0 24 24" className="control-icon-svg" aria-hidden="true">
+      <rect x="6" y="6" width="2" height="12" rx="1" />
+      <polygon points="18,6 10,12 18,18" />
+    </svg>
+  );
+
+  const IconNext = () => (
+    <svg viewBox="0 0 24 24" className="control-icon-svg" aria-hidden="true">
+      <polygon points="6,6 14,12 6,18" />
+      <rect x="16" y="6" width="2" height="12" rx="1" />
+    </svg>
+  );
+
+  const IconShuffle = () => (
+    <svg viewBox="0 0 24 24" className="control-icon-svg" aria-hidden="true">
+      <path d="M4 7h6l4 4 2-2 4 4" />
+      <path d="M4 17h6l4-4 2 2 4-4" />
+    </svg>
+  );
+
+  const IconRepeat = () => (
+    <svg viewBox="0 0 24 24" className="control-icon-svg" aria-hidden="true">
+      <path d="M7 7h10v4" />
+      <path d="M17 17H7v-4" />
+      <path d="M17 7l3 3-3 3" />
+      <path d="M7 17l-3-3 3-3" />
+    </svg>
+  );
 
   return (
     <div className={`playback-controls ${expanded ? 'expanded' : ''}`}>
@@ -43,7 +80,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           aria-label="Shuffle"
           title="Shuffle"
         >
-          🔀
+          <IconShuffle />
         </button>
       )}
       
@@ -54,7 +91,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
         aria-label="Previous"
         title="Previous track"
       >
-        ⏮
+        <IconPrev />
       </button>
 
       <button
@@ -63,7 +100,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
         aria-label={isPlaying ? 'Pause' : 'Play'}
         title={isPlaying ? 'Pause' : 'Play'}
       >
-        {isPlaying ? '⏸' : '▶'}
+        {isPlaying ? <IconPause /> : <IconPlay />}
       </button>
 
       <button
@@ -73,7 +110,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
         aria-label="Next"
         title="Next track"
       >
-        ⏭
+        <IconNext />
       </button>
 
       {expanded && (
@@ -83,7 +120,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
           aria-label={`Repeat: ${repeat}`}
           title={`Repeat: ${repeat}`}
         >
-          {getRepeatIcon()}
+          <IconRepeat />
           {repeat === 'one' && <span className="repeat-indicator">1</span>}
         </button>
       )}

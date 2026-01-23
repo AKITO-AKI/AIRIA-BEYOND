@@ -30,7 +30,7 @@ body.player-expanded {
 
 /* Focus trap for expanded player */
 .expanded-player-modal *:focus {
-  outline: 2px solid rgba(112, 195, 176, 0.6);
+  outline: 2px solid rgba(212, 175, 55, 0.6);
   outline-offset: 2px;
 }
 

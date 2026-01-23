@@ -4,8 +4,8 @@
   gap: 24px;
   padding: 16px 24px;
   background: var(--surface-glass);
-  border-radius: 12px;
-  box-shadow: 0 2px 12px var(--shadow);
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
   margin-bottom: 20px;
   align-items: center;
 }
@@ -34,6 +34,16 @@
   font-size: 18px;
 }
 
+.control-icon.geometric {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  transform: rotate(45deg);
+  border-radius: 2px;
+  background: rgba(212, 175, 55, 0.18);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+}
+
 .control-text {
   font-size: 14px;
   font-weight: 500;
@@ -55,7 +65,7 @@
   padding: 6px 14px;
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -64,15 +74,15 @@
 }
 
 .control-button:hover {
-  background: rgba(124, 139, 255, 0.12);
-  border-color: rgba(124, 139, 255, 0.4);
-  color: rgba(124, 139, 255, 0.9);
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.4);
+  color: rgba(0, 0, 0, 0.85);
 }
 
 .control-button.active {
-  background: rgba(124, 139, 255, 0.18);
-  border-color: rgba(124, 139, 255, 0.45);
-  color: rgba(124, 139, 255, 1);
+  background: rgba(212, 175, 55, 0.18);
+  border-color: rgba(212, 175, 55, 0.45);
+  color: rgba(0, 0, 0, 0.9);
   font-weight: 600;
 }
 

@@ -79,7 +79,7 @@ const DebugPanel: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         title="開発者デバッグパネル"
       >
-        {isOpen ? '✕' : '🔧'}
+        {isOpen ? 'CLOSE' : 'DEV'}
       </button>
 
       {isOpen && (
@@ -135,7 +135,7 @@ const DebugPanel: React.FC = () => {
                   >
                     <div className="log-summary-left">
                       <span className={`log-status ${log.success ? 'success' : 'error'}`}>
-                        {log.success ? '✓' : '✗'}
+                        {log.success ? 'OK' : 'NG'}
                       </span>
                       <span className="log-id">{log.sessionId.slice(0, 12)}...</span>
                       <span className="log-time">

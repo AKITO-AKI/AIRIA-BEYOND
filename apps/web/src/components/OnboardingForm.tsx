@@ -42,14 +42,14 @@ const DAILY_TIME_SLOTS = [
 // Emotion options
 const EMOTIONS = [
   { value: '', label: '選択してください' },
-  { value: '穏やか', label: '😌 穏やか' },
-  { value: '嬉しい', label: '😊 嬉しい' },
-  { value: '不安', label: '😰 不安' },
-  { value: '疲れ', label: '😫 疲れ' },
-  { value: '怒り', label: '😠 怒り' },
-  { value: '悲しい', label: '😢 悲しい' },
-  { value: '興奮', label: '🤩 興奮' },
-  { value: '退屈', label: '😐 退屈' },
+  { value: '穏やか', label: '○ 穏やか' },
+  { value: '嬉しい', label: '△ 嬉しい' },
+  { value: '不安', label: '□ 不安' },
+  { value: '疲れ', label: '◇ 疲れ' },
+  { value: '怒り', label: '▲ 怒り' },
+  { value: '悲しい', label: '◆ 悲しい' },
+  { value: '興奮', label: '▽ 興奮' },
+  { value: '退屈', label: '◻︎ 退屈' },
 ];
 
 // Timeframe for goals
@@ -351,7 +351,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
             onClick={handleSubmit}
             disabled={!canProceed()}
           >
-            ✓ 完了
+            完了
           </button>
         )}
       </div>

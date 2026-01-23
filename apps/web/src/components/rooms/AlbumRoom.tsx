@@ -7,6 +7,7 @@ import { MAX_SEED } from '../../utils/prng';
 import ExplainabilityPanel from '../ExplainabilityPanel';
 import Aura from '../visual/patterns/Aura';
 import { useMouseProximity } from '../visual/interactions/MouseTracker';
+import GeometricCanvas from '../visual/GeometricCanvas';
 import './AlbumRoom.css';
 
 const AlbumRoom: React.FC = () => {
@@ -101,6 +102,7 @@ const AlbumRoom: React.FC = () => {
   if (!album) {
     return (
       <div className="room-content album-room">
+        <GeometricCanvas pattern="polyhedron" isActive={true} />
         <h1 className="room-title">ALBUM</h1>
         <p className="room-subtitle">アルバム詳細</p>
         <div className="album-empty">
@@ -113,6 +115,7 @@ const AlbumRoom: React.FC = () => {
 
   return (
     <div className="room-content album-room">
+      <GeometricCanvas pattern="polyhedron" isActive={true} />
       <div className="album-header">
         <button 
           className="back-to-gallery-btn"
@@ -323,11 +326,11 @@ const AlbumRoom: React.FC = () => {
                     onClick={handleRegenerate}
                     disabled={isRegenerating}
                   >
-                    {isRegenerating ? '再生成中...' : '🔄 再生成 (新しいシード)'}
+                    {isRegenerating ? '再生成中...' : '再生成 (新しいシード)'}
                   </button>
                   {regenerateSuccess && (
                     <div className="regenerate-success">
-                      ✓ 再生成が完了しました！Galleryで新しいアルバムを確認できます。
+                      再生成が完了しました。Galleryで新しいアルバムを確認できます。
                     </div>
                   )}
                   {regenerateError && (
