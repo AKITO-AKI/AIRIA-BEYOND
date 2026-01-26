@@ -29,6 +29,7 @@ const AtmosphericBackdrop: React.FC<AtmosphericBackdropProps> = ({
   const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number | null>(null);
   const timeRef = useRef(0);
+  const noisePatternRef = useRef<CanvasPattern | null>(null);
 
   useEffect(() => {
     const glassCanvas = glassCanvasRef.current;
@@ -51,6 +52,23 @@ const AtmosphericBackdrop: React.FC<AtmosphericBackdropProps> = ({
           ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
         }
       });
+
+      const noiseCanvas = document.createElement('canvas');
+      noiseCanvas.width = 220;
+      noiseCanvas.height = 220;
+      const noiseCtx = noiseCanvas.getContext('2d');
+      if (noiseCtx) {
+        const imageData = noiseCtx.createImageData(noiseCanvas.width, noiseCanvas.height);
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          const value = 235 + Math.random() * 20;
+          imageData.data[i] = value;
+          imageData.data[i + 1] = value;
+          imageData.data[i + 2] = value;
+          imageData.data[i + 3] = Math.random() * 24;
+        }
+        noiseCtx.putImageData(imageData, 0, 0);
+        noisePatternRef.current = glassCtx.createPattern(noiseCanvas, 'repeat');
+      }
     };
 
     resize();
@@ -73,6 +91,9 @@ const AtmosphericBackdrop: React.FC<AtmosphericBackdropProps> = ({
       glassCtx.clearRect(0, 0, width, height);
       glassCtx.save();
       glassCtx.globalCompositeOperation = 'screen';
+
+      glassCtx.fillStyle = `rgba(255, 255, 255, ${0.18 + focusIntensity * 0.18})`;
+      glassCtx.fillRect(0, 0, width, height);
 
       const waves = 6;
       for (let i = 0; i < waves; i += 1) {
@@ -113,6 +134,14 @@ const AtmosphericBackdrop: React.FC<AtmosphericBackdropProps> = ({
       radial.addColorStop(1, 'rgba(255,255,255,0)');
       glassCtx.fillStyle = radial;
       glassCtx.fillRect(0, 0, width, height);
+
+      if (noisePatternRef.current) {
+        glassCtx.save();
+        glassCtx.globalAlpha = 0.06 + focusIntensity * 0.06;
+        glassCtx.fillStyle = noisePatternRef.current;
+        glassCtx.fillRect(0, 0, width, height);
+        glassCtx.restore();
+      }
     };
 
     const drawDust = () => {

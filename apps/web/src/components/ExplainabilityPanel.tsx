@@ -15,8 +15,8 @@ const ExplainabilityPanel: React.FC<ExplainabilityPanelProps> = ({ log }) => {
   if (!log) {
     return (
       <div className="explainability-panel">
-        <h3 className="explainability-title">説明</h3>
-        <p className="explainability-hint">このアルバムの説明データがありません</p>
+        <h3 className="explainability-title">Liner Notes / 解説</h3>
+        <p className="explainability-hint">このアルバムの解説データがありません</p>
       </div>
     );
   }
@@ -31,7 +31,7 @@ const ExplainabilityPanel: React.FC<ExplainabilityPanelProps> = ({ log }) => {
 
   return (
     <div className="explainability-panel">
-      <h3 className="explainability-title">説明（Why?）</h3>
+      <h3 className="explainability-title">Liner Notes / 解説</h3>
 
       {/* Timeline Overview */}
       {log.analysis && (
