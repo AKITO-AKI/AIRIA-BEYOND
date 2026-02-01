@@ -101,21 +101,27 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const containerWidth = containerRef.current?.clientWidth || window.innerWidth || 1;
   const translateX = -currentIndex * 100 + (offsetX / containerWidth) * 100;
 
+  const currentRoomId = rooms[currentIndex]?.id;
+  const showIndicators = currentRoomId !== 'onboarding';
+
   return (
-    <div className="room-navigator">
-      {/* Room indicator dots */}
-      <div className="room-indicators">
-        {rooms.map((room, index) => (
-          <button
-            key={room.id}
-            className={`room-indicator ${index === currentIndex ? 'active' : ''}`}
-            onClick={() => navigateToRoom(index)}
-            aria-label={`${room.name}へ移動`}
-          >
-            <span className="room-indicator-label">{room.name}</span>
-          </button>
-        ))}
-      </div>
+    <div className={`room-navigator ${showIndicators ? '' : 'indicators-hidden'}`}>
+      {/* Room indicator (navigation tool) */}
+      {showIndicators && (
+        <div className="room-indicators" aria-label="ルームナビゲーション">
+          {rooms.map((room, index) => (
+            <button
+              key={room.id}
+              className={`room-indicator ${index === currentIndex ? 'active' : ''}`}
+              onClick={() => navigateToRoom(index)}
+              aria-current={index === currentIndex ? 'page' : undefined}
+              aria-label={`${room.name}へ移動`}
+            >
+              <span className="room-indicator-label">{room.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Rooms container */}
       <div

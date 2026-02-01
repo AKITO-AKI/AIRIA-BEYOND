@@ -4,42 +4,7 @@
 .button,
 button:not(.unstyled) {
   position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-/* Ripple effect on click */
-.button::after,
-button:not(.unstyled)::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-  pointer-events: none;
-}
-
-.button:active::after,
-button:not(.unstyled):active::after {
-  width: 300px;
-  height: 300px;
-}
-
-/* Hover glow and lift */
-.button:hover,
-button:not(.unstyled):hover {
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
-  transform: translateY(-2px);
-}
-
-.button:active,
-button:not(.unstyled):active {
-  transform: translateY(0);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 /* Focus ring for accessibility */
@@ -54,8 +19,6 @@ button:not(.unstyled):focus-visible {
 button:not(.unstyled):disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
 }
 
 /* Screen reader only content */

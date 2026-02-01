@@ -12,38 +12,52 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 12px;
+  gap: 10px;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(14px);
+  padding: 6px 10px;
   border-radius: 50px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 .room-indicator {
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid transparent;
   border-radius: 20px;
-  padding: 8px 14px;
+  padding: 6px 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
   font-size: 14px;
   color: var(--text-secondary);
   font-weight: 500;
+  opacity: 0.55;
+  position: relative;
 }
 
 .room-indicator:hover {
-  border-color: rgba(212, 175, 55, 0.45);
-  background: rgba(212, 175, 55, 0.12);
-  transform: scale(1.05);
+  background: rgba(0, 0, 0, 0.04);
+  opacity: 0.8;
 }
 
 .room-indicator.active {
-  background: rgba(212, 175, 55, 0.2);
-  border-color: rgba(212, 175, 55, 0.6);
-  color: rgba(0, 0, 0, 0.85);
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.room-indicator.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .room-indicator-label {
@@ -78,7 +92,7 @@
 .room-content {
   width: 100%;
   max-width: 1100px;
-  padding: 96px 24px 80px;
+  padding: 80px 24px 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -87,21 +101,23 @@
   position: relative;
 }
 
+.room-navigator.indicators-hidden .room-content {
+  padding-top: 40px;
+}
+
 .room-title {
   font-size: clamp(32px, 6vw, 48px);
   margin: 0 0 16px 0;
-  color: var(--text-blend);
+  color: var(--text-primary);
   font-weight: 300;
   letter-spacing: 2px;
-  mix-blend-mode: difference;
 }
 
 .room-subtitle {
   font-size: clamp(16px, 3vw, 20px);
-  color: var(--text-blend);
+  color: var(--text-secondary);
   margin: 0 0 40px 0;
   font-weight: 300;
-  mix-blend-mode: difference;
 }
 
 .room-placeholder {
