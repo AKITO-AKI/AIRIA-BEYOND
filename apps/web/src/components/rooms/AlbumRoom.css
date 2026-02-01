@@ -6,8 +6,19 @@
 .album-header {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 30px;
+}
+
+.album-header-left {
+  min-width: 0;
+}
+
+.album-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .back-to-gallery-btn {
@@ -32,10 +43,15 @@
 .album-title {
   font-size: clamp(32px, 6vw, 48px);
   margin: 0;
-  color: var(--text-blend);
-  font-weight: 300;
-  letter-spacing: 2px;
-  mix-blend-mode: difference;
+  color: rgba(0, 0, 0, 0.9);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.album-subtitle {
+  margin: 10px 0 0 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .album-empty {
@@ -223,7 +239,16 @@
 
   .album-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .album-header-actions {
+    width: 100%;
+  }
+
+  .album-header-actions .btn,
+  .album-header-actions .back-to-gallery-btn {
+    width: 100%;
   }
 }
 

@@ -1,9 +1,13 @@
 import React from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
+import { useRoomNavigation } from '../../contexts/RoomNavigationContext';
+import { useMusicPlayer } from '../../contexts/MusicPlayerContext';
 
 const MusicRoom: React.FC = () => {
-  const { albums, getSelectedAlbum } = useAlbums();
+  const { albums, getSelectedAlbum, selectAlbum } = useAlbums();
   const selectedAlbum = getSelectedAlbum();
+  const { navigateToRoom } = useRoomNavigation();
+  const { requestPlayAlbum } = useMusicPlayer();
   
   // Get albums with music
   const albumsWithMusic = albums.filter(a => a.musicData);
@@ -11,12 +15,12 @@ const MusicRoom: React.FC = () => {
   return (
     <div className="room-content">
       <h1 className="room-title">MUSIC</h1>
-      <p className="room-subtitle">Mainルームで生成した楽曲の再生・管理</p>
+      <p className="room-subtitle">選択したアルバムを再生する</p>
       
       <div className="music-info">
         {selectedAlbum && selectedAlbum.musicData ? (
           <div className="current-track">
-            <h2>現在選択中のトラック</h2>
+            <h2>選択中</h2>
             <div className="track-details">
               <p><strong>アルバム:</strong> {selectedAlbum.mood}</p>
               {selectedAlbum.musicMetadata && (
@@ -29,7 +33,21 @@ const MusicRoom: React.FC = () => {
                 </>
               )}
             </div>
-            <p className="music-hint">右下のミニプレイヤーで再生できます</p>
+            <div className="music-actions">
+              <button
+                className="btn btn-primary"
+                onClick={() => requestPlayAlbum(selectedAlbum, albumsWithMusic)}
+              >
+                再生
+              </button>
+              <button
+                className="back-to-gallery-btn"
+                onClick={() => navigateToRoom('gallery')}
+              >
+                ギャラリーへ
+              </button>
+            </div>
+            <p className="music-hint">右下のプレイヤーが自動で再生を開始します</p>
           </div>
         ) : (
           <div className="no-selection">
@@ -45,7 +63,24 @@ const MusicRoom: React.FC = () => {
           {albumsWithMusic.length > 0 ? (
             <ul className="music-list">
               {albumsWithMusic.map((album) => (
-                <li key={album.id} className={selectedAlbum?.id === album.id ? 'selected' : ''}>
+                <li
+                  key={album.id}
+                  className={selectedAlbum?.id === album.id ? 'selected' : ''}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    selectAlbum(album.id);
+                    requestPlayAlbum(album, albumsWithMusic);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      selectAlbum(album.id);
+                      requestPlayAlbum(album, albumsWithMusic);
+                    }
+                  }}
+                  aria-label={`${album.mood}を再生`}
+                >
                   <span className="music-title">{album.mood}</span>
                   {album.musicMetadata && (
                     <span className="music-meta">

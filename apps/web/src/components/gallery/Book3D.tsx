@@ -1,6 +1,6 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { Album } from '../../contexts/AlbumContext';
 
@@ -8,188 +8,111 @@ interface Book3DProps {
   album: Album;
   position: [number, number, number];
   onClick: () => void;
-  onHover: (isHovered: boolean) => void;
   isSelected: boolean;
-  isHovered: boolean;
 }
 
 const Book3D: React.FC<Book3DProps> = ({
   album,
   position,
   onClick,
-  onHover,
   isSelected,
-  isHovered,
 }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [targetZ, setTargetZ] = useState(0);
-  const [targetRotX, setTargetRotX] = useState(0);
+  const spineMeshRef = useRef<THREE.Mesh>(null);
+  const coverGroupRef = useRef<THREE.Group>(null);
+  const coverProgressRef = useRef(0);
 
-  // Dimensions
-  const width = 1.2; // 120px in virtual units
-  const height = 1.8; // 180px
-  const thickness = (album.gallery?.thickness || 30) / 100; // Convert to virtual units
+  // Dimensions (kept consistent for snapping/readability)
+  const spineWidth = 0.22;
+  const spineHeight = 1.8;
+  const spineDepth = 0.55;
 
-  // Animate hover and selection states
-  useFrame(() => {
-    if (!meshRef.current) return;
+  const spineColor = album.gallery?.spineColor || '#111111';
+  const labelPrimary = album.mood;
+  const labelSecondary = useMemo(() => {
+    const d = new Date(album.createdAt);
+    return d.toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' });
+  }, [album.createdAt]);
 
-    // Target position and rotation based on state
-    const newTargetZ = isHovered ? 0.5 : 0;
-    const newTargetRotX = isHovered ? -0.05 : 0;
+  const coverTexture = useLoader(THREE.TextureLoader, album.imageDataURL);
+  useEffect(() => {
+    coverTexture.colorSpace = THREE.SRGBColorSpace;
+    coverTexture.anisotropy = 4;
+    coverTexture.needsUpdate = true;
+  }, [coverTexture]);
 
-    if (newTargetZ !== targetZ) setTargetZ(newTargetZ);
-    if (newTargetRotX !== targetRotX) setTargetRotX(newTargetRotX);
-
-    // Smooth interpolation
-    meshRef.current.position.z = THREE.MathUtils.lerp(
-      meshRef.current.position.z,
-      targetZ,
-      0.1
+  useFrame((_, dt) => {
+    const target = isSelected ? 1 : 0;
+    const speed = 8;
+    coverProgressRef.current = THREE.MathUtils.lerp(
+      coverProgressRef.current,
+      target,
+      1 - Math.exp(-speed * dt)
     );
-    meshRef.current.rotation.x = THREE.MathUtils.lerp(
-      meshRef.current.rotation.x,
-      targetRotX,
-      0.1
-    );
-  });
 
-  const spineColor = album.gallery?.spineColor || '#4A90E2';
-
-  // Create texture from image data URL
-  const spineTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    
-    // Create texture first
-    const texture = new THREE.CanvasTexture(canvas);
-    
-    if (ctx) {
-      // Background color
-      ctx.fillStyle = spineColor;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Load and draw album image
-      const img = new Image();
-      img.src = album.imageDataURL;
-      img.onload = () => {
-        // Draw small preview of album image
-        const imgSize = 180;
-        const imgX = (canvas.width - imgSize) / 2;
-        const imgY = (canvas.height - imgSize) / 2;
-        ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-        
-        // Draw badge if provider exists
-        if (album.metadata?.provider) {
-          const badge = album.metadata.provider === 'replicate' ? 'AI' : 'ローカル';
-          const badgeColor = album.metadata.provider === 'replicate' ? '#D4AF37' : '#C0C0C0';
-          
-          ctx.fillStyle = badgeColor;
-          ctx.font = 'bold 24px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(badge, canvas.width / 2, 40);
-        }
-        
-        texture.needsUpdate = true;
-      };
+    if (coverGroupRef.current) {
+      const t = coverProgressRef.current;
+      // Slide forward + slight lift; depth is mostly shadow.
+      coverGroupRef.current.position.z = (spineDepth / 2 + 0.04) + t * 0.7;
+      coverGroupRef.current.position.y = t * 0.08;
+      coverGroupRef.current.scale.setScalar(0.92 + t * 0.08);
+      coverGroupRef.current.visible = t > 0.01;
     }
-    
-    return texture;
-  }, [album.imageDataURL, spineColor, album.metadata?.provider]);
+
+    if (spineMeshRef.current) {
+      // Subtle emphasis only via brightness, not motion.
+      const t = coverProgressRef.current;
+      spineMeshRef.current.scale.y = 1 + t * 0.02;
+    }
+  });
 
   return (
     <group position={position}>
-      {/* Main book body */}
+      {/* Spine (minimal info only) */}
       <mesh
-        ref={meshRef}
+        ref={spineMeshRef}
         onClick={onClick}
-        onPointerOver={() => onHover(true)}
-        onPointerOut={() => onHover(false)}
         castShadow
         receiveShadow
       >
-        <boxGeometry args={[thickness, height, width]} />
-        <meshStandardMaterial
-          map={spineTexture}
-          metalness={0.3}
-          roughness={0.7}
-        />
+        <boxGeometry args={[spineWidth, spineHeight, spineDepth]} />
+        <meshStandardMaterial color={spineColor} roughness={0.9} metalness={0.05} />
       </mesh>
 
-      {/* Edge highlights */}
-      <mesh position={[thickness / 2, 0, 0]}>
-        <boxGeometry args={[0.02, height, width]} />
-        <meshStandardMaterial
-          color={spineColor}
-          metalness={0.8}
-          roughness={0.2}
-          emissive={spineColor}
-          emissiveIntensity={0.2}
-        />
-      </mesh>
+      {/* Minimal spine text (2 items max) */}
+      <group position={[0, 0, spineDepth / 2 + 0.01]}>
+        <Text
+          fontSize={0.12}
+          color={spineColor === '#111111' ? '#f5f5f5' : '#111111'}
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={0.9}
+        >
+          {labelPrimary}
+        </Text>
+        <Text
+          position={[0, -0.16, 0]}
+          fontSize={0.08}
+          color={spineColor === '#111111' ? '#f5f5f5' : '#111111'}
+          fillOpacity={spineColor === '#111111' ? 0.75 : 0.55}
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={0.9}
+        >
+          {labelSecondary}
+        </Text>
+      </group>
 
-      {/* Glow effect when hovered */}
-      {isHovered && (
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[thickness * 1.15, height * 1.1, width * 1.1]} />
-          <meshBasicMaterial
-            color={spineColor}
-            transparent
-            opacity={0.3}
-            side={THREE.BackSide}
-          />
+      {/* Cover: only when selected (slides forward) */}
+      <group ref={coverGroupRef} position={[0, 0.05, spineDepth / 2 + 0.04]} visible={false}>
+        <mesh onClick={onClick} castShadow>
+          <planeGeometry args={[1.1, 1.55]} />
+          <meshStandardMaterial map={coverTexture} roughness={0.85} metalness={0.0} />
         </mesh>
-      )}
-
-      {/* Tooltip when hovered */}
-      {isHovered && (
-        <Html position={[0, height / 2 + 0.4, 0]} center>
-          <div
-            style={{
-              background: 'rgba(0, 0, 0, 0.85)',
-              color: 'white',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              fontSize: '13px',
-              whiteSpace: 'nowrap',
-              pointerEvents: 'none',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: '6px', fontSize: '14px' }}>
-              {album.mood}
-            </div>
-            <div style={{ fontSize: '11px', opacity: 0.8 }}>
-              {new Date(album.createdAt).toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </div>
-            {album.metadata?.provider && (
-              <div
-                style={{
-                  fontSize: '11px',
-                  marginTop: '4px',
-                  color: album.metadata.provider === 'replicate' ? '#D4AF37' : '#C0C0C0',
-                  fontWeight: 600,
-                }}
-              >
-                {album.metadata.provider === 'replicate' ? 'AI生成' : 'ローカル'}
-              </div>
-            )}
-            {album.musicMetadata?.duration && (
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '2px' }}>
-                音楽 {Math.floor(album.musicMetadata.duration)}秒
-              </div>
-            )}
-          </div>
-        </Html>
-      )}
+        <mesh position={[0, 0, -0.01]} receiveShadow>
+          <planeGeometry args={[1.14, 1.6]} />
+          <meshStandardMaterial color="#ffffff" roughness={1} metalness={0} opacity={0.6} transparent />
+        </mesh>
+      </group>
     </group>
   );
 };

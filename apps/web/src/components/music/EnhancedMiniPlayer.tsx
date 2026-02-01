@@ -41,6 +41,8 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
   const frequencyDataRef = useRef<Uint8Array | null>(null);
   const timeDataRef = useRef<Uint8Array | null>(null);
   const progressIntervalRef = useRef<number | null>(null);
+  const pendingPlayRequestIdRef = useRef(0);
+  const handledPlayRequestIdRef = useRef(0);
 
   const [frequencyData, setFrequencyData] = useState<Uint8Array | null>(null);
   const [timeDomainData, setTimeDomainData] = useState<Uint8Array | null>(null);
@@ -100,6 +102,36 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
       setCurrentAlbumFull(currentAlbum);
     }
   }, [state.currentAlbum?.id, album?.id]);
+
+  // Autoplay requests (from Gallery / other UIs)
+  useEffect(() => {
+    if (state.playRequestId > 0) {
+      pendingPlayRequestIdRef.current = state.playRequestId;
+    }
+  }, [state.playRequestId]);
+
+  useEffect(() => {
+    const currentAlbum = state.currentAlbum || album;
+    const requestId = pendingPlayRequestIdRef.current;
+    if (!currentAlbum?.musicData) return;
+    if (requestId === 0 || requestId === handledPlayRequestIdRef.current) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await loadMIDI(currentAlbum);
+        if (cancelled) return;
+        await startPlayback();
+        handledPlayRequestIdRef.current = requestId;
+      } catch (err) {
+        console.error('[EnhancedMiniPlayer] Autoplay failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.currentAlbum?.id, album?.id, state.playRequestId]);
 
   // Update visualization data when playing
   useEffect(() => {

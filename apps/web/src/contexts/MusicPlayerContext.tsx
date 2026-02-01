@@ -33,6 +33,9 @@ interface MusicPlayerState {
   // UI state
   isExpanded: boolean;
   visualizationMode: VisualizationMode;
+
+  // Autoplay requests (handled by EnhancedMiniPlayer)
+  playRequestId: number;
 }
 
 interface MusicPlayerContextType {
@@ -53,7 +56,11 @@ interface MusicPlayerContextType {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   toggleExpanded: () => void;
+  setExpanded: (expanded: boolean) => void;
   setVisualizationMode: (mode: VisualizationMode) => void;
+
+  // High-level action
+  requestPlayAlbum: (album: Album, queue?: Album[]) => void;
   
   // Playback actions
   play: () => void;
@@ -84,6 +91,7 @@ export const MusicPlayerProvider: React.FC<{ children: ReactNode }> = ({ childre
     repeat: 'off',
     isExpanded: false,
     visualizationMode: 'waveform',
+    playRequestId: 0,
   });
 
   // Legacy methods
@@ -161,8 +169,34 @@ export const MusicPlayerProvider: React.FC<{ children: ReactNode }> = ({ childre
     setState(prev => ({ ...prev, isExpanded: !prev.isExpanded }));
   }, []);
 
+  const setExpanded = useCallback((expanded: boolean) => {
+    setState(prev => ({ ...prev, isExpanded: expanded }));
+  }, []);
+
   const setVisualizationMode = useCallback((mode: VisualizationMode) => {
     setState(prev => ({ ...prev, visualizationMode: mode }));
+  }, []);
+
+  const requestPlayAlbum = useCallback((album: Album, queue?: Album[]) => {
+    setState(prev => {
+      const nextQueue = queue && queue.length > 0 ? queue : prev.queue;
+      const resolvedQueue = nextQueue.length > 0 ? nextQueue : [album];
+      const startIndex = Math.max(0, resolvedQueue.findIndex(a => a.id === album.id));
+      const current = resolvedQueue[startIndex] || album;
+
+      return {
+        ...prev,
+        queue: resolvedQueue,
+        queueIndex: startIndex,
+        currentAlbum: current,
+        currentAlbumImage: current.imageDataURL,
+        currentTrackTitle: current.mood,
+        currentTime: 0,
+        // Signal EnhancedMiniPlayer to load + start playback
+        playRequestId: prev.playRequestId + 1,
+        isExpanded: true,
+      };
+    });
   }, []);
 
   // Playback actions
@@ -272,7 +306,9 @@ export const MusicPlayerProvider: React.FC<{ children: ReactNode }> = ({ childre
       toggleShuffle,
       cycleRepeat,
       toggleExpanded,
+      setExpanded,
       setVisualizationMode,
+      requestPlayAlbum,
       play,
       pause,
       stop,

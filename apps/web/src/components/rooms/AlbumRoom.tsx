@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { useCausalLog } from '../../contexts/CausalLogContext';
-import { useMusicPlayer } from '../../contexts/MusicPlayerContext';
+import { PlaybackState, useMusicPlayer } from '../../contexts/MusicPlayerContext';
+import { useRoomNavigation } from '../../contexts/RoomNavigationContext';
 import { generateImage, pollJobStatus } from '../../api/imageApi';
 import { MAX_SEED } from '../../utils/prng';
 import ExplainabilityPanel from '../ExplainabilityPanel';
@@ -12,7 +13,8 @@ import './AlbumRoom.css';
 const AlbumRoom: React.FC = () => {
   const { getSelectedAlbum, selectAlbum, addAlbum } = useAlbums();
   const { getLog } = useCausalLog();
-  const { state: musicState } = useMusicPlayer();
+  const { state: musicState, requestPlayAlbum } = useMusicPlayer();
+  const { navigateToRoom } = useRoomNavigation();
   const album = getSelectedAlbum();
   
   // P5: Get causal log for this album
@@ -32,10 +34,12 @@ const AlbumRoom: React.FC = () => {
   const dominantColors = album?.metadata?.dominantColors || ['#D4AF37', '#F4E5C2', '#B8941E'];
   
   // Check if this album is currently playing
-  const isPlaying = musicState.isPlaying && musicState.currentAlbum?.id === album?.id;
+  const isPlaying =
+    musicState.playbackState === PlaybackState.PLAYING && musicState.currentAlbum?.id === album?.id;
 
   const handleBackToGallery = () => {
     selectAlbum(null);
+    navigateToRoom('gallery');
   };
 
   // P3: Regenerate with same parameters but new seed
@@ -114,14 +118,27 @@ const AlbumRoom: React.FC = () => {
   return (
     <div className="room-content album-room">
       <div className="album-header">
-        <button 
-          className="back-to-gallery-btn"
-          onClick={handleBackToGallery}
-          aria-label="ギャラリーに戻る"
-        >
-          ← ギャラリーへ
-        </button>
-        <h1 className="album-title">{album.mood}</h1>
+        <div className="album-header-left">
+          <h1 className="album-title">{album.mood}</h1>
+          <p className="album-subtitle">選択したアルバムの詳細</p>
+        </div>
+
+        <div className="album-header-actions">
+          <button
+            className="back-to-gallery-btn"
+            onClick={handleBackToGallery}
+            aria-label="ギャラリーに戻る"
+          >
+            ギャラリーへ
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={!album.musicData}
+            onClick={() => requestPlayAlbum(album)}
+          >
+            再生
+          </button>
+        </div>
       </div>
 
       <div className="album-details">

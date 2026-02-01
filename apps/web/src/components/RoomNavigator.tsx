@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { RoomNavigationProvider, type RoomType } from '../contexts/RoomNavigationContext';
 import './RoomNavigator.css';
-
-export type RoomType = 'onboarding' | 'main' | 'gallery' | 'album' | 'music';
 
 interface Room {
   id: RoomType;
@@ -104,48 +103,55 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const currentRoomId = rooms[currentIndex]?.id;
   const showIndicators = currentRoomId !== 'onboarding';
 
+  const navigateToRoomId = (roomId: RoomType) => {
+    const idx = rooms.findIndex(r => r.id === roomId);
+    if (idx >= 0) navigateToRoom(idx);
+  };
+
   return (
-    <div className={`room-navigator ${showIndicators ? '' : 'indicators-hidden'}`}>
-      {/* Room indicator (navigation tool) */}
-      {showIndicators && (
-        <div className="room-indicators" aria-label="ルームナビゲーション">
-          {rooms.map((room, index) => (
-            <button
-              key={room.id}
-              className={`room-indicator ${index === currentIndex ? 'active' : ''}`}
-              onClick={() => navigateToRoom(index)}
-              aria-current={index === currentIndex ? 'page' : undefined}
-              aria-label={`${room.name}へ移動`}
-            >
-              <span className="room-indicator-label">{room.name}</span>
-            </button>
+    <RoomNavigationProvider value={{ currentRoomId, navigateToRoom: navigateToRoomId }}>
+      <div className={`room-navigator ${showIndicators ? '' : 'indicators-hidden'}`}>
+        {/* Room indicator (navigation tool) */}
+        {showIndicators && (
+          <div className="room-indicators" aria-label="ルームナビゲーション">
+            {rooms.map((room, index) => (
+              <button
+                key={room.id}
+                className={`room-indicator ${index === currentIndex ? 'active' : ''}`}
+                onClick={() => navigateToRoom(index)}
+                aria-current={index === currentIndex ? 'page' : undefined}
+                aria-label={`${room.name}へ移動`}
+              >
+                <span className="room-indicator-label">{room.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Rooms container */}
+        <div
+          ref={containerRef}
+          className="rooms-container"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            transform: `translateX(${translateX}%)`,
+            transition: isDragging ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)',
+          }}
+        >
+          {rooms.map((room) => (
+            <div key={room.id} className="room">
+              {room.component}
+            </div>
           ))}
         </div>
-      )}
-
-      {/* Rooms container */}
-      <div
-        ref={containerRef}
-        className="rooms-container"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          transform: `translateX(${translateX}%)`,
-          transition: isDragging ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)',
-        }}
-      >
-        {rooms.map((room) => (
-          <div key={room.id} className="room">
-            {room.component}
-          </div>
-        ))}
       </div>
-    </div>
+    </RoomNavigationProvider>
   );
 };
 
