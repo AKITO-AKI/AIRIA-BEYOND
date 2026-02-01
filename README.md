@@ -30,7 +30,7 @@ AIRIA BEYOND uses a split architecture for cost-effective deployment:
 └─────────────────────────────┘
 ```
 
-**See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for deployment instructions.**
+**See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for deployment instructions.**
 
 ## Repository Structure
 
@@ -457,9 +457,9 @@ The generated images reflect your emotional state through intelligent prompt gen
 
 ### Running Tests
 
-See `TESTING.md` for comprehensive test scenarios covering P0/P1/P2.
+See [docs/TESTING.md](./docs/TESTING.md) for comprehensive test scenarios covering P0/P1/P2.
 
-See `P3_IMPLEMENTATION.md` for P3 feature documentation and examples.
+See [docs/P3_IMPLEMENTATION.md](./docs/P3_IMPLEMENTATION.md) for P3 feature documentation and examples.
 
 ### P3 Test Scenarios
 
@@ -505,7 +505,7 @@ npm run dev
 
 ## Security
 
-See `SECURITY_SUMMARY.md` for security analysis.
+See [docs/SECURITY_SUMMARY.md](./docs/SECURITY_SUMMARY.md) for security analysis.
 
 **Key Security Features:**
 - Rate limiting (5 requests/min per IP)
@@ -521,11 +521,11 @@ See `SECURITY_SUMMARY.md` for security analysis.
 
 ## Documentation
 
-- **P2_TESTING.md**: Test scenarios and guide for LLM analysis (P2)
-- **P2_IMPLEMENTATION.md**: Detailed P2 implementation summary
-- **TESTING.md**: Comprehensive test scenarios for P0 and P1
-- **P1_IMPLEMENTATION.md**: Detailed P1 implementation summary
-- **SECURITY_SUMMARY.md**: Security analysis and recommendations
+- **docs/P2_TESTING.md**: Test scenarios and guide for LLM analysis (P2)
+- **docs/P2_IMPLEMENTATION.md**: Detailed P2 implementation summary
+- **docs/TESTING.md**: Comprehensive test scenarios for P0 and P1
+- **docs/P1_IMPLEMENTATION.md**: Detailed P1 implementation summary
+- **docs/SECURITY_SUMMARY.md**: Security analysis and recommendations
 
 ## Deployment
 

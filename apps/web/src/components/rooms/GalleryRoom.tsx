@@ -60,7 +60,14 @@ const GalleryRoom: React.FC = () => {
 
   return (
     <div className="room-content gallery-room">
-      <GeometricCanvas pattern="polyhedron" isActive={true} />
+      <GeometricCanvas
+        pattern="polyhedron"
+        isActive={false}
+        layer="background"
+        placement="topRight"
+        sizePx={360}
+        opacity={0.08}
+      />
       <h1 className="room-title">GALLERY</h1>
       <p className="room-subtitle">あなたの感情コレクション</p>
       

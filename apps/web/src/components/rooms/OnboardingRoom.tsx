@@ -6,6 +6,7 @@ import '../OnboardingForm.css';
 const OnboardingRoom: React.FC = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [completedData, setCompletedData] = useState<OnboardingData | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const handleComplete = (data: OnboardingData) => {
     setCompletedData(data);
@@ -15,18 +16,29 @@ const OnboardingRoom: React.FC = () => {
   const handleRestart = () => {
     setIsCompleted(false);
     setCompletedData(null);
+    setProgress(0);
   };
 
   return (
-    <div className="room-content" style={{ position: 'relative' }}>
-      {/* Geometric 3D backdrop for introspection */}
-      <GeometricCanvas pattern="polyhedron" isActive={!isCompleted} />
+    <div className="room-content">
+      {/* Onboarding only: progress/introspection symbol (backgrounded) */}
+      {!isCompleted && (
+        <GeometricCanvas
+          pattern="polyhedron"
+          isActive={true}
+          progress={progress}
+          layer="background"
+          placement="center"
+          sizePx={420}
+          opacity={0.16}
+        />
+      )}
       
       <h1 className="room-title">ONBOARDING</h1>
       <p className="room-subtitle">ようこそ AIRIA BEYOND へ</p>
       
       {!isCompleted ? (
-        <OnboardingForm onComplete={handleComplete} />
+        <OnboardingForm onComplete={handleComplete} onProgressChange={setProgress} />
       ) : (
         <div className="onboarding-complete">
           <h2 className="blend-text">完了しました！</h2>

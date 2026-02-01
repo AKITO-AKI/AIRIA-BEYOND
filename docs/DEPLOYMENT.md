@@ -284,4 +284,4 @@ Built-in protection:
 
 - GitHub Issues: [github.com/AKITO-AKI/AIRIA-BEYOND/issues](https://github.com/AKITO-AKI/AIRIA-BEYOND/issues)
 - Vercel Support: [vercel.com/support](https://vercel.com/support)
-- Documentation: See README.md and OPERATIONS.md
+- Documentation: See [README.md](../README.md) and [OPERATIONS.md](./OPERATIONS.md)

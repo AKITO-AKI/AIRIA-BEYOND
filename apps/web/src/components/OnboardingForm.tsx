@@ -65,9 +65,10 @@ const GOAL_TIMEFRAMES = [
 
 interface OnboardingFormProps {
   onComplete?: (data: OnboardingData) => void;
+  onProgressChange?: (progress: number) => void;
 }
 
-const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
+const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressChange }) => {
   const [formData, setFormData] = useState<OnboardingData>({
     recentMomentWhen: '',
     recentMomentEmotion: '',
@@ -82,6 +83,12 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete }) => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = 4;
+
+  // Notify progress (0..1, but keep < 1 to avoid triggering polyhedron dissolve)
+  useEffect(() => {
+    const progress = totalSteps > 0 ? currentStep / totalSteps : 0;
+    onProgressChange?.(Math.min(progress, 0.999));
+  }, [currentStep, totalSteps, onProgressChange]);
 
   // Load from localStorage on mount
   useEffect(() => {

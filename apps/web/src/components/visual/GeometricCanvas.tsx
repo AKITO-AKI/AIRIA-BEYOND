@@ -6,6 +6,8 @@ import Polyhedron from './patterns/Polyhedron';
 import StringVibration from './patterns/StringVibration';
 
 export type GeometricPatternType = 'spiral' | 'lissajous' | 'ripples' | 'polyhedron' | 'stringVibration' | 'none';
+export type GeometricLayer = 'foreground' | 'background';
+export type GeometricPlacement = 'center' | 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft';
 
 interface GeometricCanvasProps {
   pattern: GeometricPatternType;
@@ -13,6 +15,10 @@ interface GeometricCanvasProps {
   triggerRipple?: number;
   progress?: number; // For polyhedron loading
   dominantColor?: string; // For polyhedron color
+  layer?: GeometricLayer; // For polyhedron placement/z-order
+  placement?: GeometricPlacement; // For polyhedron placement
+  sizePx?: number; // For polyhedron size
+  opacity?: number; // For polyhedron opacity
   audioData?: {
     bass: number;
     midLow: number;
@@ -31,6 +37,10 @@ const GeometricCanvas: React.FC<GeometricCanvasProps> = ({
   triggerRipple,
   progress = 0,
   dominantColor = '#D4AF37',
+  layer = 'foreground',
+  placement = 'center',
+  sizePx,
+  opacity,
   audioData = null,
   valence = 0,
   arousal = 0.5,
@@ -79,6 +89,10 @@ const GeometricCanvas: React.FC<GeometricCanvasProps> = ({
           progress={progress}
           dominantColor={dominantColor}
           onComplete={onComplete}
+          layer={layer}
+          placement={placement}
+          sizePx={sizePx}
+          opacity={opacity}
         />
       )}
       {pattern === 'stringVibration' && (

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
-import GeometricCanvas from '../visual/GeometricCanvas';
 
 const MusicRoom: React.FC = () => {
   const { albums, getSelectedAlbum } = useAlbums();
@@ -11,7 +10,6 @@ const MusicRoom: React.FC = () => {
   
   return (
     <div className="room-content">
-      <GeometricCanvas pattern="polyhedron" isActive={true} />
       <h1 className="room-title">MUSIC</h1>
       <p className="room-subtitle">Mainルームで生成した楽曲の再生・管理</p>
       

@@ -2,11 +2,18 @@ import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+export type PolyhedronLayer = 'foreground' | 'background';
+export type PolyhedronPlacement = 'center' | 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft';
+
 interface PolyhedronProps {
   isActive?: boolean;
   progress?: number; // 0-1 for loading progress
   onComplete?: () => void;
   dominantColor?: string;
+  layer?: PolyhedronLayer;
+  placement?: PolyhedronPlacement;
+  sizePx?: number;
+  opacity?: number;
 }
 
 interface PolyhedronGeometryProps {
@@ -151,9 +158,12 @@ const Polyhedron: React.FC<PolyhedronProps> = ({
   progress = 0,
   onComplete,
   dominantColor = '#D4AF37',
+  layer = 'foreground',
+  placement = 'center',
+  sizePx = 400,
+  opacity,
 }) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [rotationSpeed, setRotationSpeed] = useState(1);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -164,25 +174,37 @@ const Polyhedron: React.FC<PolyhedronProps> = ({
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const handleClick = () => {
-    // Speed up rotation temporarily
-    setRotationSpeed(3);
-    setTimeout(() => setRotationSpeed(1), 2000);
-  };
+  const placementStyle: React.CSSProperties = (() => {
+    switch (placement) {
+      case 'topRight':
+        return { top: '30%', left: '75%' };
+      case 'topLeft':
+        return { top: '30%', left: '25%' };
+      case 'bottomRight':
+        return { top: '70%', left: '75%' };
+      case 'bottomLeft':
+        return { top: '70%', left: '25%' };
+      case 'center':
+      default:
+        return { top: '50%', left: '50%' };
+    }
+  })();
+
+  const isBackground = layer === 'background';
+  const containerOpacity = typeof opacity === 'number' ? opacity : isBackground ? 0.14 : 1;
 
   return (
     <div
       style={{
         width: '100%',
-        height: '400px',
+        height: `${sizePx}px`,
         position: 'absolute',
-        top: '50%',
-        left: '50%',
+        ...placementStyle,
         transform: 'translate(-50%, -50%)',
-        pointerEvents: isActive ? 'auto' : 'none',
-        zIndex: 0,
+        pointerEvents: isBackground ? 'none' : isActive ? 'auto' : 'none',
+        zIndex: isBackground ? -1 : 0,
+        opacity: containerOpacity,
       }}
-      onClick={handleClick}
     >
       <Canvas
         camera={{ position: [0, 0, 3], fov: 50 }}
