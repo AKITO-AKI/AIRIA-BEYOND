@@ -55,7 +55,7 @@ const GalleryRoom: React.FC = () => {
           )}
         </div>
 
-        <div className="gallery-actionbar" aria-label="選択中アルバムの操作">
+        <div className="gallery-actionbar" data-no-swipe="true" aria-label="選択中アルバムの操作">
           <div className="gallery-selection">
             <div className="gallery-selection-label">選択中</div>
             <div className="gallery-selection-value">

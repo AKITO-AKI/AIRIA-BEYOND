@@ -21,7 +21,17 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const [offsetX, setOffsetX] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(
+      target.closest(
+        'button, a, input, select, textarea, [role="button"], [data-no-swipe="true"]'
+      )
+    );
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isInteractiveTarget(e.target)) return;
     setIsDragging(true);
     setStartX(e.touches[0].clientX);
   };
@@ -51,6 +61,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isInteractiveTarget(e.target)) return;
     setIsDragging(true);
     setStartX(e.clientX);
   };
