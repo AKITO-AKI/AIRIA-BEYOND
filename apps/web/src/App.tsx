@@ -3,8 +3,6 @@ import { generateAbstractImage, canvasToDataURL, downloadCanvasAsPNG } from './u
 import { MAX_SEED } from './utils/prng';
 import { useAlbums } from './contexts/AlbumContext';
 import { useCausalLog } from './contexts/CausalLogContext';
-import AtmosphericBackdrop from './components/visual/AiriaAtmosphere';
-import FluidCursor from './components/visual/interactions/FluidCursor';
 import { 
   generateImage, 
   pollJobStatus, 
@@ -657,41 +655,10 @@ const Phase1SessionUI = () => {
     };
 
     return (
-        <div
-            className={`app-container airia-stage ${isImmersive ? 'immersive' : 'idle'} ${isDarkroom ? 'darkroom' : ''} ${isInSafeZone ? 'safe-zone' : ''}`}
-        >
-            <AtmosphericBackdrop mode={isImmersive ? 'dust' : 'glass'} isPaused={isInSafeZone} focusIntensity={focusIntensity} />
-            <FluidCursor onSafeZoneChange={setIsInSafeZone} onFocusChange={setHasFocusIntent} />
-            {isDarkroom && <div className="darkroom-overlay" aria-hidden />}
+        <div className="app-container">
             <header>
-                <h1>AIRIA BEYOND</h1>
-                <p className="subtitle">セッション管理とムード記録アプリケーション</p>
-                <div className="primary-focus">
-                    <div className="primary-focus-title">作成フロー</div>
-                    <div className="primary-focus-grid">
-                        <div className="focus-card">
-                            <span className="focus-step">01</span>
-                            <div>
-                                <h3>セッションを開始</h3>
-                                <p>ムードと時間を選択して計測</p>
-                            </div>
-                        </div>
-                        <div className="focus-card">
-                            <span className="focus-step">02</span>
-                            <div>
-                                <h3>画像・音楽を生成</h3>
-                                <p>外部生成でアルバムと曲を作成</p>
-                            </div>
-                        </div>
-                        <div className="focus-card">
-                            <span className="focus-step">03</span>
-                            <div>
-                                <h3>アルバムに保存</h3>
-                                <p>Gallery / Music で再生・閲覧</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <h1>セッションを作成</h1>
+                <p className="subtitle">ムードと時間を選んで開始し、必要なら画像・音楽を生成します。</p>
             </header>
 
             {error && (

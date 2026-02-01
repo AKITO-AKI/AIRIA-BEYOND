@@ -43,7 +43,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: radial-gradient(circle at top, #FFFFFF 0%, #F7F3EE 55%, #F0EEE9 100%);
+    background: #ffffff;
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
@@ -70,10 +70,7 @@ header {
 header h1 {
     font-size: clamp(28px, 5vw, 42px);
     margin: 0 0 10px 0;
-    background: linear-gradient(135deg, #0F0F0F, #6E6E6E);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
 }
 
 .subtitle {
@@ -272,15 +269,14 @@ button,
     padding: 12px 22px;
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.12);
-    background: rgba(255, 255, 255, 0.8);
+    background: #ffffff;
     color: var(--text-primary);
     font-size: 15px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     font-weight: 500;
     flex: 1;
     min-width: fit-content;
-    backdrop-filter: blur(12px);
     letter-spacing: 0.02em;
 }
 
@@ -294,15 +290,13 @@ button,
 
 button:hover:not(:disabled),
 .btn:hover:not(:disabled) {
-    background: rgba(212, 175, 55, 0.08);
-    border-color: var(--accent-input);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.18);
 }
 
 button:active:not(:disabled),
 .btn:active:not(:disabled) {
-    transform: translateY(0);
+    background: rgba(0, 0, 0, 0.06);
 }
 
 button:focus,
@@ -319,29 +313,31 @@ button:disabled,
 }
 
 .btn-primary {
-    background: rgba(212, 175, 55, 0.16);
-    border-color: rgba(212, 175, 55, 0.45);
-    color: var(--text-primary);
+    background: #111111;
+    border-color: #111111;
+    color: #ffffff;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: rgba(212, 175, 55, 0.28);
-    border-color: rgba(212, 175, 55, 0.6);
+    background: #000000;
+    border-color: #000000;
 }
 
 .btn-secondary {
-    background: var(--bg-secondary);
-}
-
-.btn-success {
-    background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.2);
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.18);
     color: var(--text-primary);
 }
 
+.btn-success {
+    background: #111111;
+    border-color: #111111;
+    color: #ffffff;
+}
+
 .btn-success:hover:not(:disabled) {
-    background: rgba(212, 175, 55, 0.18);
-    border-color: rgba(212, 175, 55, 0.4);
+    background: #000000;
+    border-color: #000000;
 }
 
 .btn-outline {

@@ -15,8 +15,6 @@ import MusicRoom from './components/rooms/MusicRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
 import DebugPanel from './components/DebugPanel';
-import BackgroundDyeSystem from './components/visual/BackgroundDyeSystem';
-import FrequencyGeometry from './components/visual/patterns/FrequencyGeometry';
 import { initSentry } from './lib/sentry';
 import { initWebVitals } from './lib/vitals';
 import { initAnalytics } from './lib/analytics';
@@ -52,16 +50,6 @@ const AppContent = () => {
       {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
       {!showSplash && (
         <>
-          {/* Phase C-1: Background dye system */}
-          <BackgroundDyeSystem 
-            albumImageUrl={musicState.currentAlbumImage || selectedAlbum?.imageUrl}
-            isPlaying={musicState.isPlaying}
-          />
-          {/* Phase C-4: Frequency spectrum geometry (ambient audio visualization) */}
-          <FrequencyGeometry 
-            audioData={null}
-            enabled={musicState.isPlaying}
-          />
           <RoomNavigator rooms={rooms} initialRoom="main" />
           {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
           <EnhancedMiniPlayer 
