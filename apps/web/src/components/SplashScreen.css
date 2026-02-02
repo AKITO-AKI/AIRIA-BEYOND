@@ -4,152 +4,108 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, #FFFFFF, #FAFAFA);
+  background: radial-gradient(circle at 50% 45%, rgba(30, 30, 30, 0.05) 0%, rgba(255, 255, 255, 1) 55%);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   cursor: pointer;
-  animation: fadeIn 3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    background: #000;
-  }
-  to {
-    opacity: 1;
-  }
+  overflow: hidden;
+  color: #111;
 }
 
 .splash-content {
   text-align: center;
   position: relative;
+  max-width: 640px;
+  padding: 24px;
 }
 
-/* Golden spiral canvas */
-.golden-spiral-canvas {
-  display: block;
-  margin: 0 auto 40px;
-  opacity: 0;
-  animation: spiralFadeIn 2s ease-in-out forwards;
+.splash-mark {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.08);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
 }
 
-@keyframes spiralFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.splash-monogram {
+  font-family: 'Times New Roman', serif;
+  font-size: 36px;
+  letter-spacing: 0.02em;
+  color: rgba(0, 0, 0, 0.78);
 }
 
-/* Title with calligraphy effect */
 .splash-title {
-  font-family: 'Noto Serif JP', serif;
-  font-size: 48px;
+  font-family: 'Times New Roman', serif;
+  font-size: clamp(2.1rem, 3.6vw, 3.1rem);
   font-weight: 400;
-  color: #1A1A1A;
-  margin: 0 0 20px 0;
-  letter-spacing: 0.1em;
-}
-
-.splash-char {
-  opacity: 0;
-  animation: charAppear 0.8s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
-}
-
-@keyframes charAppear {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Subtitle */
-.splash-subtitle {
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 18px;
-  font-weight: 300;
-  color: #1A1A1A;
+  letter-spacing: 0.18em;
   margin: 0;
-  opacity: 0;
+}
+
+.splash-rule {
+  width: min(260px, 70vw);
+  height: 1px;
+  background: rgba(0, 0, 0, 0.12);
+  margin: 14px auto 12px;
 }
 
 .splash-subtitle {
-  animation: subtitleAppear 1s ease-in-out 5s forwards;
+  font-family: 'Noto Serif JP', serif;
+  font-size: 1.05rem;
+  color: rgba(0, 0, 0, 0.68);
+  margin: 0;
 }
 
-@keyframes subtitleAppear {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 0.8;
-    transform: translateY(0);
-  }
+.splash-hint {
+  height: 20px;
+  margin-top: 18px;
+  font-size: 0.95rem;
+  color: rgba(0, 0, 0, 0.55);
 }
 
-/* Phase-based animations */
-.splash-fade-out {
-  animation: fadeOut 2s ease-in-out forwards;
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-.splash-screen-fade-out {
+/* Phase-based motion */
+.splash-enter {
   opacity: 0;
-  transition: opacity 0.5s ease-out;
 }
 
-/* Mobile optimization */
-@media (max-width: 768px) {
-  .splash-title {
-    font-size: 32px;
-  }
-  
-  .splash-subtitle {
-    font-size: 14px;
-  }
-  
-  .golden-spiral-canvas {
-    width: 200px !important;
-    height: 200px !important;
-  }
+.splash-enter .splash-content {
+  transform: translateY(10px);
+  opacity: 0;
 }
 
-/* Reduced motion support */
+.splash-ready {
+  opacity: 1;
+}
+
+.splash-ready .splash-content {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 420ms ease, opacity 420ms ease;
+}
+
+.splash-exit {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms ease;
+}
+
+.splash-exit .splash-content {
+  transform: translateY(-6px);
+  opacity: 0;
+  transition: transform 260ms ease, opacity 260ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .splash-screen,
-  .splash-char,
-  .splash-subtitle,
-  .golden-spiral-canvas {
-    animation: none !important;
-  }
-  
-  .splash-screen {
-    opacity: 1;
-  }
-  
-  .splash-char,
-  .splash-subtitle,
-  .golden-spiral-canvas {
-    opacity: 1 !important;
-    transform: none !important;
+  .splash-enter,
+  .splash-ready,
+  .splash-exit,
+  .splash-content {
+    transition: none !important;
   }
 }

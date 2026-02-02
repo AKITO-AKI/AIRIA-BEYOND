@@ -108,6 +108,62 @@ export interface ApiError {
   message?: string;
 }
 
+export type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+export interface RecommendationItem {
+  composer: string;
+  title: string;
+  era?: string;
+  why: string;
+}
+
+export interface ChatTurnRequest {
+  messages: ChatMessage[];
+  onboardingData?: AnalyzeRequest['onboardingData'];
+}
+
+export interface ChatTurnResponse {
+  assistant_message: string;
+  recommendations: RecommendationItem[];
+  provider: 'openai' | 'rule-based';
+  event_suggestion?: {
+    shouldTrigger: boolean;
+    reason: string;
+  };
+}
+
+export interface RefineEventRequest {
+  messages: ChatMessage[];
+  onboardingData?: AnalyzeRequest['onboardingData'];
+}
+
+export interface RefinedEventResponse {
+  provider: 'openai' | 'rule-based';
+  brief: any;
+  analysisLike: IntermediateRepresentation;
+  image: GenerateImageRequest & {
+    subject?: string;
+    palette?: string;
+    ambiguity?: number;
+  };
+  music: {
+    valence: number;
+    arousal: number;
+    focus: number;
+    motif_tags: string[];
+    duration: number;
+    genre_palette?: string[];
+    primary_genre?: string;
+    instrumentation?: string[];
+    timbre_arc?: any;
+    theme?: any;
+    personality_axes?: any;
+  };
+}
+
 // Detect API base URL from environment variable
 const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
@@ -218,6 +274,46 @@ export async function analyzeSession(request: AnalyzeRequest): Promise<AnalyzeRe
   if (!response.ok) {
     const error: ApiError = await response.json();
     throw new Error(error.message || error.error || 'Failed to analyze session');
+  }
+
+  return response.json();
+}
+
+/**
+ * Daily conversation + recommendation
+ */
+export async function chatTurn(request: ChatTurnRequest): Promise<ChatTurnResponse> {
+  const response = await fetch(`${API_BASE}/api/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to chat');
+  }
+
+  return response.json();
+}
+
+/**
+ * Refine a generation event from conversation logs
+ */
+export async function refineGenerationEvent(request: RefineEventRequest): Promise<RefinedEventResponse> {
+  const response = await fetch(`${API_BASE}/api/event/refine`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to refine event');
   }
 
   return response.json();

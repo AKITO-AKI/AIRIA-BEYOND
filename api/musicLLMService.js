@@ -18,6 +18,12 @@ const openai = process.env.OPENAI_API_KEY
  * @param {number} request.focus - Focus level (0 to 1)
  * @param {string[]} request.motif_tags - Artistic motif tags
  * @param {number} [request.duration=75] - Target duration in seconds
+ * @param {string[]} [request.genre_palette] - Allowed genres (event flow uses at least classical+jazz)
+ * @param {string} [request.primary_genre] - Primary genre hint (classical|jazz|hybrid)
+ * @param {string[]} [request.instrumentation] - Instrument list hint
+ * @param {Object} [request.timbre_arc] - Timbre plan for early/middle/late
+ * @param {Object} [request.theme] - Theme object (title/keywords)
+ * @param {Array} [request.personality_axes] - Personality axes used for instrument choice
  * @returns {Promise<Object>} Music structure
  */
 export async function generateMusicStructure(request) {
@@ -25,17 +31,31 @@ export async function generateMusicStructure(request) {
     throw new Error('OpenAI API key not configured');
   }
 
-  const { valence, arousal, focus, motif_tags, duration = 75 } = request;
+  const {
+    valence,
+    arousal,
+    focus,
+    motif_tags,
+    duration = 75,
+    genre_palette,
+    primary_genre,
+    instrumentation,
+    timbre_arc,
+    theme,
+    personality_axes,
+  } = request;
 
-  // Build the system prompt for classical music generation
-  const systemPrompt = `You are a classical music composition assistant specializing in generating structured music data based on emotional parameters.
+  // Build the system prompt for music generation
+  const systemPrompt = `You are a music composition assistant specializing in generating structured music data based on emotional parameters.
 
-Your task is to generate a JSON structure representing a classical music composition for solo piano.
+Your task is to generate a JSON structure representing a composition that can be rendered by a single-track MIDI prototype.
+Prefer piano-first writing, but you may describe broader instrumentation in the metadata when requested.
 
 Guidelines:
-- Use classical composition principles (motifs, development, recapitulation)
+- Default to classical composition principles (motifs, development, recapitulation)
 - Use classical forms (ABA, sonata, rondo, theme-and-variations)
 - Use functional harmony and proper cadences
+- If jazz influence is requested/allowed, incorporate it subtly (extended harmony, gentle syncopation) while keeping the overall form coherent
 - Avoid modern/pop music patterns
 
 Emotional Parameter Interpretation:
@@ -66,12 +86,14 @@ Output ONLY valid JSON with this exact structure:
       "texture": "string (simple, contrapuntal, homophonic)"
     }
   ],
-  "instrumentation": "piano",
+  "instrumentation": "string (e.g., 'piano' or 'piano trio')",
   "character": "string describing emotional character",
   "reasoning": "brief explanation of why you chose this key, tempo, form, and other musical decisions"
 }`;
 
-  const userPrompt = `Generate a classical piano composition with the following emotional parameters:
+  const constraintsBlock = `\n\nCreative constraints (optional):\n- Allowed genres: ${Array.isArray(genre_palette) && genre_palette.length ? genre_palette.join(', ') : 'classical'}\n- Primary genre hint: ${primary_genre || 'classical'}\n- Instrumentation hint: ${Array.isArray(instrumentation) && instrumentation.length ? instrumentation.join(', ') : 'piano'}\n- Timbre arc: ${timbre_arc ? JSON.stringify(timbre_arc) : 'n/a'}\n- Theme: ${theme ? JSON.stringify({ title: theme.title, keywords: theme.keywords }) : 'n/a'}\n- Personality axes: ${Array.isArray(personality_axes) ? JSON.stringify(personality_axes.slice(0, 3)) : 'n/a'}\n`;
+
+  const userPrompt = `Generate a composition with the following emotional parameters:
 
 Valence: ${valence.toFixed(2)} (${valence < -0.3 ? 'negative/sad' : valence > 0.3 ? 'positive/happy' : 'neutral'})
 Arousal: ${arousal.toFixed(2)} (${arousal < 0.3 ? 'calm' : arousal > 0.7 ? 'energetic' : 'moderate'})
@@ -79,7 +101,7 @@ Focus: ${focus.toFixed(2)} (${focus < 0.3 ? 'diffuse' : focus > 0.7 ? 'concentra
 Artistic motifs: ${motif_tags.join(', ')}
 Target duration: ${duration} seconds
 
-Create a composition that reflects these emotional qualities using classical music techniques.`;
+Create a composition that reflects these emotional qualities, staying within the allowed genre palette and respecting the timbre arc when provided.${constraintsBlock}`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -141,7 +163,7 @@ export async function generateMusicStructureWithFallback(request) {
  * @returns {Object} Music structure
  */
 function generateRuleBasedMusic(request) {
-  const { valence, arousal, focus, motif_tags } = request;
+  const { valence, arousal, focus, motif_tags, instrumentation, primary_genre } = request;
 
   // Determine key based on valence
   const key = valence < 0 ? 'd minor' : 'C major';
@@ -208,7 +230,11 @@ function generateRuleBasedMusic(request) {
     timeSignature,
     form,
     sections,
-    instrumentation: 'piano',
+    instrumentation: Array.isArray(instrumentation) && instrumentation.length
+      ? instrumentation.join(', ')
+      : primary_genre === 'jazz'
+      ? 'piano (jazz-influenced)'
+      : 'piano',
     character,
   };
 }

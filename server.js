@@ -53,12 +53,16 @@ import imageRoutes from './api/routes/image.js';
 import musicRoutes from './api/routes/music.js';
 import jobRoutes from './api/routes/job.js';
 import adminRoutes from './api/routes/admin.js';
+import chatRoutes from './api/routes/chat.js';
+import eventRoutes from './api/routes/event.js';
 
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/image', imageRoutes);
 app.use('/api/music', musicRoutes);
 app.use('/api/job', jobRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/event', eventRoutes);
 
 // Sitemap
 app.get('/sitemap.xml', (req, res) => {

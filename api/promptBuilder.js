@@ -175,6 +175,9 @@ export function autoSelectStylePreset(valence, arousal) {
  * @param {number} [params.valence] - Valence value
  * @param {number} [params.arousal] - Arousal value
  * @param {number} [params.focus] - Focus value
+ * @param {string} [params.subject] - Subject hints (comma-separated)
+ * @param {string} [params.palette] - Color palette hints (comma-separated)
+ * @param {number} [params.ambiguity] - 0..1 (1=very abstract/ambiguous)
  * @returns {Object} Prompt and negative prompt
  */
 export function buildPrompt(params) {
@@ -185,7 +188,10 @@ export function buildPrompt(params) {
     stylePreset,
     valence,
     arousal,
-    focus 
+    focus,
+    subject,
+    palette,
+    ambiguity,
   } = params;
   
   // Auto-select style if not provided and we have IR data
@@ -198,6 +204,14 @@ export function buildPrompt(params) {
   
   // Build prompt components
   const components = [];
+
+  // Refined brief additions (kept optional)
+  if (subject) {
+    components.push(`subject hints: ${subject}`);
+  }
+  if (palette) {
+    components.push(`color palette: ${palette}`);
+  }
   
   // P3: Use IR data if available (takes precedence over mood)
   if (valence !== undefined) {
@@ -211,8 +225,15 @@ export function buildPrompt(params) {
     components.push(getArousalDescriptors(arousal));
   }
   
-  if (focus !== undefined) {
-    components.push(getFocusDescriptors(focus));
+  // Ambiguity can override focus (more ambiguity => more diffuse composition)
+  const resolvedFocus = focus !== undefined
+    ? focus
+    : ambiguity !== undefined
+    ? Math.max(0, Math.min(1, 1 - ambiguity))
+    : undefined;
+
+  if (resolvedFocus !== undefined) {
+    components.push(getFocusDescriptors(resolvedFocus));
   }
   
   // Add complexity based on duration
