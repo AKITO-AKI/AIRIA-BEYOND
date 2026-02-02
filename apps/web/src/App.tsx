@@ -996,10 +996,6 @@ const Phase1SessionUI = () => {
                     )}
                 </section>
             </main>
-
-            <footer>
-                <p>セッションデータは決定論的に画像へ変換されます</p>
-            </footer>
         </div>
     );
 };

@@ -28,7 +28,7 @@
  * @property {string} [errorMessage]
  * @property {number} retryCount
  * @property {number} maxRetries
- * @property {'openai' | 'rule-based'} provider
+ * @property {'openai' | 'ollama' | 'rule-based'} provider
  * @property {GenerateMusicRequest} input
  * @property {string} [result]
  * @property {string} [resultUrl]
@@ -43,7 +43,7 @@ let jobIdCounter = 0;
 /**
  * Create a new music generation job
  * @param {Object} data
- * @param {'openai' | 'rule-based'} data.provider
+ * @param {'openai' | 'ollama' | 'rule-based'} data.provider
  * @param {GenerateMusicRequest} data.input
  * @param {number} [data.maxRetries]
  * @returns {MusicJobData}

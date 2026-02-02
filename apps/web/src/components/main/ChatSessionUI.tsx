@@ -194,46 +194,48 @@ export default function ChatSessionUI() {
             <div className="chatBubble">{m.content}</div>
           </div>
         ))}
+
+        {recommendations.length > 0 ? (
+          <details className="chatRecsInline" data-no-swipe open>
+            <summary className="chatRecsSummary">いまのレコメンド</summary>
+            <ul className="chatRecsList">
+              {recommendations.slice(0, 4).map((r, i) => (
+                <li key={i} className="chatRecItem">
+                  <div className="chatRecMain">
+                    <span className="chatRecComposer">{r.composer}</span>
+                    <span className="chatRecSep">—</span>
+                    <span className="chatRecTitle">{r.title}</span>
+                    {r.era ? <span className="chatRecEra">({r.era})</span> : null}
+                  </div>
+                  <div className="chatRecWhy">{r.why}</div>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </div>
 
-      {recommendations.length > 0 ? (
-        <div className="chatRecs" data-no-swipe>
-          <div className="chatRecsTitle">いまのレコメンド</div>
-          <ul className="chatRecsList">
-            {recommendations.slice(0, 4).map((r, i) => (
-              <li key={i} className="chatRecItem">
-                <div className="chatRecMain">
-                  <span className="chatRecComposer">{r.composer}</span>
-                  <span className="chatRecSep">—</span>
-                  <span className="chatRecTitle">{r.title}</span>
-                  {r.era ? <span className="chatRecEra">({r.era})</span> : null}
-                </div>
-                <div className="chatRecWhy">{r.why}</div>
-              </li>
-            ))}
-          </ul>
+      <div className="chatDock" data-no-swipe>
+        {error ? <div className="chatError">{error}</div> : null}
+
+        <div className="chatComposer">
+          <textarea
+            className="chatInput"
+            placeholder={userOnlyMessages.length === 0 ? '今日のことを一言で' : '続けて話して'}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isSending) handleSend();
+              }
+            }}
+            rows={2}
+          />
+          <button className="chatSend" onClick={handleSend} disabled={isSending || !input.trim()}>
+            {isSending ? '送信中…' : '送信'}
+          </button>
         </div>
-      ) : null}
-
-      {error ? <div className="chatError">{error}</div> : null}
-
-      <div className="chatComposer" data-no-swipe>
-        <textarea
-          className="chatInput"
-          placeholder={userOnlyMessages.length === 0 ? '今日のことを一言で' : '続けて話して'}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              if (!isSending) handleSend();
-            }
-          }}
-          rows={2}
-        />
-        <button className="chatSend" onClick={handleSend} disabled={isSending || !input.trim()} data-no-swipe>
-          {isSending ? '送信中…' : '送信'}
-        </button>
       </div>
     </div>
   );

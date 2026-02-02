@@ -17,7 +17,7 @@
  * @property {number} arousal
  * @property {number} focus
  * @property {number} confidence
- * @property {string[]} motifTags
+ * @property {string[]} motif_tags
  * @property {string} [reasoning]
  */
 
@@ -33,7 +33,7 @@
  * @property {string} [errorMessage]
  * @property {number} retryCount
  * @property {number} maxRetries
- * @property {'openai' | 'rule-based'} provider
+ * @property {'openai' | 'ollama' | 'rule-based'} provider
  * @property {SessionInput} input
  * @property {IntermediateRepresentation} [result]
  */
@@ -47,7 +47,7 @@ const JOB_EXPIRY_MS = 60 * 60 * 1000;
 /**
  * Create a new analysis job
  * @param {Object} data
- * @param {'openai' | 'rule-based'} data.provider
+ * @param {'openai' | 'ollama' | 'rule-based'} data.provider
  * @param {SessionInput} data.input
  * @param {number} [data.maxRetries]
  * @returns {AnalysisJobData}

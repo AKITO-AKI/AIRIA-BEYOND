@@ -6,6 +6,15 @@
 import OpenAI from 'openai';
 import { IntermediateRepresentationSchema } from './types.js';
 import { trackUsage } from './lib/usage-tracker.js';
+import { ollamaChatJson } from './lib/ollamaClient.js';
+
+function hasOllamaConfigured() {
+  return !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL);
+}
+
+function getProviderPreference() {
+  return String(process.env.LLM_PROVIDER ?? '').toLowerCase();
+}
 
 // System prompt for LLM
 const SYSTEM_PROMPT = `あなたは音楽とアート療法の専門家です。セッションデータから感情と芸術的な中間表現を生成します。
@@ -138,6 +147,39 @@ export async function generateWithLLM(input, apiKey) {
 }
 
 /**
+ * Generate IR using Ollama (local)
+ * @param {Object} input - Session input data
+ * @returns {Promise<Object>} Intermediate representation
+ */
+export async function generateWithOllama(input) {
+  // Build user message
+  const userMessage = JSON.stringify({
+    mood: input.mood,
+    duration: input.duration,
+    freeText: input.freeText,
+    onboardingData: input.onboardingData,
+  });
+
+  console.log('[LLM] Calling Ollama for analysis');
+
+  const parsed = await ollamaChatJson({
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    temperature: 0.7,
+    // num_predict is applied by the client; keep generous but bounded
+    maxTokens: 900,
+    model: process.env.OLLAMA_MODEL_ANALYSIS || process.env.OLLAMA_MODEL,
+    debugTag: 'Analysis',
+  });
+
+  const validated = IntermediateRepresentationSchema.parse(parsed);
+  console.log('[LLM] Successfully validated IR (Ollama)');
+  return validated;
+}
+
+/**
  * Rule-based fallback generation
  * Used when LLM is unavailable or fails validation
  * @param {Object} input - Session input data
@@ -198,14 +240,37 @@ export function generateWithRules(input) {
 export async function generateIR(input, forceFallback = false) {
   const apiKey = process.env.OPENAI_API_KEY;
   const disableLLM = process.env.DISABLE_LLM_ANALYSIS;
+  const providerPref = getProviderPreference();
+  const hasOllama = hasOllamaConfigured();
 
   // Check if we should force fallback
   if (forceFallback || disableLLM || !apiKey) {
-    console.log('[Analysis] Using rule-based fallback (forced or no API key)');
-    return {
-      ir: generateWithRules(input),
-      provider: 'rule-based',
-    };
+    // If OpenAI isn't available but Ollama is, prefer Ollama unless explicitly forced to rules.
+    if (!forceFallback && !disableLLM && hasOllama && providerPref !== 'rule-based') {
+      try {
+        const ir = await generateWithOllama(input);
+        return { ir, provider: 'ollama' };
+      } catch (error) {
+        console.error('[Analysis] Ollama failed, falling back to rules:', error);
+      }
+    }
+
+    console.log('[Analysis] Using rule-based fallback (forced/disabled/no OpenAI key)');
+    return { ir: generateWithRules(input), provider: 'rule-based' };
+  }
+
+  // Provider selection:
+  // - If LLM_PROVIDER=ollama and configured -> Ollama first
+  // - Else default to OpenAI (if configured) with fallback
+  const shouldPreferOllama = providerPref === 'ollama' || (providerPref !== 'openai' && hasOllama);
+
+  if (shouldPreferOllama && hasOllama) {
+    try {
+      const ir = await generateWithOllama(input);
+      return { ir, provider: 'ollama' };
+    } catch (error) {
+      console.error('[Analysis] Ollama failed; trying OpenAI next:', error);
+    }
   }
 
   try {

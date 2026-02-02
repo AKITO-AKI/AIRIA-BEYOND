@@ -9,6 +9,24 @@ import { createAnalysisJob, updateAnalysisJob } from '../analysisJobStore.js';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
 import { generateIR } from '../llmService.js';
 
+function hasOllamaConfigured() {
+  return !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL);
+}
+
+function getInitialProvider() {
+  const pref = String(process.env.LLM_PROVIDER ?? '').toLowerCase();
+  const hasOllama = hasOllamaConfigured();
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  const disableLLM = !!process.env.DISABLE_LLM_ANALYSIS;
+
+  if (disableLLM) return 'rule-based';
+  if (pref === 'ollama' && hasOllama) return 'ollama';
+  if (pref === 'openai' && hasOpenAI) return 'openai';
+  if (hasOllama && pref !== 'openai') return 'ollama';
+  if (hasOpenAI) return 'openai';
+  return 'rule-based';
+}
+
 // Error codes
 const ERROR_CODES = {
   TIMEOUT: 'TIMEOUT',
@@ -143,9 +161,9 @@ export async function analyzeSession(req, res) {
       timestamp: timestamp || new Date().toISOString(),
     };
 
-    // Create job (start with 'openai' provider, may change to 'rule-based' if fallback)
+    // Create job (provider may update during execution if fallback happens)
     const job = createAnalysisJob({
-      provider: 'openai',
+      provider: getInitialProvider(),
       input: sessionInput,
       maxRetries: 1,
     });

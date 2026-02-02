@@ -5,13 +5,13 @@ import { CausalLogProvider } from './contexts/CausalLogContext';
 import { MusicPlayerProvider, useMusicPlayer } from './contexts/MusicPlayerContext';
 import { ToastProvider } from './components/visual/feedback/ToastContainer';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Footer } from './components/Footer';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import MainRoom from './components/rooms/MainRoom';
 import GalleryRoom from './components/rooms/GalleryRoom';
 import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
+import InfoRoom from './components/rooms/InfoRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
 import DebugPanel from './components/DebugPanel';
@@ -28,16 +28,28 @@ if (import.meta.env.PROD) {
   initAnalytics();
 }
 
-const rooms = [
-  { id: 'onboarding' as const, name: 'Onboarding', component: <OnboardingRoom /> },
-  { id: 'main' as const, name: 'Main', component: <MainRoom /> },
-  { id: 'gallery' as const, name: 'Gallery', component: <GalleryRoom /> },
-  { id: 'album' as const, name: 'Album', component: <AlbumRoom /> },
-  { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
-];
+const ONBOARDING_STORAGE_KEY = 'airia_onboarding_data';
+
+function isOnboardingCompleted(): boolean {
+  try {
+    const raw = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return Boolean(parsed?.completedAt);
+  } catch {
+    return false;
+  }
+}
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [hasOnboarded, setHasOnboarded] = useState(() => {
+    try {
+      return isOnboardingCompleted();
+    } catch {
+      return false;
+    }
+  });
   const { getSelectedAlbum, albums } = useAlbums();
   const { state: musicState } = useMusicPlayer();
   const selectedAlbum = getSelectedAlbum();
@@ -45,12 +57,37 @@ const AppContent = () => {
   // Create queue from all albums with music data
   const musicQueue = albums.filter(album => album.musicData);
 
+  const rooms = hasOnboarded
+    ? [
+        { id: 'main' as const, name: 'Main', component: <MainRoom /> },
+        { id: 'gallery' as const, name: 'Gallery', component: <GalleryRoom /> },
+        { id: 'album' as const, name: 'Album', component: <AlbumRoom /> },
+        { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
+        { id: 'info' as const, name: 'Info', component: <InfoRoom /> },
+      ]
+    : [
+        {
+          id: 'onboarding' as const,
+          name: 'Onboarding',
+          component: (
+            <OnboardingRoom
+              onExit={() => {
+                // Re-check storage (in case of partial saves)
+                setHasOnboarded(isOnboardingCompleted());
+              }}
+            />
+          ),
+        },
+      ];
+
+  const initialRoom = hasOnboarded ? ('main' as const) : ('onboarding' as const);
+
   return (
     <>
       {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
       {!showSplash && (
         <>
-          <RoomNavigator rooms={rooms} initialRoom="main" />
+          <RoomNavigator key={hasOnboarded ? 'onboarded' : 'needs-onboarding'} rooms={rooms} initialRoom={initialRoom} />
           {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
           <EnhancedMiniPlayer 
             album={selectedAlbum || undefined} 
@@ -58,8 +95,6 @@ const AppContent = () => {
           />
           {/* P5: Debug panel for developers */}
           <DebugPanel />
-          {/* Phase D: Footer with legal pages */}
-          <Footer />
         </>
       )}
     </>

@@ -81,8 +81,87 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
     emotionalGoalTimeframe: '',
   });
 
+  type Step = {
+    key: keyof OnboardingData;
+    title: string;
+    description?: string;
+    kind: 'select' | 'textarea' | 'input';
+    options?: Array<{ value: string; label: string }>;
+    placeholder?: string;
+    rows?: number;
+  };
+
+  const steps: Step[] = [
+    {
+      key: 'recentMomentWhen',
+      title: '最近の感情的な瞬間は「いつ」でしたか？',
+      description: '時間の粒度はざっくりで大丈夫です。',
+      kind: 'select',
+      options: TIME_PERIODS,
+    },
+    {
+      key: 'recentMomentEmotion',
+      title: 'そのときの感情は？',
+      description: '一番近いものを選んでください。',
+      kind: 'select',
+      options: EMOTIONS,
+    },
+    {
+      key: 'recentMomentWhy',
+      title: 'なぜその感情が湧きましたか？',
+      description: '短文でもOKです。',
+      kind: 'textarea',
+      placeholder: '例：プロジェクトが成功した／大切な人と話せた／不安な連絡が来た…',
+      rows: 4,
+    },
+    {
+      key: 'dailyPatternWhen',
+      title: '普段、感情が動きやすい時間帯は？',
+      description: '一日の中で特徴的な時間帯を選んでください。',
+      kind: 'select',
+      options: DAILY_TIME_SLOTS,
+    },
+    {
+      key: 'dailyPatternEmotion',
+      title: 'その時間帯に感じやすい感情は？',
+      description: '一番よく起きるものを選んでください。',
+      kind: 'select',
+      options: EMOTIONS,
+    },
+    {
+      key: 'emotionalTrigger',
+      title: '感情を動かしやすい「きっかけ」は？',
+      description: '要因を一言で書いてください。',
+      kind: 'input',
+      placeholder: '例：仕事の締切／SNS／睡眠不足／人間関係…',
+    },
+    {
+      key: 'emotionalTriggerWhy',
+      title: 'そのきっかけが影響する理由は？',
+      description: '背景やパターンがあれば。',
+      kind: 'textarea',
+      placeholder: '例：評価が気になる／比較してしまう／体力が落ちると不安が増える…',
+      rows: 4,
+    },
+    {
+      key: 'emotionalGoal',
+      title: 'これから目指したい感情は？',
+      description: 'どんな状態で過ごしたいですか？',
+      kind: 'textarea',
+      placeholder: '例：落ち着いて集中できる／夜に安心して眠れる／穏やかに話せる…',
+      rows: 3,
+    },
+    {
+      key: 'emotionalGoalTimeframe',
+      title: 'その目標はいつ頃までに？',
+      description: '時間感覚を選んでください。',
+      kind: 'select',
+      options: GOAL_TIMEFRAMES,
+    },
+  ];
+
   const [currentStep, setCurrentStep] = useState(0);
-  const totalSteps = 4;
+  const totalSteps = steps.length;
 
   // Notify progress (0..1, but keep < 1 to avoid triggering polyhedron dissolve)
   useEffect(() => {
@@ -138,18 +217,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
   };
 
   const canProceed = () => {
-    switch (currentStep) {
-      case 0:
-        return formData.recentMomentWhen && formData.recentMomentEmotion && formData.recentMomentWhy.trim();
-      case 1:
-        return formData.dailyPatternWhen && formData.dailyPatternEmotion;
-      case 2:
-        return formData.emotionalTrigger && formData.emotionalTriggerWhy.trim();
-      case 3:
-        return formData.emotionalGoal.trim() && formData.emotionalGoalTimeframe;
-      default:
-        return false;
-    }
+    const step = steps[currentStep];
+    const value = String(formData[step.key] ?? '');
+    return step.kind === 'select' ? value.length > 0 : value.trim().length > 0;
   };
 
   return (
@@ -169,169 +239,47 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
       </div>
 
       <div className="question-container">
-        {currentStep === 0 && (
-          <div className="question-step">
-            <h3 className="question-title">1. 最近の感情的な瞬間</h3>
-            <p className="question-description">
-              最近経験した強い感情の瞬間について教えてください
-            </p>
-            
-            <div className="form-group">
-              <label htmlFor="recent-when">それはいつでしたか？</label>
-              <select
-                id="recent-when"
-                className="form-select"
-                value={formData.recentMomentWhen}
-                onChange={(e) => updateField('recentMomentWhen', e.target.value)}
-              >
-                {TIME_PERIODS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {(() => {
+          const step = steps[currentStep];
+          return (
+            <div className="question-step">
+              <h3 className="question-title">{step.title}</h3>
+              {step.description ? <p className="question-description">{step.description}</p> : null}
 
-            <div className="form-group">
-              <label htmlFor="recent-emotion">どんな感情でしたか？</label>
-              <select
-                id="recent-emotion"
-                className="form-select"
-                value={formData.recentMomentEmotion}
-                onChange={(e) => updateField('recentMomentEmotion', e.target.value)}
-              >
-                {EMOTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="form-group">
+                {step.kind === 'select' ? (
+                  <select
+                    className="form-select"
+                    value={String(formData[step.key] ?? '')}
+                    onChange={(e) => updateField(step.key, e.target.value)}
+                  >
+                    {(step.options ?? []).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : step.kind === 'input' ? (
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder={step.placeholder}
+                    value={String(formData[step.key] ?? '')}
+                    onChange={(e) => updateField(step.key, e.target.value)}
+                  />
+                ) : (
+                  <textarea
+                    className="form-textarea"
+                    placeholder={step.placeholder}
+                    value={String(formData[step.key] ?? '')}
+                    onChange={(e) => updateField(step.key, e.target.value)}
+                    rows={step.rows ?? 4}
+                  />
+                )}
+              </div>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="recent-why">なぜその感情が湧いたのですか？</label>
-              <textarea
-                id="recent-why"
-                className="form-textarea"
-                placeholder="例：プロジェクトが成功したから、大切な人と話せたから、など"
-                value={formData.recentMomentWhy}
-                onChange={(e) => updateField('recentMomentWhy', e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-        )}
-
-        {currentStep === 1 && (
-          <div className="question-step">
-            <h3 className="question-title">2. 日常の感情パターン</h3>
-            <p className="question-description">
-              普段、一日の中でどの時間帯にどんな感情を感じやすいですか？
-            </p>
-            
-            <div className="form-group">
-              <label htmlFor="daily-when">最も特徴的な時間帯は？</label>
-              <select
-                id="daily-when"
-                className="form-select"
-                value={formData.dailyPatternWhen}
-                onChange={(e) => updateField('dailyPatternWhen', e.target.value)}
-              >
-                {DAILY_TIME_SLOTS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="daily-emotion">その時間帯によく感じる感情は？</label>
-              <select
-                id="daily-emotion"
-                className="form-select"
-                value={formData.dailyPatternEmotion}
-                onChange={(e) => updateField('dailyPatternEmotion', e.target.value)}
-              >
-                {EMOTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 2 && (
-          <div className="question-step">
-            <h3 className="question-title">3. 感情のトリガー</h3>
-            <p className="question-description">
-              あなたの感情を動かす主な要因は何ですか？
-            </p>
-            
-            <div className="form-group">
-              <label htmlFor="trigger">最も影響する要因は？</label>
-              <input
-                id="trigger"
-                type="text"
-                className="form-input"
-                placeholder="例：人間関係、仕事、健康、趣味など"
-                value={formData.emotionalTrigger}
-                onChange={(e) => updateField('emotionalTrigger', e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="trigger-why">それはなぜですか？</label>
-              <textarea
-                id="trigger-why"
-                className="form-textarea"
-                placeholder="その要因があなたにとって重要な理由を教えてください"
-                value={formData.emotionalTriggerWhy}
-                onChange={(e) => updateField('emotionalTriggerWhy', e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-        )}
-
-        {currentStep === 3 && (
-          <div className="question-step">
-            <h3 className="question-title">4. 感情面での目標</h3>
-            <p className="question-description">
-              感情面でどうなりたいですか？
-            </p>
-            
-            <div className="form-group">
-              <label htmlFor="goal">あなたの感情的な目標は？</label>
-              <textarea
-                id="goal"
-                className="form-textarea"
-                placeholder="例：もっと穏やかでいたい、ストレスに強くなりたい、喜びを増やしたいなど"
-                value={formData.emotionalGoal}
-                onChange={(e) => updateField('emotionalGoal', e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="goal-timeframe">いつまでに達成したいですか？</label>
-              <select
-                id="goal-timeframe"
-                className="form-select"
-                value={formData.emotionalGoalTimeframe}
-                onChange={(e) => updateField('emotionalGoalTimeframe', e.target.value)}
-              >
-                {GOAL_TIMEFRAMES.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       <div className="button-group">

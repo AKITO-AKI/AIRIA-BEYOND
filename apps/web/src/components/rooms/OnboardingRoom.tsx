@@ -3,7 +3,11 @@ import OnboardingForm, { OnboardingData } from '../OnboardingForm';
 import GeometricCanvas from '../visual/GeometricCanvas';
 import '../OnboardingForm.css';
 
-const OnboardingRoom: React.FC = () => {
+type Props = {
+  onExit?: () => void;
+};
+
+const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [completedData, setCompletedData] = useState<OnboardingData | null>(null);
   const [progress, setProgress] = useState(0);
@@ -65,6 +69,14 @@ const OnboardingRoom: React.FC = () => {
               }}
             >
               プロフィールをダウンロード
+            </button>
+            <button
+              className="btn btn-success"
+              onClick={() => {
+                onExit?.();
+              }}
+            >
+              はじめる
             </button>
           </div>
         </div>

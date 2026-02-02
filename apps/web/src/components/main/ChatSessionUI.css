@@ -6,6 +6,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* RoomNavigator uses overflow:hidden; keep chat usable by making this self-contained */
+  height: calc(100dvh - 190px);
+  max-height: calc(100dvh - 190px);
+  overflow: hidden;
+  min-height: 0;
 }
 
 .chatHeader {
@@ -52,9 +57,24 @@
   background: rgba(255, 255, 255, 0.65);
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.06);
   padding: 14px;
-  min-height: 40vh;
-  max-height: 56vh;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+}
+
+.chatDock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.0),
+    rgba(255, 255, 255, 0.65) 22%,
+    rgba(255, 255, 255, 0.82)
+  );
 }
 
 .chatMsg {
@@ -90,18 +110,24 @@
   color: #111;
 }
 
-.chatRecs {
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.7);
+.chatRecsInline {
+  margin-top: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 10px 12px;
 }
 
-.chatRecsTitle {
+.chatRecsSummary {
+  cursor: pointer;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.02em;
-  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.chatRecsInline[open] .chatRecsSummary {
+  margin-bottom: 10px;
 }
 
 .chatRecsList {
