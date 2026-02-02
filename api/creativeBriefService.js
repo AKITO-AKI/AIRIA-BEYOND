@@ -6,10 +6,22 @@
  */
 
 import OpenAI from 'openai';
+import { ollamaChatJson } from './lib/ollamaClient.js';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+function isLikelyOpenAIQuotaOrRateError(error) {
+  const status = error?.status;
+  const code = error?.code;
+  const message = String(error?.message ?? '');
+  return (
+    status === 429 ||
+    code === 'insufficient_quota' ||
+    /exceeded your current quota|insufficient_quota|quota/i.test(message)
+  );
+}
 
 function normalizeMessages(messages) {
   if (!Array.isArray(messages)) return [];
@@ -163,6 +175,94 @@ export function briefToGenerationInputs(brief) {
 export async function generateCreativeBrief({ messages, onboardingData }) {
   const normalized = normalizeMessages(messages);
 
+  const providerPref = String(process.env.LLM_PROVIDER ?? '').toLowerCase();
+  const hasOllama = !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL);
+
+  if (providerPref !== 'openai' && (providerPref === 'ollama' || (!openai && hasOllama))) {
+    const system = `あなたは作曲と絵画ディレクションの両方ができるクリエイティブディレクターです。
+
+目的:
+- 対話ログから「その人の軸（性格）」「感情の流れ（前中後）」「曲のテーマ」「曲の制約」「アルバム絵のプロンプト素材」を抽出して、JSONのcreative briefを作る。
+- ユーザーは何も選択しない。対話が入力であり、あなたが精製して仕様へ落とす。
+
+必須要件:
+- music.genre_palette には必ず "classical" と "jazz" を含める（どちらも作れる状態）。
+- personality_axes は2〜3件。
+- emotional_arc は early/middle/late の3点で、valence(-1..1)とarousal(0..1)を持つ。
+- image.style は abstract/watercolor/oil のいずれか。
+- image.ambiguity は 0..1（1=かなり曖昧）。
+- theme.keywords は3〜5件（日本語の短い単語を推奨: 光/影/霧/水面/風/記憶 など）。
+
+出力はJSONのみ:
+{
+  "personality_axes": [{"name":"string","description":"string","weight":number}],
+  "emotional_arc": {
+    "early": {"valence": number, "arousal": number, "note":"string"},
+    "middle": {"valence": number, "arousal": number, "note":"string"},
+    "late": {"valence": number, "arousal": number, "note":"string"}
+  },
+  "theme": {"title":"string","keywords":["string"],"summary":"string"},
+  "music": {
+    "genre_palette": ["classical","jazz"],
+    "primary_genre": "classical|jazz|hybrid",
+    "instrumentation": ["string"],
+    "timbre_arc": {"early":"string","middle":"string","late":"string"}
+  },
+  "image": {
+    "style": "abstract|watercolor|oil",
+    "ambiguity": number,
+    "palette": ["string"],
+    "subjects": ["string"],
+    "composition": ["string"]
+  }
+}`;
+
+    const userPayload = {
+      onboardingData: onboardingData ?? null,
+      messages: normalized.slice(-36),
+    };
+
+    try {
+      const brief = await ollamaChatJson({
+        system,
+        user: JSON.stringify(userPayload),
+        temperature: 0.6,
+        maxTokens: 1500,
+        debugTag: 'EventRefine',
+      });
+
+      // Normalize numeric ranges
+      for (const key of ['early', 'middle', 'late']) {
+        if (brief?.emotional_arc?.[key]) {
+          brief.emotional_arc[key].valence = clampValence(brief.emotional_arc[key].valence);
+          brief.emotional_arc[key].arousal = clamp01(brief.emotional_arc[key].arousal);
+        }
+      }
+      if (brief?.image) {
+        brief.image.ambiguity = clamp01(brief.image.ambiguity);
+      }
+
+      // Guarantee palette includes classical + jazz
+      if (brief?.music?.genre_palette) {
+        const palette = Array.isArray(brief.music.genre_palette) ? brief.music.genre_palette.map((g) => String(g).toLowerCase()) : [];
+        if (!palette.includes('classical')) palette.unshift('classical');
+        if (!palette.includes('jazz')) palette.push('jazz');
+        brief.music.genre_palette = [...new Set(palette)];
+      }
+
+      validateBrief(brief);
+      return { brief, provider: 'ollama' };
+    } catch (error) {
+      console.warn('[EventRefine] Ollama failed; using rule-based fallback.', {
+        status: error?.status,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      const brief = fallbackBrief(normalized);
+      validateBrief(brief);
+      return { brief, provider: 'rule-based' };
+    }
+  }
+
   if (!openai) {
     const brief = fallbackBrief(normalized);
     validateBrief(brief);
@@ -212,22 +312,35 @@ export async function generateCreativeBrief({ messages, onboardingData }) {
     messages: normalized.slice(-36),
   };
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: JSON.stringify(userPayload) },
-    ],
-    temperature: 0.6,
-    response_format: { type: 'json_object' },
-    max_tokens: 1500,
-  });
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: JSON.stringify(userPayload) },
+      ],
+      temperature: 0.6,
+      response_format: { type: 'json_object' },
+      max_tokens: 1500,
+    });
+  } catch (error) {
+    const tag = isLikelyOpenAIQuotaOrRateError(error) ? 'quota/rate' : 'unknown';
+    console.warn(`[EventRefine] OpenAI failed (${tag}); using rule-based fallback.`, {
+      status: error?.status,
+      code: error?.code,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    const brief = fallbackBrief(normalized);
+    validateBrief(brief);
+    return { brief, provider: 'rule-based' };
+  }
 
-  const content = completion.choices[0]?.message?.content;
+  const content = completion?.choices?.[0]?.message?.content;
   if (!content) {
     const brief = fallbackBrief(normalized);
     validateBrief(brief);
-    return { brief, provider: 'openai' };
+    return { brief, provider: 'rule-based' };
   }
 
   let brief;

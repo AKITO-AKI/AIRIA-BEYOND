@@ -1,7 +1,7 @@
 /**
  * POST /api/image/generate
  * 
- * Generate an image using Replicate (SDXL)
+ * Generate an image using Replicate (SDXL) or local ComfyUI
  * Returns a job ID immediately, actual generation happens async
  */
 
@@ -10,6 +10,14 @@ import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore.j
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
 import { buildPrompt } from '../promptBuilder.js';
 import { trackUsage } from '../lib/usage-tracker.js';
+import { debugAiConsole, debugAiLog } from '../lib/aiDebug.js';
+import {
+  buildBasicComfyWorkflow,
+  comfyuiSubmitPrompt,
+  comfyuiWaitForImage,
+  comfyuiFetchImageBytes,
+  bytesToDataUrl,
+} from '../lib/comfyuiClient.js';
 
 // SDXL model on Replicate
 const SDXL_MODEL = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b';
@@ -38,6 +46,81 @@ const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
 };
+
+function resolveImageProvider(requestedProvider) {
+  const pref = String(requestedProvider ?? process.env.IMAGE_PROVIDER ?? '').toLowerCase();
+  const hasReplicate = !!process.env.REPLICATE_API_TOKEN;
+
+  if (pref === 'replicate') return 'replicate';
+  if (pref === 'comfyui' || pref === 'comfy') return 'comfyui';
+  if (pref === 'auto') {
+    return hasReplicate ? 'replicate' : 'comfyui';
+  }
+
+  // Default mode:
+  // - In dev/local, prefer ComfyUI to avoid paid services.
+  // - In production, keep the legacy behavior if Replicate token exists.
+  if (process.env.NODE_ENV === 'production') {
+    return hasReplicate ? 'replicate' : 'comfyui';
+  }
+  return 'comfyui';
+}
+
+async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed) {
+  const steps = Number(process.env.COMFYUI_STEPS) || 25;
+  const cfg = Number(process.env.COMFYUI_CFG) || 7.5;
+  const width = Number(process.env.COMFYUI_WIDTH) || 1024;
+  const height = Number(process.env.COMFYUI_HEIGHT) || 1024;
+  const sampler_name = process.env.COMFYUI_SAMPLER || 'euler';
+  const scheduler = process.env.COMFYUI_SCHEDULER || 'normal';
+  const checkpoint = process.env.COMFYUI_CHECKPOINT;
+
+  updateJob(jobId, {
+    status: 'running',
+    startedAt: new Date().toISOString(),
+  });
+
+  const workflow = buildBasicComfyWorkflow({
+    prompt,
+    negativePrompt,
+    seed,
+    width,
+    height,
+    steps,
+    cfg,
+    sampler_name,
+    scheduler,
+    ckpt_name: checkpoint,
+    filenamePrefix: `AIRIA_${jobId}`,
+  });
+
+  const promptId = await comfyuiSubmitPrompt({
+    workflow,
+    clientId: `airia_${jobId}`,
+    debugTag: `ComfyUI_${jobId}`,
+  });
+
+  const { ref } = await comfyuiWaitForImage({
+    promptId,
+    debugTag: `ComfyUI_${jobId}`,
+  });
+
+  const { bytes, contentType } = await comfyuiFetchImageBytes(ref);
+  const resultUrl = bytesToDataUrl(bytes, contentType);
+
+  // Local usage, no paid cost.
+  trackUsage('comfyui', 0, 'local-image-generation', {
+    jobId,
+    promptId,
+    checkpoint: checkpoint || 'unknown',
+    width,
+    height,
+    steps,
+    cfg,
+  });
+
+  return { resultUrl, promptId };
+}
 
 /**
  * Get client identifier (IP address) from request
@@ -245,12 +328,12 @@ export async function generateImage(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check if API token is configured
+  const provider = resolveImageProvider(req.body?.provider);
   const apiToken = process.env.REPLICATE_API_TOKEN;
-  if (!apiToken) {
+  if (provider === 'replicate' && !apiToken) {
     return res.status(503).json({
       error: 'External image generation is not configured',
-      message: 'REPLICATE_API_TOKEN is not set. Please use local generation instead.',
+      message: 'REPLICATE_API_TOKEN is not set. Set IMAGE_PROVIDER=comfyui or start ComfyUI locally.',
     });
   }
 
@@ -304,10 +387,18 @@ export async function generateImage(req, res) {
       focus,
     });
 
+    debugAiConsole('image.generate.request', {
+      provider,
+      mood,
+      duration,
+      stylePreset,
+      motifTagsCount: Array.isArray(motifTags) ? motifTags.length : 0,
+    });
+
     // Create job with full input data
     const job = createJob({
-      provider: 'replicate',
-      model: SDXL_MODEL,
+      provider,
+      model: provider === 'replicate' ? SDXL_MODEL : `comfyui:${process.env.COMFYUI_CHECKPOINT || 'workflow'}`,
       input: {
         mood,
         duration,
@@ -318,6 +409,7 @@ export async function generateImage(req, res) {
         arousal,
         focus,
         confidence,
+        provider,
       },
       inputSummary: {
         mood,
@@ -327,17 +419,38 @@ export async function generateImage(req, res) {
       },
     });
 
+    debugAiLog('image_generate', {
+      jobId: job.id,
+      provider,
+      model: job.model,
+      prompt,
+      negativePrompt,
+      seed,
+      input: job.input,
+      inputSummary: job.inputSummary,
+    });
+
     // Start async generation with retry logic
     (async () => {
       try {
-        const resultUrl = await executeGeneration(
-          new Replicate({ auth: apiToken }),
-          job.id,
-          prompt,
-          negativePrompt,
-          seed || Math.floor(Math.random() * 1000000),
-          clientId
-        );
+        const finalSeed = seed || Math.floor(Math.random() * 1000000);
+        let resultUrl;
+        let extraMeta;
+
+        if (provider === 'replicate') {
+          resultUrl = await executeGeneration(
+            new Replicate({ auth: apiToken }),
+            job.id,
+            prompt,
+            negativePrompt,
+            finalSeed,
+            clientId
+          );
+        } else {
+          const out = await executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed);
+          resultUrl = out.resultUrl;
+          extraMeta = { comfyuiPromptId: out.promptId };
+        }
 
         // Update job as succeeded
         updateJob(job.id, {
@@ -345,6 +458,7 @@ export async function generateImage(req, res) {
           finishedAt: new Date().toISOString(),
           result: resultUrl,
           resultUrl: resultUrl,
+          ...(extraMeta ? extraMeta : {}),
         });
         
         console.log(`[Generation] Job ${job.id} completed successfully`);

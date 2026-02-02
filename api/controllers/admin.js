@@ -32,6 +32,17 @@ export async function getUsage(req, res) {
     period: 'last_24h',
     totalRequests: 0,
     services: {
+      ollama: {
+        requests: 0,
+        estimatedCost: 0,
+        available: !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL),
+      },
+      comfyui: {
+        requests: 0,
+        estimatedCost: 0,
+        available: true,
+        baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
+      },
       replicate: {
         requests: 0,
         estimatedCost: 0,
@@ -42,6 +53,11 @@ export async function getUsage(req, res) {
         estimatedCost: 0,
         available: !!process.env.OPENAI_API_KEY
       }
+    },
+    debug: {
+      DEBUG_AI: String(process.env.DEBUG_AI ?? ''),
+      LLM_PROVIDER: String(process.env.LLM_PROVIDER ?? ''),
+      IMAGE_PROVIDER: String(process.env.IMAGE_PROVIDER ?? ''),
     },
     timestamp: new Date().toISOString()
   };

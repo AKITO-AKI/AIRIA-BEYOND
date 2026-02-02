@@ -95,9 +95,60 @@ OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 **Note:** 
-- Without `REPLICATE_API_TOKEN`, the app falls back to local image generation
-- Without `OPENAI_API_KEY`, the app uses rule-based analysis instead of LLM
+- Without `REPLICATE_API_TOKEN`, the app can run with local ComfyUI (`IMAGE_PROVIDER=comfyui`)
+- Without `OPENAI_API_KEY`, the app uses rule-based (or Ollama if configured)
 - Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control)
+
+### Local-first (Ollama + ComfyUI)
+
+If you want to avoid paid services (OpenAI/Replicate), run everything locally:
+
+1) Start Ollama and pull a model
+```bash
+ollama serve
+ollama pull qwen2.5:7b-instruct
+```
+
+2) Start ComfyUI (default: http://127.0.0.1:8188)
+- Make sure you have a checkpoint installed (e.g. SDXL checkpoint under `models/checkpoints`).
+
+3) Set env vars
+```
+LLM_PROVIDER=ollama
+IMAGE_PROVIDER=comfyui
+
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:7b-instruct
+
+COMFYUI_BASE_URL=http://127.0.0.1:8188
+COMFYUI_CHECKPOINT=sdxl_base_1.0.safetensors
+
+# Debug logs (writes to .debug/ai)
+DEBUG_AI=1
+```
+
+Provider behavior:
+- `/api/chat` and `/api/event/refine` use Ollama when `LLM_PROVIDER=ollama`.
+- `/api/image/generate` uses ComfyUI when `IMAGE_PROVIDER=comfyui` (or when Replicate token is missing in auto mode).
+
+### Smoke test (debug)
+
+These commands help you quickly verify ComfyUI and the Image API wiring.
+
+- Direct ComfyUI test (requires ComfyUI running at `COMFYUI_BASE_URL`):
+```bash
+npm run smoke:comfyui
+```
+
+- Image API test via `/api/image/generate` + `/api/job/:id` (requires API server running):
+```bash
+npm run dev:api
+npm run smoke:image:comfyui
+```
+
+Tips:
+- Save lots of logs: set `DEBUG_AI=1` (writes JSON logs to `.debug/ai`).
+- The API smoke test writes the resulting image file into `.debug/smoke/`.
 
 ### Cost and Rate Limits
 

@@ -5,10 +5,22 @@
  */
 
 import OpenAI from 'openai';
+import { ollamaChatJson } from './lib/ollamaClient.js';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+
+function isLikelyOpenAIQuotaOrRateError(error) {
+  const status = error?.status;
+  const code = error?.code;
+  const message = String(error?.message ?? '');
+  return (
+    status === 429 ||
+    code === 'insufficient_quota' ||
+    /exceeded your current quota|insufficient_quota|quota/i.test(message)
+  );
+}
 
 const CURATED_RECS = [
   {
@@ -107,8 +119,66 @@ function fallbackRespond(messages) {
   };
 }
 
+function getProviderPreference() {
+  return String(process.env.LLM_PROVIDER ?? '').toLowerCase();
+}
+
+function hasOllamaConfigured() {
+  return !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL);
+}
+
 export async function respondAndRecommend({ messages, onboardingData }) {
   const normalized = normalizeMessages(messages);
+
+  const providerPref = getProviderPreference();
+  if (providerPref !== 'openai' && (providerPref === 'ollama' || (!openai && hasOllamaConfigured()))) {
+    const system = `あなたは「レコメンド＋日常会話特化LLM」です。
+
+目的:
+- 普段はユーザーの話し相手になり、会話の流れに自然に溶け込む形で“いま聴きたそうな曲”を提案する。
+- 基本はクラシック中心。ただしユーザーの話題が夜・静けさ・余韻・都市的な孤独などの場合、ジャズを1曲混ぜても良い。
+
+制約:
+- 出力は必ずJSONのみ。
+- recommendations は 2〜4件。
+- why は日本語で短く、会話に接続して説明。
+
+出力JSON:
+{
+  "assistant_message": "string",
+  "recommendations": [
+    {"composer":"string","title":"string","era":"string","why":"string"}
+  ]
+}`;
+
+    const userPayload = {
+      onboardingData: onboardingData ?? null,
+      messages: normalized.slice(-24),
+    };
+
+    try {
+      const parsed = await ollamaChatJson({
+        system,
+        user: JSON.stringify(userPayload),
+        temperature: 0.7,
+        maxTokens: 800,
+        model: process.env.OLLAMA_MODEL_CHAT || process.env.OLLAMA_MODEL,
+        debugTag: 'Chat',
+      });
+
+      return {
+        assistant_message: String(parsed?.assistant_message ?? ''),
+        recommendations: Array.isArray(parsed?.recommendations) ? parsed.recommendations.slice(0, 4) : [],
+        provider: 'ollama',
+      };
+    } catch (error) {
+      console.warn('[Chat] Ollama failed; using rule-based fallback.', {
+        status: error?.status,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return { ...fallbackRespond(normalized), provider: 'rule-based' };
+    }
+  }
 
   if (!openai) {
     return { ...fallbackRespond(normalized), provider: 'rule-based' };
@@ -138,26 +208,37 @@ export async function respondAndRecommend({ messages, onboardingData }) {
     messages: normalized.slice(-24),
   };
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: JSON.stringify(userPayload) },
-    ],
-    temperature: 0.7,
-    response_format: { type: 'json_object' },
-  });
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: JSON.stringify(userPayload) },
+      ],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+  } catch (error) {
+    const tag = isLikelyOpenAIQuotaOrRateError(error) ? 'quota/rate' : 'unknown';
+    console.warn(`[Chat] OpenAI failed (${tag}); using rule-based fallback.`, {
+      status: error?.status,
+      code: error?.code,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { ...fallbackRespond(normalized), provider: 'rule-based' };
+  }
 
-  const content = completion.choices[0]?.message?.content;
+  const content = completion?.choices?.[0]?.message?.content;
   if (!content) {
-    return { ...fallbackRespond(normalized), provider: 'openai' };
+    return { ...fallbackRespond(normalized), provider: 'rule-based' };
   }
 
   let parsed;
   try {
     parsed = JSON.parse(content);
   } catch {
-    return { ...fallbackRespond(normalized), provider: 'openai' };
+    return { ...fallbackRespond(normalized), provider: 'rule-based' };
   }
 
   return {

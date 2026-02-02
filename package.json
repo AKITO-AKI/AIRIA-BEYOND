@@ -22,7 +22,9 @@
     "server:dev": "nodemon server.js",
     "preview": "npm --workspace apps/web run preview",
     "lint": "echo \"TODO: add lint\"",
-    "format": "echo \"TODO: add format\""
+    "format": "echo \"TODO: add format\"",
+    "smoke:comfyui": "node scripts/smoke-comfyui-direct.mjs",
+    "smoke:image:comfyui": "node scripts/smoke-image-api-comfyui.mjs"
   },
   "dependencies": {
     "express": "^4.18.2",

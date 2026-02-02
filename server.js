@@ -35,6 +35,11 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'production',
     services: {
+      comfyui: {
+        available: true,
+        configured: !!(process.env.COMFYUI_BASE_URL || process.env.IMAGE_PROVIDER === 'comfyui' || process.env.IMAGE_PROVIDER === 'comfy'),
+        baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
+      },
       replicate: { 
         available: !!process.env.REPLICATE_API_TOKEN,
         configured: !!process.env.REPLICATE_API_TOKEN
