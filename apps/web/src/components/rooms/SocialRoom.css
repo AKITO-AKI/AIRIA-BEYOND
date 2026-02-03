@@ -23,9 +23,9 @@
 }
 
 .social-compose {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(var(--blur-md));
   border-radius: 16px;
   padding: 14px;
   margin-bottom: 18px;
@@ -58,8 +58,8 @@
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-strong);
   color: inherit;
   outline: none;
 }
@@ -84,8 +84,8 @@
   max-width: 440px;
   padding: 8px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-glass);
 }
 
 .social-error {
@@ -110,8 +110,8 @@
 }
 
 .social-post {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-glass);
   border-radius: 18px;
   padding: 14px;
 }
@@ -146,7 +146,7 @@
 .social-post-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   margin-top: 12px;
   flex-wrap: wrap;
@@ -155,7 +155,38 @@
 .social-action {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  flex: 0 0 auto;
+  width: auto;
+  padding: 8px 12px;
+  min-width: fit-content;
+  justify-content: center;
+}
+
+.social-action-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.social-action-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.social-action-label {
+  white-space: nowrap;
+}
+
+.social-action.social-action-iconOnly {
+  padding: 8px 10px;
+}
+
+.social-action.is-active {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent 94%);
+  border-color: color-mix(in srgb, var(--color-border) 40%, var(--color-text) 60%);
 }
 
 .social-count-chip {
@@ -165,13 +196,31 @@
   min-width: 20px;
   padding: 2px 6px;
   border-radius: var(--radius-pill);
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent 92%);
   font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .social-action {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .social-action-label {
+    display: none;
+  }
 }
 
 @media (max-width: 680px) {
   .social-post-actions {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .social-post-actions .btn {
+    width: auto;
+    flex: 0 0 auto;
   }
 }
 
@@ -186,7 +235,11 @@
   flex-direction: column;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  border-top: 1px dashed var(--color-border);
+  background: var(--color-surface-glass);
+  border-radius: 12px;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .social-comment {

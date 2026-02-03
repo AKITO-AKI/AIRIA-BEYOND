@@ -175,36 +175,58 @@ const AlbumRoom: React.FC = () => {
           >
             公開
           </button>
-          <Popover triggerClassName="btn" trigger={<span>操作</span>} placement="bottom">
-            <Menu
-              items={[
-                {
-                  id: 'gallery',
-                  label: 'ギャラリーへ戻る',
-                  onSelect: () => navigateToRoom('gallery'),
-                },
-                {
-                  id: 'publish',
-                  label: 'SNSに公開',
-                  onSelect: () => navigateToRoom('social'),
-                },
-                {
-                  id: 'play',
-                  label: '再生',
-                  onSelect: () => requestPlayAlbum(album),
-                },
-                {
-                  id: 'favorite',
-                  label: album.isFavorite ? 'お気に入り解除' : 'お気に入り登録',
-                  onSelect: () => updateAlbum(album.id, { isFavorite: !album.isFavorite }),
-                },
-                {
-                  id: 'public',
-                  label: album.isPublic ? '非公開にする' : '公開にする',
-                  onSelect: () => updateAlbum(album.id, { isPublic: !album.isPublic }),
-                },
-              ]}
-            />
+          <Popover
+            triggerClassName="btn"
+            trigger={<span>操作</span>}
+            placement="bottom"
+            triggerAriaHaspopup="menu"
+          >
+            {({ close }) => (
+              <Menu
+                items={[
+                  {
+                    id: 'gallery',
+                    label: 'ギャラリーへ戻る',
+                    onSelect: () => {
+                      navigateToRoom('gallery');
+                      close();
+                    },
+                  },
+                  {
+                    id: 'publish',
+                    label: 'SNSに公開',
+                    onSelect: () => {
+                      navigateToRoom('social');
+                      close();
+                    },
+                  },
+                  {
+                    id: 'play',
+                    label: '再生',
+                    onSelect: () => {
+                      requestPlayAlbum(album);
+                      close();
+                    },
+                  },
+                  {
+                    id: 'favorite',
+                    label: album.isFavorite ? 'お気に入り解除' : 'お気に入り登録',
+                    onSelect: () => {
+                      updateAlbum(album.id, { isFavorite: !album.isFavorite });
+                      close();
+                    },
+                  },
+                  {
+                    id: 'public',
+                    label: album.isPublic ? '非公開にする' : '公開にする',
+                    onSelect: () => {
+                      updateAlbum(album.id, { isPublic: !album.isPublic });
+                      close();
+                    },
+                  },
+                ]}
+              />
+            )}
           </Popover>
         </div>
       </div>

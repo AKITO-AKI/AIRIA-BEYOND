@@ -61,10 +61,20 @@
   border-radius: var(--radius-pill);
   font-size: 10px;
   line-height: 1;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  background: rgba(0, 0, 0, 0.5);
-  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--overlay-chip-border);
+  background: var(--overlay-chip-bg);
+  color: var(--overlay-chip-fg);
   white-space: nowrap;
+}
+
+.badge-chip.badge-compact {
+  padding: 2px 5px;
+  font-size: 9px;
+}
+
+.badge-chip.is-priority {
+  border-width: 2px;
+  box-shadow: var(--overlay-chip-priority-shadow);
 }
 
 .badge-chip .badge-dot {

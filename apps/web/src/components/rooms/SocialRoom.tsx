@@ -12,6 +12,7 @@ import SegmentedControl from '../ui/SegmentedControl';
 import AlbumCard from '../gallery/AlbumCard';
 import Popover from '../ui/Popover';
 import Menu from '../ui/Menu';
+import Icon from '../ui/Icon';
 import './SocialRoom.css';
 
 const SocialRoom: React.FC = () => {
@@ -273,29 +274,49 @@ const SocialRoom: React.FC = () => {
               <button
                 className={`btn social-action ${expandedPosts[post.id] ? 'is-active' : ''}`}
                 onClick={() => toggleExpanded(post.id)}
+                aria-expanded={Boolean(expandedPosts[post.id])}
+                aria-controls={`post-comments-${post.id}`}
+                aria-label={expandedPosts[post.id] ? 'コメントを閉じる' : 'コメントを開く'}
               >
-                <span>{expandedPosts[post.id] ? '閉じる' : 'コメント'}</span>
+                <span className="social-action-main">
+                  <Icon name={expandedPosts[post.id] ? 'chevronDown' : 'comment'} className="social-action-icon" />
+                  <span className="social-action-label">{expandedPosts[post.id] ? '閉じる' : 'コメント'}</span>
+                </span>
                 <span className="social-count-chip">{Array.isArray(post.comments) ? post.comments.length : 0}</span>
               </button>
               <button className="btn social-action" onClick={() => void handleLike(post.id)}>
-                <span>いいね</span>
+                <span className="social-action-main">
+                  <Icon name="heart" className="social-action-icon" />
+                  <span className="social-action-label">いいね</span>
+                </span>
                 <span className="social-count-chip">{post.likes || 0}</span>
               </button>
               <button className="btn social-action" onClick={() => void copyPostLink(post.id)}>
-                共有
+                <span className="social-action-main">
+                  <Icon name="link" className="social-action-icon" />
+                  <span className="social-action-label">共有</span>
+                </span>
               </button>
-              <Popover triggerClassName="btn" trigger={<span>•••</span>} placement="bottom">
-                <Menu
-                  items={[
-                    { id: 'copy', label: 'リンクをコピー', onSelect: () => void copyPostLink(post.id) },
-                    { id: 'report', label: '通報する', onSelect: () => setError('通報を受け付けました') },
-                  ]}
-                />
+              <Popover
+                triggerClassName="btn social-action social-action-iconOnly"
+                trigger={<Icon name="more" className="social-action-icon" />}
+                placement="bottom"
+                triggerAriaLabel="メニュー"
+                triggerAriaHaspopup="menu"
+              >
+                {({ close }) => (
+                  <Menu
+                    items={[
+                      { id: 'copy', label: 'リンクをコピー', onSelect: () => { void copyPostLink(post.id); close(); } },
+                      { id: 'report', label: '通報する', onSelect: () => { setError('通報を受け付けました'); close(); } },
+                    ]}
+                  />
+                )}
               </Popover>
             </div>
 
             {expandedPosts[post.id] && (
-              <div className="social-post-comments">
+              <div className="social-post-comments" id={`post-comments-${post.id}`}>
                 {(post.comments || []).slice(-6).map((c) => (
                   <div key={c.id} className="social-comment">
                     <span className="social-comment-author">{c.authorName || 'anonymous'}</span>

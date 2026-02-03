@@ -62,6 +62,12 @@
     --blur-md: 14px;
     --noise-opacity: 0.06;
 
+    /* Design tokens: overlay chips (bookshelf badges, etc) */
+    --overlay-chip-border: rgba(255, 255, 255, 0.75);
+    --overlay-chip-bg: rgba(0, 0, 0, 0.65);
+    --overlay-chip-fg: rgba(255, 255, 255, 0.95);
+    --overlay-chip-priority-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+
     /* Alias existing variables to tokens */
     --bg-primary: var(--color-bg);
     --bg-secondary: rgba(255, 255, 255, 0.92);
@@ -103,6 +109,11 @@ html[data-theme='dark'] {
     --color-danger: #ff6b6b;
     --color-success: #63e6be;
     --color-focus: #f5f5f7;
+
+    --overlay-chip-border: rgba(255, 255, 255, 0.72);
+    --overlay-chip-bg: rgba(0, 0, 0, 0.62);
+    --overlay-chip-fg: rgba(255, 255, 255, 0.96);
+    --overlay-chip-priority-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
 
 html[data-theme='high-contrast'] {
@@ -121,6 +132,11 @@ html[data-theme='high-contrast'] {
     --color-danger: #ffffff;
     --color-success: #ffffff;
     --color-focus: #ffffff;
+
+    --overlay-chip-border: #ffffff;
+    --overlay-chip-bg: #000000;
+    --overlay-chip-fg: #ffffff;
+    --overlay-chip-priority-shadow: 0 0 0 2px #ffffff;
 }
 
 * {

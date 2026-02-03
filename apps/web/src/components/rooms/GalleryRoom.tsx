@@ -21,6 +21,7 @@ const GalleryRoom: React.FC = () => {
   const [viewTab, setViewTab] = React.useState('shelf');
   const [filterMode, setFilterMode] = React.useState<'all' | 'public' | 'private' | 'favorite'>('all');
   const [sortMode, setSortMode] = React.useState<'new' | 'popular' | 'duration'>('new');
+  const [badgePriority, setBadgePriority] = React.useState<'public' | 'favorite'>('public');
   
   const handleAlbumClick = (albumId: string) => {
     selectAlbum(albumId);
@@ -75,18 +76,21 @@ const GalleryRoom: React.FC = () => {
                     gridRow: album.gallery.shelfIndex + 1,
                   }}
                 >
-                  {[
-                    album.isPublic && (
-                      <span key="public" className="badge-chip badge-public">
-                        <span className="badge-dot" />公開
-                      </span>
-                    ),
-                    album.isFavorite && (
-                      <span key="favorite" className="badge-chip badge-favorite">
+                  {album.isPublic || album.isFavorite ? (
+                    badgePriority === 'favorite' && album.isFavorite ? (
+                      <span className="badge-chip badge-favorite badge-compact is-priority">
                         <span className="badge-dot" />お気に入り
                       </span>
-                    ),
-                  ].filter(Boolean)}
+                    ) : album.isPublic ? (
+                      <span className={`badge-chip badge-public badge-compact ${badgePriority === 'public' ? 'is-priority' : ''}`.trim()}>
+                        <span className="badge-dot" />公開
+                      </span>
+                    ) : (
+                      <span className="badge-chip badge-favorite badge-compact">
+                        <span className="badge-dot" />お気に入り
+                      </span>
+                    )
+                  ) : null}
                 </div>
               );
             })}
@@ -141,33 +145,43 @@ const GalleryRoom: React.FC = () => {
             triggerClassName="btn"
             trigger={<span>その他</span>}
             placement="top"
+            triggerAriaHaspopup="menu"
           >
-            <Menu
-              items={[
-                {
-                  id: 'open',
-                  label: 'アルバム詳細へ',
-                  onSelect: () => navigateToRoom('album'),
-                },
-                {
-                  id: 'publish',
-                  label: 'SNSに公開',
-                  onSelect: () => navigateToRoom('social'),
-                },
-                {
-                  id: 'play',
-                  label: '再生',
-                  onSelect: () => {
-                    if (!selectedAlbum) return;
-                    requestPlayAlbum(selectedAlbum, musicQueue);
+            {({ close }) => (
+              <Menu
+                items={[
+                  {
+                    id: 'open',
+                    label: 'アルバム詳細へ',
+                    onSelect: () => {
+                      navigateToRoom('album');
+                      close();
+                    },
                   },
-                },
+                  {
+                    id: 'publish',
+                    label: 'SNSに公開',
+                    onSelect: () => {
+                      navigateToRoom('social');
+                      close();
+                    },
+                  },
+                  {
+                    id: 'play',
+                    label: '再生',
+                    onSelect: () => {
+                      if (!selectedAlbum) return;
+                      requestPlayAlbum(selectedAlbum, musicQueue);
+                      close();
+                    },
+                  },
                   {
                     id: 'favorite',
                     label: selectedAlbum?.isFavorite ? 'お気に入り解除' : 'お気に入り登録',
                     onSelect: () => {
                       if (!selectedAlbum) return;
                       updateAlbum(selectedAlbum.id, { isFavorite: !selectedAlbum.isFavorite });
+                      close();
                     },
                   },
                   {
@@ -176,10 +190,12 @@ const GalleryRoom: React.FC = () => {
                     onSelect: () => {
                       if (!selectedAlbum) return;
                       updateAlbum(selectedAlbum.id, { isPublic: !selectedAlbum.isPublic });
+                      close();
                     },
                   },
-              ]}
-            />
+                ]}
+              />
+            )}
           </Popover>
         </div>
       </div>
@@ -260,21 +276,34 @@ const GalleryRoom: React.FC = () => {
           <div className="gallery-filter-tags">
             <span className="filter-tag">{filterMode === 'all' ? '全件' : filterMode === 'public' ? '公開のみ' : filterMode === 'private' ? '非公開のみ' : 'お気に入り'}</span>
             <span className="filter-tag">{sortLabel}</span>
+            <span className="filter-tag">バッジ優先: {badgePriority === 'public' ? '公開' : 'お気に入り'}</span>
           </div>
         </div>
         <div className="gallery-toolbar-right">
+          <SegmentedControl
+            value={badgePriority}
+            onChange={(value) => setBadgePriority(value)}
+            ariaLabel="バッジ優先"
+            options={[
+              { id: 'public', label: '公開優先' },
+              { id: 'favorite', label: 'お気に入り優先' },
+            ]}
+          />
           <Popover
             triggerClassName="btn"
             trigger={<span>並び替え: {sortLabel}</span>}
             placement="bottom"
+            triggerAriaHaspopup="menu"
           >
-            <Menu
-              items={[
-                { id: 'new', label: '新しい順', onSelect: () => setSortMode('new') },
-                { id: 'popular', label: '人気順', onSelect: () => setSortMode('popular') },
-                { id: 'duration', label: '長さ順', onSelect: () => setSortMode('duration') },
-              ]}
-            />
+            {({ close }) => (
+              <Menu
+                items={[
+                  { id: 'new', label: '新しい順', onSelect: () => { setSortMode('new'); close(); } },
+                  { id: 'popular', label: '人気順', onSelect: () => { setSortMode('popular'); close(); } },
+                  { id: 'duration', label: '長さ順', onSelect: () => { setSortMode('duration'); close(); } },
+                ]}
+              />
+            )}
           </Popover>
         </div>
       </div>
