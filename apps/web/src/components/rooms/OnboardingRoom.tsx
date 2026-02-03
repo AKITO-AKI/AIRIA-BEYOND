@@ -24,7 +24,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
   };
 
   return (
-    <div className="room-content">
+    <div className="room-content onboarding-room" data-no-swipe="true">
       {/* Onboarding only: progress/introspection symbol (backgrounded) */}
       {!isCompleted && (
         <GeometricCanvas

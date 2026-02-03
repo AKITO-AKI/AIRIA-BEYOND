@@ -99,84 +99,119 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
     rows?: number;
   };
 
-  const steps: Step[] = [
-    {
-      key: 'startMode',
-      title: 'はじめに：どちらから始めたい？',
-      description: '迷ったら「会話から」でOK。後からいつでも変えられます。',
-      kind: 'select',
-      options: START_MODES,
-    },
-    {
-      key: 'recentMomentWhen',
-      title: '最近の感情的な瞬間は「いつ」でしたか？',
-      description: '時間の粒度はざっくりで大丈夫です。',
-      kind: 'select',
-      options: TIME_PERIODS,
-    },
-    {
-      key: 'recentMomentEmotion',
-      title: 'そのときの感情は？',
-      description: '一番近いものを選んでください。',
-      kind: 'select',
-      options: EMOTIONS,
-    },
-    {
-      key: 'recentMomentWhy',
-      title: 'なぜその感情が湧きましたか？',
-      description: '短文でもOKです。',
-      kind: 'textarea',
-      placeholder: '例：プロジェクトが成功した／大切な人と話せた／不安な連絡が来た…',
-      rows: 4,
-    },
-    {
-      key: 'dailyPatternWhen',
-      title: '普段、感情が動きやすい時間帯は？',
-      description: '一日の中で特徴的な時間帯を選んでください。',
-      kind: 'select',
-      options: DAILY_TIME_SLOTS,
-    },
-    {
-      key: 'dailyPatternEmotion',
-      title: 'その時間帯に感じやすい感情は？',
-      description: '一番よく起きるものを選んでください。',
-      kind: 'select',
-      options: EMOTIONS,
-    },
-    {
-      key: 'emotionalTrigger',
-      title: '感情を動かしやすい「きっかけ」は？',
-      description: '要因を一言で書いてください。',
-      kind: 'input',
-      placeholder: '例：仕事の締切／SNS／睡眠不足／人間関係…',
-    },
-    {
-      key: 'emotionalTriggerWhy',
-      title: 'そのきっかけが影響する理由は？',
-      description: '背景やパターンがあれば。',
-      kind: 'textarea',
-      placeholder: '例：評価が気になる／比較してしまう／体力が落ちると不安が増える…',
-      rows: 4,
-    },
-    {
-      key: 'emotionalGoal',
-      title: 'これから目指したい感情は？',
-      description: 'どんな状態で過ごしたいですか？',
-      kind: 'textarea',
-      placeholder: '例：落ち着いて集中できる／夜に安心して眠れる／穏やかに話せる…',
-      rows: 3,
-    },
-    {
-      key: 'emotionalGoalTimeframe',
-      title: 'その目標はいつ頃までに？',
-      description: '時間感覚を選んでください。',
-      kind: 'select',
-      options: GOAL_TIMEFRAMES,
-    },
-  ];
+  const stepStartMode: Step = {
+    key: 'startMode',
+    title: 'はじめに：どちらから始めたい？',
+    description: '迷ったら「会話から」でOK。後からいつでも変えられます。',
+    kind: 'select',
+    options: START_MODES,
+  };
+
+  const stepRecentMomentWhen: Step = {
+    key: 'recentMomentWhen',
+    title: '最近の感情的な瞬間は「いつ」でしたか？',
+    description: '時間の粒度はざっくりで大丈夫です。',
+    kind: 'select',
+    options: TIME_PERIODS,
+  };
+
+  const stepRecentMomentEmotion: Step = {
+    key: 'recentMomentEmotion',
+    title: 'そのときの感情は？',
+    description: '一番近いものを選んでください。',
+    kind: 'select',
+    options: EMOTIONS,
+  };
+
+  const stepRecentMomentWhy: Step = {
+    key: 'recentMomentWhy',
+    title: 'なぜその感情が湧きましたか？',
+    description: '短文でもOKです。',
+    kind: 'textarea',
+    placeholder: '例：プロジェクトが成功した／大切な人と話せた／不安な連絡が来た…',
+    rows: 4,
+  };
+
+  const stepDailyPatternWhen: Step = {
+    key: 'dailyPatternWhen',
+    title: '普段、感情が動きやすい時間帯は？',
+    description: '一日の中で特徴的な時間帯を選んでください。',
+    kind: 'select',
+    options: DAILY_TIME_SLOTS,
+  };
+
+  const stepDailyPatternEmotion: Step = {
+    key: 'dailyPatternEmotion',
+    title: 'その時間帯に感じやすい感情は？',
+    description: '一番よく起きるものを選んでください。',
+    kind: 'select',
+    options: EMOTIONS,
+  };
+
+  const stepEmotionalTrigger: Step = {
+    key: 'emotionalTrigger',
+    title: '感情を動かしやすい「きっかけ」は？',
+    description: '要因を一言で書いてください。',
+    kind: 'input',
+    placeholder: '例：仕事の締切／SNS／睡眠不足／人間関係…',
+  };
+
+  const stepEmotionalTriggerWhy: Step = {
+    key: 'emotionalTriggerWhy',
+    title: 'そのきっかけが影響する理由は？',
+    description: '背景やパターンがあれば。',
+    kind: 'textarea',
+    placeholder: '例：評価が気になる／比較してしまう／体力が落ちると不安が増える…',
+    rows: 4,
+  };
+
+  const stepEmotionalGoal: Step = {
+    key: 'emotionalGoal',
+    title: 'これから目指したい感情は？',
+    description: 'どんな状態で過ごしたいですか？',
+    kind: 'textarea',
+    placeholder: '例：落ち着いて集中できる／夜に安心して眠れる／穏やかに話せる…',
+    rows: 3,
+  };
+
+  const stepEmotionalGoalTimeframe: Step = {
+    key: 'emotionalGoalTimeframe',
+    title: 'その目標はいつ頃までに？',
+    description: '時間感覚を選んでください。',
+    kind: 'select',
+    options: GOAL_TIMEFRAMES,
+  };
+
+  const steps: Step[] = React.useMemo(() => {
+    // create: shortest path to get you into making something
+    if (formData.startMode === 'create') {
+      return [stepStartMode, stepEmotionalGoal, stepEmotionalGoalTimeframe];
+    }
+
+    // talk (default): full introspection path
+    return [
+      stepStartMode,
+      stepRecentMomentWhen,
+      stepRecentMomentEmotion,
+      stepRecentMomentWhy,
+      stepDailyPatternWhen,
+      stepDailyPatternEmotion,
+      stepEmotionalTrigger,
+      stepEmotionalTriggerWhy,
+      stepEmotionalGoal,
+      stepEmotionalGoalTimeframe,
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.startMode]);
 
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = steps.length;
+
+  useEffect(() => {
+    if (currentStep > steps.length - 1) {
+      setCurrentStep(Math.max(0, steps.length - 1));
+    }
+  }, [currentStep, steps.length]);
 
   // Notify progress (0..1, but keep < 1 to avoid triggering polyhedron dissolve)
   useEffect(() => {
@@ -203,6 +238,15 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
 
   const updateField = (field: keyof OnboardingData, value: string) => {
     setFormData({ ...formData, [field]: value });
+  };
+
+  const selectStartMode = (value: OnboardingData['startMode']) => {
+    const nextData = { ...formData, startMode: value };
+    setFormData(nextData);
+    saveToLocalStorage(nextData);
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const handleNext = () => {
@@ -262,7 +306,28 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
               {step.description ? <p className="question-description">{step.description}</p> : null}
 
               <div className="form-group">
-                {step.kind === 'select' ? (
+                {step.key === 'startMode' ? (
+                  <div className="choice-grid" role="group" aria-label="開始モード">
+                    <button
+                      type="button"
+                      className={`choice-btn ${formData.startMode === 'talk' ? 'is-selected' : ''}`}
+                      onClick={() => selectStartMode('talk')}
+                      aria-pressed={formData.startMode === 'talk'}
+                    >
+                      <div className="choice-title">会話から</div>
+                      <div className="choice-desc">やさしく整えてから、次へ</div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${formData.startMode === 'create' ? 'is-selected' : ''}`}
+                      onClick={() => selectStartMode('create')}
+                      aria-pressed={formData.startMode === 'create'}
+                    >
+                      <div className="choice-title">創作から</div>
+                      <div className="choice-desc">早く作品に進みたい</div>
+                    </button>
+                  </div>
+                ) : step.kind === 'select' ? (
                   <select
                     className="form-select"
                     value={String(formData[step.key] ?? '')}
@@ -297,33 +362,38 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
         })()}
       </div>
 
-      <div className="button-group">
-        {currentStep > 0 && (
-          <button 
-            className="btn btn-secondary"
-            onClick={handlePrevious}
-          >
-            ← 戻る
-          </button>
-        )}
-        
-        {currentStep < totalSteps - 1 ? (
-          <button 
-            className="btn btn-primary"
-            onClick={handleNext}
-            disabled={!canProceed()}
-          >
-            次へ →
-          </button>
-        ) : (
-          <button 
-            className="btn btn-success"
-            onClick={handleSubmit}
-            disabled={!canProceed()}
-          >
-            完了
-          </button>
-        )}
+      <div className="onboarding-actions" data-no-swipe="true" aria-label="オンボーディング操作">
+        <div className="button-group">
+          {currentStep > 0 && (
+            <button 
+              className="btn btn-secondary"
+              onClick={handlePrevious}
+              type="button"
+            >
+              ← 戻る
+            </button>
+          )}
+          
+          {currentStep < totalSteps - 1 ? (
+            <button 
+              className="btn btn-primary"
+              onClick={handleNext}
+              disabled={!canProceed()}
+              type="button"
+            >
+              次へ →
+            </button>
+          ) : (
+            <button 
+              className="btn btn-success"
+              onClick={handleSubmit}
+              disabled={!canProceed()}
+              type="button"
+            >
+              完了
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

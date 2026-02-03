@@ -48,8 +48,67 @@
 }
 
 .question-container {
-  min-height: 400px;
+  min-height: 280px;
   margin-bottom: 30px;
+}
+
+.onboarding-room {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.onboarding-actions {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  padding-top: 10px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-primary) 0%, transparent 100%) 0%,
+    color-mix(in srgb, var(--bg-primary) 92%, transparent 8%) 40%,
+    var(--bg-primary) 100%
+  );
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.choice-btn {
+  text-align: left;
+  padding: 16px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.choice-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.choice-btn.is-selected {
+  border-color: rgba(74, 144, 226, 0.85);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.12);
+}
+
+.choice-title {
+  font-size: 16px;
+  font-weight: 650;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.choice-desc {
+  margin-top: 6px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.5;
 }
 
 .question-step {
@@ -211,6 +270,10 @@
 
   .button-group .btn {
     width: 100%;
+  }
+
+  .choice-grid {
+    grid-template-columns: 1fr;
   }
 }
 
