@@ -1,0 +1,20 @@
+.menu {
+  display: grid;
+  gap: 4px;
+}
+
+.menu-item {
+  text-align: left;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+
+.menu-item:hover {
+  background: var(--color-bg-muted);
+  border-color: var(--color-border);
+}

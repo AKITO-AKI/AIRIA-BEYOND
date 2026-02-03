@@ -8,6 +8,8 @@ import { MAX_SEED } from '../../utils/prng';
 import ExplainabilityPanel from '../ExplainabilityPanel';
 import Aura from '../visual/patterns/Aura';
 import { useMouseProximity } from '../visual/interactions/MouseTracker';
+import Popover from '../ui/Popover';
+import Menu from '../ui/Menu';
 import './AlbumRoom.css';
 
 const AlbumRoom: React.FC = () => {
@@ -145,15 +147,15 @@ const AlbumRoom: React.FC = () => {
 
   return (
     <div className="room-content album-room">
-      <div className="album-header">
+      <div className="album-header room-header">
         <div className="album-header-left">
           <h1 className="album-title">{album.title || album.mood}</h1>
           <p className="album-subtitle">ムード: {album.mood} ・ 選択したアルバムの詳細</p>
         </div>
 
-        <div className="album-header-actions">
+        <div className="album-header-actions room-header-actions">
           <button
-            className="back-to-gallery-btn"
+            className="btn back-to-gallery-btn"
             onClick={handleBackToGallery}
             aria-label="ギャラリーに戻る"
           >
@@ -172,6 +174,27 @@ const AlbumRoom: React.FC = () => {
           >
             公開
           </button>
+          <Popover triggerClassName="btn" trigger={<span>操作</span>} placement="bottom">
+            <Menu
+              items={[
+                {
+                  id: 'gallery',
+                  label: 'ギャラリーへ戻る',
+                  onSelect: () => navigateToRoom('gallery'),
+                },
+                {
+                  id: 'publish',
+                  label: 'SNSに公開',
+                  onSelect: () => navigateToRoom('social'),
+                },
+                {
+                  id: 'play',
+                  label: '再生',
+                  onSelect: () => requestPlayAlbum(album),
+                },
+              ]}
+            />
+          </Popover>
         </div>
       </div>
 

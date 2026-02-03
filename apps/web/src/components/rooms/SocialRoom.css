@@ -3,6 +3,12 @@
   margin: 0 auto;
 }
 
+.social-filter {
+  display: flex;
+  justify-content: flex-start;
+  margin: 8px 0 14px 0;
+}
+
 .social-header {
   display: flex;
   align-items: flex-end;
@@ -82,23 +88,6 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-.social-compose-preview img {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  object-fit: cover;
-}
-
-.social-compose-preview-title {
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.social-compose-preview-sub {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
 .social-error {
   margin-top: 10px;
   padding: 10px 12px;
@@ -145,29 +134,7 @@
 }
 
 .social-post-album {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
-  align-items: center;
-}
-
-.social-post-image {
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.social-post-album-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-
-.social-post-album-sub {
-  font-size: 12px;
-  opacity: 0.75;
+  display: block;
 }
 
 .social-post-caption {
@@ -241,12 +208,6 @@
   }
 
   .social-post-album {
-    grid-template-columns: 1fr;
-  }
-
-  .social-post-image {
     width: 100%;
-    height: auto;
-    aspect-ratio: 1 / 1;
   }
 }

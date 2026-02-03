@@ -1,0 +1,65 @@
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-bubble {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+  background: var(--color-text);
+  color: var(--color-text-invert);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  z-index: 30;
+}
+
+.tooltip-bubble.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltip-top .tooltip-bubble {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, -6px);
+}
+
+.tooltip-top .tooltip-bubble.is-open {
+  transform: translate(-50%, 0);
+}
+
+.tooltip-bottom .tooltip-bubble {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, 6px);
+}
+
+.tooltip-bottom .tooltip-bubble.is-open {
+  transform: translate(-50%, 0);
+}
+
+.tooltip-left .tooltip-bubble {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translate(-6px, -50%);
+}
+
+.tooltip-left .tooltip-bubble.is-open {
+  transform: translate(0, -50%);
+}
+
+.tooltip-right .tooltip-bubble {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translate(6px, -50%);
+}
+
+.tooltip-right .tooltip-bubble.is-open {
+  transform: translate(0, -50%);
+}

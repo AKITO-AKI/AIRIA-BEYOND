@@ -8,6 +8,8 @@ import {
   listSocialPosts,
   type SocialPost,
 } from '../../api/socialApi';
+import SegmentedControl from '../ui/SegmentedControl';
+import AlbumCard from '../gallery/AlbumCard';
 import './SocialRoom.css';
 
 const SocialRoom: React.FC = () => {
@@ -26,6 +28,7 @@ const SocialRoom: React.FC = () => {
 
   const [commentDraftByPostId, setCommentDraftByPostId] = React.useState<Record<string, string>>({});
   const [commentingPostId, setCommentingPostId] = React.useState<string | null>(null);
+  const [feedMode, setFeedMode] = React.useState<'all' | 'following' | 'trending'>('all');
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -132,6 +135,19 @@ const SocialRoom: React.FC = () => {
         </div>
       </div>
 
+      <div className="social-filter" data-no-swipe="true">
+        <SegmentedControl
+          value={feedMode}
+          onChange={(value) => setFeedMode(value)}
+          ariaLabel="フィード切り替え"
+          options={[
+            { id: 'all', label: 'おすすめ' },
+            { id: 'following', label: 'フォロー中' },
+            { id: 'trending', label: 'トレンド' },
+          ]}
+        />
+      </div>
+
       <div className="social-compose" data-no-swipe="true" aria-label="投稿フォーム">
         <div className="social-compose-grid">
           <label className="social-field">
@@ -176,11 +192,15 @@ const SocialRoom: React.FC = () => {
           </button>
           {selectedForPost && (
             <div className="social-compose-preview" aria-label="選択中アルバムのプレビュー">
-              <img src={selectedForPost.thumbnailUrl || selectedForPost.imageDataURL} alt="" />
-              <div className="social-compose-preview-meta">
-                <div className="social-compose-preview-title">{selectedForPost.title || selectedForPost.mood}</div>
-                <div className="social-compose-preview-sub">{selectedForPost.mood}</div>
-              </div>
+              <AlbumCard
+                variant="compact"
+                title={selectedForPost.title || selectedForPost.mood}
+                mood={selectedForPost.mood}
+                imageUrl={selectedForPost.thumbnailUrl || selectedForPost.imageDataURL}
+                badges={[
+                  { label: selectedForPost.musicData ? '再生可能' : '音声なし', tone: selectedForPost.musicData ? 'success' : 'default' },
+                ]}
+              />
             </div>
           )}
         </div>
@@ -208,11 +228,13 @@ const SocialRoom: React.FC = () => {
             </header>
 
             <div className="social-post-album">
-              <img className="social-post-image" src={post.album?.imageUrl} alt={post.album?.title || 'album'} />
-              <div className="social-post-album-meta">
-                <div className="social-post-album-title">{post.album?.title}</div>
-                <div className="social-post-album-sub">{post.album?.mood}</div>
-              </div>
+              <AlbumCard
+                title={post.album?.title || 'album'}
+                mood={post.album?.mood}
+                imageUrl={post.album?.imageUrl}
+                meta={post.album?.createdAt ? `作成日: ${new Date(post.album.createdAt).toLocaleDateString('ja-JP')}` : undefined}
+                badges={[{ label: '公開作品', tone: 'info' }]}
+              />
             </div>
 
             {post.caption && <div className="social-post-caption">{post.caption}</div>}

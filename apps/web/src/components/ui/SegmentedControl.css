@@ -1,0 +1,26 @@
+.segmented-control {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+}
+
+.segmented-item {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--motion-fast) var(--ease-standard);
+}
+
+.segmented-item.is-active {
+  background: var(--color-text);
+  color: var(--color-text-invert);
+  border-color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}

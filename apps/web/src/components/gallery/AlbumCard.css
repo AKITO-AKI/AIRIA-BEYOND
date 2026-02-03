@@ -1,0 +1,81 @@
+.album-card {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-4);
+  align-items: center;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+}
+
+.album-card-compact {
+  grid-template-columns: 72px 1fr;
+  padding: var(--space-3);
+}
+
+.album-card-image img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  aspect-ratio: 1 / 1;
+}
+
+.album-card-body {
+  display: grid;
+  gap: 6px;
+}
+
+.album-card-title {
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.album-card-mood {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.album-card-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.album-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.album-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+}
+
+.album-badge.tone-success {
+  border-color: color-mix(in srgb, var(--color-success) 70%, var(--color-border) 30%);
+  background: color-mix(in srgb, var(--color-success) 15%, var(--color-bg-muted) 85%);
+}
+
+.album-badge.tone-warning {
+  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-border) 30%);
+  background: color-mix(in srgb, var(--color-accent) 15%, var(--color-bg-muted) 85%);
+}
+
+.album-badge.tone-info {
+  border-color: color-mix(in srgb, var(--color-text) 50%, var(--color-border) 50%);
+  background: color-mix(in srgb, var(--color-text) 10%, var(--color-bg-muted) 90%);
+}
+
+@media (max-width: 680px) {
+  .album-card {
+    grid-template-columns: 1fr;
+  }
+}
