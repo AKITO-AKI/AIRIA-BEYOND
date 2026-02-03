@@ -15,7 +15,9 @@ import {
   generateMusic,
   pollMusicJobStatus,
   MusicJobStatus,
+    nameAlbumTitle,
 } from './api/imageApi';
+import AlbumTitleModal from './components/AlbumTitleModal';
 import {
   logAnalysisStage,
   logImageStage,
@@ -94,6 +96,11 @@ const Phase1SessionUI = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedPreset, setSelectedPreset] = useState(0);
     const [saveSuccess, setSaveSuccess] = useState(false);
+
+    // Album title prompt (user naming + optional AI fallback)
+    const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
+    const [pendingAlbumData, setPendingAlbumData] = useState<any | null>(null);
+    const [isResolvingTitle, setIsResolvingTitle] = useState(false);
     
     // External image generation state
     const [externalJobId, setExternalJobId] = useState<string | null>(null);
@@ -249,6 +256,55 @@ const Phase1SessionUI = () => {
         }
     };
 
+    const finalizeSaveToAlbum = async (userTitle: string) => {
+        if (!pendingAlbumData) {
+            setIsTitleModalOpen(false);
+            return;
+        }
+
+        try {
+            setIsResolvingTitle(true);
+            const trimmed = userTitle.trim();
+            let finalTitle = trimmed;
+
+            if (!finalTitle) {
+                try {
+                    const resp = await nameAlbumTitle({
+                        mood: pendingAlbumData.mood,
+                        motifTags: pendingAlbumData?.metadata?.motif_tags,
+                        character: pendingAlbumData?.musicMetadata?.character,
+                    });
+                    finalTitle = resp.title;
+                } catch {
+                    finalTitle = '';
+                }
+            }
+
+            addAlbum({
+                ...pendingAlbumData,
+                title: finalTitle || undefined,
+            } as any);
+
+            // P5: Log album creation
+            if (currentLogId) {
+                logAlbumStage(updateLog, currentLogId, {
+                    albumId: `album_${Date.now()}`,
+                    title: finalTitle || `${pendingAlbumData.mood} - ${pendingAlbumData.duration}s`,
+                });
+            }
+
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (err) {
+            setError('アルバムへの保存中にエラーが発生しました');
+            console.error(err);
+        } finally {
+            setIsResolvingTitle(false);
+            setIsTitleModalOpen(false);
+            setPendingAlbumData(null);
+        }
+    };
+
     const saveToAlbum = () => {
         try {
             setError(null);
@@ -294,20 +350,8 @@ const Phase1SessionUI = () => {
                 causalLogId: currentLogId || undefined,
             };
             
-            addAlbum(newAlbumData as any);
-
-            // P5: Log album creation
-            if (currentLogId) {
-                // Get the album ID that was just created (it's the last one added)
-                // Note: This is a simplification - in production you'd want the addAlbum to return the ID
-                logAlbumStage(updateLog, currentLogId, {
-                    albumId: `album_${Date.now()}`, // Approximate - real ID is generated in addAlbum
-                    title: `${sessionData.mood_choice} - ${sessionData.duration_sec}s`,
-                });
-            }
-
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 3000);
+            setPendingAlbumData(newAlbumData);
+            setIsTitleModalOpen(true);
         } catch (err) {
             setError('アルバムへの保存中にエラーが発生しました');
             console.error(err);
@@ -672,6 +716,21 @@ const Phase1SessionUI = () => {
                     アルバムに保存しました。Galleryルームで確認できます。
                 </div>
             )}
+
+            <AlbumTitleModal
+                open={isTitleModalOpen}
+                mood={pendingAlbumData?.mood || sessionData.mood_choice}
+                defaultTitle={pendingAlbumData?.title}
+                onCancel={() => {
+                    if (isResolvingTitle) return;
+                    setIsTitleModalOpen(false);
+                    setPendingAlbumData(null);
+                }}
+                onSubmit={(title) => {
+                    if (isResolvingTitle) return;
+                    void finalizeSaveToAlbum(title);
+                }}
+            />
 
             <main>
                 <section className="session-controls" aria-label="セッション設定">

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { useCausalLog } from '../../contexts/CausalLogContext';
 import {
@@ -8,6 +8,8 @@ import {
   generateMusic,
   pollJobStatus,
   pollMusicJobStatus,
+  nameAlbumTitle,
+  getMusicPreview,
   ChatMessage,
 } from '../../api/imageApi';
 import {
@@ -15,6 +17,7 @@ import {
   logError,
 } from '../../utils/causalLogging/loggingHelpers';
 import './ChatSessionUI.css';
+import AlbumTitleModal from '../AlbumTitleModal';
 
 function nowIso() {
   return new Date().toISOString();
@@ -41,7 +44,89 @@ export default function ChatSessionUI() {
   const [eventSuggested, setEventSuggested] = useState<{ shouldTrigger: boolean; reason: string } | null>(null);
   const [isGeneratingEvent, setIsGeneratingEvent] = useState(false);
 
+  const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
+  const [pendingAlbum, setPendingAlbum] = useState<any | null>(null);
+  const [pendingLogId, setPendingLogId] = useState<string | null>(null);
+  const [isResolvingTitle, setIsResolvingTitle] = useState(false);
+
+  // Recommendation playback (legal preview only)
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
+  const [previewByKey, setPreviewByKey] = useState<Record<string, any>>({});
+  const [previewLoading, setPreviewLoading] = useState<Record<string, boolean>>({});
+  const [previewError, setPreviewError] = useState<Record<string, string | null>>({});
+
   const userOnlyMessages = useMemo(() => messages.filter((m) => m.role === 'user'), [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const getRecKey = (r: { composer: string; title: string }) => `${r.composer}::${r.title}`;
+
+  async function ensurePreview(r: { composer: string; title: string }) {
+    const key = getRecKey(r);
+    if (previewByKey[key]) return previewByKey[key];
+    if (previewLoading[key]) return null;
+
+    setPreviewLoading((p) => ({ ...p, [key]: true }));
+    setPreviewError((p) => ({ ...p, [key]: null }));
+
+    try {
+      const resolved = await getMusicPreview({ composer: r.composer, title: r.title });
+      setPreviewByKey((p) => ({ ...p, [key]: resolved }));
+      return resolved;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'プレビュー取得に失敗しました';
+      setPreviewError((p) => ({ ...p, [key]: msg }));
+      return null;
+    } finally {
+      setPreviewLoading((p) => ({ ...p, [key]: false }));
+    }
+  }
+
+  async function togglePlayRecommendation(r: { composer: string; title: string }) {
+    const key = getRecKey(r);
+    const isThisPlaying = playingKey === key;
+
+    if (isThisPlaying) {
+      audioRef.current?.pause();
+      setPlayingKey(null);
+      return;
+    }
+
+    const resolved = await ensurePreview(r);
+    const previewUrl = resolved?.previewUrl;
+    const trackUrl = resolved?.trackUrl;
+
+    if (!previewUrl) {
+      if (trackUrl) window.open(trackUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
+      audioRef.current.pause();
+      audioRef.current.src = previewUrl;
+      audioRef.current.currentTime = 0;
+      await audioRef.current.play();
+      setPlayingKey(key);
+
+      audioRef.current.onended = () => {
+        setPlayingKey((prev) => (prev === key ? null : prev));
+      };
+    } catch (e) {
+      setPreviewError((p) => ({ ...p, [key]: e instanceof Error ? e.message : '再生に失敗しました' }));
+    }
+  }
 
   async function handleSend() {
     const content = input.trim();
@@ -99,8 +184,9 @@ export default function ChatSessionUI() {
         throw new Error('曲生成に失敗しました');
       }
 
-      // Store as an album
-      addAlbum({
+      const suggestedTitle = refined?.brief?.theme?.title || '';
+      setPendingAlbum({
+        title: suggestedTitle,
         mood: refined.image.mood,
         duration: refined.image.duration,
         imageDataURL: imageStatus.resultUrl,
@@ -133,11 +219,8 @@ export default function ChatSessionUI() {
         },
         causalLogId: logId,
       });
-
-      logAlbumStage(updateLog, logId, {
-        albumId: 'local',
-        title: refined?.brief?.theme?.title || '生成アルバム',
-      });
+      setPendingLogId(logId);
+      setIsTitleModalOpen(true);
 
       setEventSuggested(null);
       setMessages((prev) => [
@@ -163,8 +246,73 @@ export default function ChatSessionUI() {
     }
   }
 
+  async function finalizeAlbumTitle(userTitle: string) {
+    if (!pendingAlbum) {
+      setIsTitleModalOpen(false);
+      return;
+    }
+    const trimmed = userTitle.trim();
+
+    try {
+      setIsResolvingTitle(true);
+      let finalTitle = trimmed;
+      if (!finalTitle) {
+        try {
+          const resp = await nameAlbumTitle({
+            mood: pendingAlbum.mood,
+            motifTags: pendingAlbum?.metadata?.motif_tags,
+            character: pendingAlbum?.musicMetadata?.character,
+            brief: pendingAlbum?.sessionData?.brief,
+            messages: pendingAlbum?.sessionData?.messages,
+          });
+          finalTitle = resp.title;
+        } catch {
+          finalTitle = '';
+        }
+      }
+
+      addAlbum({ ...pendingAlbum, title: finalTitle || undefined } as any);
+
+      if (pendingLogId) {
+        logAlbumStage(updateLog, pendingLogId, {
+          albumId: 'local',
+          title: finalTitle || pendingAlbum.mood,
+        });
+      }
+
+      setEventSuggested(null);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: '生成イベントを完了したよ。ギャラリーで見返せるように保存した。',
+        },
+      ]);
+    } finally {
+      setIsResolvingTitle(false);
+      setIsTitleModalOpen(false);
+      setPendingAlbum(null);
+      setPendingLogId(null);
+    }
+  }
+
   return (
     <div className="chatSession">
+      <AlbumTitleModal
+        open={isTitleModalOpen}
+        mood={pendingAlbum?.mood || '穏やか'}
+        defaultTitle={pendingAlbum?.title}
+        onCancel={() => {
+          if (isResolvingTitle) return;
+          setIsTitleModalOpen(false);
+          setPendingAlbum(null);
+          setPendingLogId(null);
+        }}
+        onSubmit={(title) => {
+          if (isResolvingTitle) return;
+          void finalizeAlbumTitle(title);
+        }}
+      />
       <div className="chatHeader">
         <div className="chatTitle">
           <div className="chatTitleMain">対話</div>
@@ -208,6 +356,34 @@ export default function ChatSessionUI() {
                     {r.era ? <span className="chatRecEra">({r.era})</span> : null}
                   </div>
                   <div className="chatRecWhy">{r.why}</div>
+
+                  <div className="chatRecActions">
+                    <button
+                      className="chatRecPlay"
+                      onClick={() => void togglePlayRecommendation(r)}
+                      disabled={Boolean(previewLoading[getRecKey(r)])}
+                      data-no-swipe
+                      title="プレビューがある場合は30秒再生します"
+                    >
+                      {playingKey === getRecKey(r) ? '停止' : previewLoading[getRecKey(r)] ? '取得中…' : '再生'}
+                    </button>
+
+                    {previewByKey[getRecKey(r)]?.trackUrl ? (
+                      <a
+                        className="chatRecOpen"
+                        href={previewByKey[getRecKey(r)]?.trackUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        data-no-swipe
+                      >
+                        開く
+                      </a>
+                    ) : null}
+                  </div>
+
+                  {previewError[getRecKey(r)] ? (
+                    <div className="chatRecErr">{previewError[getRecKey(r)]}</div>
+                  ) : null}
                 </li>
               ))}
             </ul>

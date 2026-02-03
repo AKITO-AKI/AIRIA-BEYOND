@@ -1,10 +1,12 @@
 import express from 'express';
-import { generateMusic } from '../controllers/music.js';
+import { generateMusic, getMusicPreview } from '../controllers/music.js';
 import { getMusicJob } from '../musicJobStore.js';
 
 const router = express.Router();
 
 router.post('/generate', generateMusic);
+
+router.post('/preview', getMusicPreview);
 
 router.get('/:id', (req, res) => {
   try {

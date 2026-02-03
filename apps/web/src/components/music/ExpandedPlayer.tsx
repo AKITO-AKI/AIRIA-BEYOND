@@ -137,7 +137,7 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                 <>
                   <img
                     src={album.imageDataURL}
-                    alt={album.mood}
+                    alt={album.title || album.mood}
                     className="expanded-player-album-image"
                   />
                   {/* Motif tags orbiting */}
@@ -156,7 +156,7 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             {/* Album metadata */}
             {album && (
               <div className="expanded-player-album-meta">
-                <h2 className="expanded-player-album-title">{album.mood}</h2>
+                <h2 className="expanded-player-album-title">{album.title || album.mood}</h2>
                 {album.musicMetadata && (
                   <p className="expanded-player-album-details">
                     {album.musicMetadata.key} • {album.musicMetadata.tempo} BPM • {album.musicMetadata.timeSignature}

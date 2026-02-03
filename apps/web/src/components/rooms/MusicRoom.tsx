@@ -22,7 +22,7 @@ const MusicRoom: React.FC = () => {
           <div className="current-track">
             <h2>選択中</h2>
             <div className="track-details">
-              <p><strong>アルバム:</strong> {selectedAlbum.mood}</p>
+              <p><strong>アルバム:</strong> {selectedAlbum.title || selectedAlbum.mood}</p>
               {selectedAlbum.musicMetadata && (
                 <>
                   <p><strong>調:</strong> {selectedAlbum.musicMetadata.key}</p>
@@ -79,9 +79,9 @@ const MusicRoom: React.FC = () => {
                       requestPlayAlbum(album, albumsWithMusic);
                     }
                   }}
-                  aria-label={`${album.mood}を再生`}
+                  aria-label={`${album.title || album.mood}を再生`}
                 >
-                  <span className="music-title">{album.mood}</span>
+                  <span className="music-title">{album.title || album.mood}</span>
                   {album.musicMetadata && (
                     <span className="music-meta">
                       {album.musicMetadata.key} | {album.musicMetadata.tempo} BPM | {album.musicMetadata.form}

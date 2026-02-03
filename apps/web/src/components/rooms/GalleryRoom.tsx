@@ -59,7 +59,7 @@ const GalleryRoom: React.FC = () => {
           <div className="gallery-selection">
             <div className="gallery-selection-label">選択中</div>
             <div className="gallery-selection-value">
-              {selectedAlbum ? selectedAlbum.mood : '未選択'}
+              {selectedAlbum ? (selectedAlbum.title || selectedAlbum.mood) : '未選択'}
             </div>
           </div>
 
@@ -80,6 +80,13 @@ const GalleryRoom: React.FC = () => {
               }}
             >
               再生
+            </button>
+            <button
+              className="btn"
+              disabled={!canOpen}
+              onClick={() => navigateToRoom('social')}
+            >
+              公開
             </button>
           </div>
         </div>

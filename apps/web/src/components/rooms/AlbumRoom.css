@@ -83,11 +83,32 @@
 .album-image-container {
   position: relative;
   background: var(--surface-porcelain);
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --shine-x: 50%;
+  --shine-y: 45%;
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--border-color);
   overflow: hidden;
+}
+
+.album-image-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--shine-x) var(--shine-y), rgba(255, 255, 255, 0.42), transparent 52%),
+    linear-gradient(135deg, rgba(212, 175, 55, 0.0), rgba(212, 175, 55, 0.10), rgba(212, 175, 55, 0.0));
+  opacity: 0.55;
+  mix-blend-mode: soft-light;
+  transition: opacity 220ms ease;
+}
+
+.album-image-container:hover::after {
+  opacity: 0.95;
 }
 
 .album-image {
@@ -98,6 +119,33 @@
   border-radius: 8px;
   display: block;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: perspective(1200px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(8px);
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.album-image-container:hover .album-image {
+  transition: transform 70ms linear;
+}
+
+.album-image-container.is-playing .album-image {
+  animation: albumFloat 2.8s ease-in-out infinite;
+}
+
+@keyframes albumFloat {
+  0%, 100% { transform: perspective(1200px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(8px) translateY(0); }
+  50% { transform: perspective(1200px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(8px) translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-image-container::after {
+    transition: none;
+  }
+  .album-image {
+    transition: none;
+    animation: none !important;
+  }
 }
 
 .album-metadata {

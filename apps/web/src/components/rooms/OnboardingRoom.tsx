@@ -38,8 +38,8 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
         />
       )}
       
-      <h1 className="room-title">ONBOARDING</h1>
-      <p className="room-subtitle">ようこそ AIRIA BEYOND へ</p>
+      <h1 className="room-title">はじめに</h1>
+      <p className="room-subtitle">あなたに合う体験へ整えます</p>
       
       {!isCompleted ? (
         <OnboardingForm onComplete={handleComplete} onProgressChange={setProgress} />
@@ -63,7 +63,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'onboarding_profile.json';
+                a.download = 'getting_started_profile.json';
                 a.click();
                 URL.revokeObjectURL(url);
               }}

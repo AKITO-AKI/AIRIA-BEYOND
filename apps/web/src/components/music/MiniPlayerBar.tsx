@@ -46,7 +46,7 @@ export const MiniPlayerBar: React.FC<MiniPlayerBarProps> = ({
   onExpand,
 }) => {
   const displayTitle = album
-    ? `${album.mood} - ${album.musicMetadata?.key || 'Classical'} ${album.musicMetadata?.tempo || ''}BPM`
+    ? `${album.title || album.mood} - ${album.musicMetadata?.key || 'Classical'} ${album.musicMetadata?.tempo || ''}BPM`
     : 'No track playing';
 
   const hasTrack = Boolean(album);
@@ -58,7 +58,7 @@ export const MiniPlayerBar: React.FC<MiniPlayerBarProps> = ({
         {album && (
           <img
             src={album.imageDataURL}
-            alt={album.mood}
+            alt={album.title || album.mood}
             className="mini-player-thumbnail"
           />
         )}

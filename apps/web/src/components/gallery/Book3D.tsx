@@ -27,7 +27,7 @@ const Book3D: React.FC<Book3DProps> = ({
   const spineDepth = 0.55;
 
   const spineColor = album.gallery?.spineColor || '#111111';
-  const labelPrimary = album.mood;
+  const labelPrimary = album.title || album.mood;
   const labelSecondary = useMemo(() => {
     const d = new Date(album.createdAt);
     return d.toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' });

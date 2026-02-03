@@ -1,0 +1,252 @@
+.social-room {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.social-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.social-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.social-compose {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.social-compose-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.social-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.social-field-wide {
+  grid-column: 1 / -1;
+}
+
+.social-label {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.social-input,
+.social-select,
+.social-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  outline: none;
+}
+
+.social-textarea {
+  resize: vertical;
+}
+
+.social-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.social-compose-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 440px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.social-compose-preview img {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.social-compose-preview-title {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.social-compose-preview-sub {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.social-error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 60, 60, 0.35);
+  background: rgba(255, 60, 60, 0.08);
+  color: rgba(255, 220, 220, 0.95);
+}
+
+.social-muted {
+  opacity: 0.7;
+  padding: 18px 2px;
+}
+
+.social-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 60px;
+}
+
+.social-post {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.social-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.social-post-author {
+  font-weight: 700;
+}
+
+.social-post-date {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.social-post-album {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.social-post-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.social-post-album-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.social-post-album-sub {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.social-post-caption {
+  margin-top: 10px;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+.social-post-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.social-post-comments-count {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.social-post-comments {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.social-comment {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  opacity: 0.92;
+}
+
+.social-comment-author {
+  font-weight: 700;
+  opacity: 0.95;
+  white-space: nowrap;
+}
+
+.social-comment-text {
+  opacity: 0.9;
+}
+
+.social-comment-compose {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+@media (max-width: 680px) {
+  .social-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .social-compose-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .social-compose-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .social-compose-preview {
+    min-width: auto;
+    max-width: none;
+  }
+
+  .social-post-album {
+    grid-template-columns: 1fr;
+  }
+
+  .social-post-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+}

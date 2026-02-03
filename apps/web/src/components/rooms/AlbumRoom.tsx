@@ -30,6 +30,34 @@ const AlbumRoom: React.FC = () => {
   const mouseProximity = useMouseProximity(imageContainerRef, 300);
   const [hoveredMetadataLayer, setHoveredMetadataLayer] = useState(-1);
 
+  // C-4+: Subtle tilt + shimmer for album artwork
+  const handleTiltMove = (e: React.MouseEvent) => {
+    const el = imageContainerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / Math.max(1, rect.width);
+    const py = (e.clientY - rect.top) / Math.max(1, rect.height);
+    const clampedX = Math.max(0, Math.min(1, px));
+    const clampedY = Math.max(0, Math.min(1, py));
+
+    const rotY = (clampedX - 0.5) * 10; // left/right
+    const rotX = (0.5 - clampedY) * 7;  // up/down
+
+    el.style.setProperty('--tilt-x', `${rotX.toFixed(2)}deg`);
+    el.style.setProperty('--tilt-y', `${rotY.toFixed(2)}deg`);
+    el.style.setProperty('--shine-x', `${(clampedX * 100).toFixed(1)}%`);
+    el.style.setProperty('--shine-y', `${(clampedY * 100).toFixed(1)}%`);
+  };
+
+  const handleTiltLeave = () => {
+    const el = imageContainerRef.current;
+    if (!el) return;
+    el.style.setProperty('--tilt-x', `0deg`);
+    el.style.setProperty('--tilt-y', `0deg`);
+    el.style.setProperty('--shine-x', `50%`);
+    el.style.setProperty('--shine-y', `45%`);
+  };
+
   // Extract dominant colors from album (fallback to default gold palette)
   const dominantColors = album?.metadata?.dominantColors || ['#D4AF37', '#F4E5C2', '#B8941E'];
   
@@ -119,8 +147,8 @@ const AlbumRoom: React.FC = () => {
     <div className="room-content album-room">
       <div className="album-header">
         <div className="album-header-left">
-          <h1 className="album-title">{album.mood}</h1>
-          <p className="album-subtitle">選択したアルバムの詳細</p>
+          <h1 className="album-title">{album.title || album.mood}</h1>
+          <p className="album-subtitle">ムード: {album.mood} ・ 選択したアルバムの詳細</p>
         </div>
 
         <div className="album-header-actions">
@@ -138,11 +166,22 @@ const AlbumRoom: React.FC = () => {
           >
             再生
           </button>
+          <button
+            className="btn"
+            onClick={() => navigateToRoom('social')}
+          >
+            公開
+          </button>
         </div>
       </div>
 
       <div className="album-details">
-        <div className="album-image-container" ref={imageContainerRef}>
+        <div
+          className={`album-image-container ${isPlaying ? 'is-playing' : ''}`}
+          ref={imageContainerRef}
+          onMouseMove={handleTiltMove}
+          onMouseLeave={handleTiltLeave}
+        >
           {/* C-4: Aura effect behind album image */}
           <Aura
             dominantColors={dominantColors}

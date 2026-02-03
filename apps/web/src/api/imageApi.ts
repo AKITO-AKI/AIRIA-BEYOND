@@ -164,6 +164,34 @@ export interface RefinedEventResponse {
   };
 }
 
+export interface NameAlbumTitleRequest {
+  mood: string;
+  motifTags?: string[];
+  character?: string;
+  brief?: any;
+  messages?: ChatMessage[];
+}
+
+export interface NameAlbumTitleResponse {
+  title: string;
+  provider: 'openai' | 'rule-based';
+}
+
+export interface MusicPreviewRequest {
+  composer: string;
+  title: string;
+}
+
+export interface MusicPreviewResponse {
+  found: boolean;
+  previewUrl: string | null;
+  trackUrl: string | null;
+  artistName: string | null;
+  trackName: string | null;
+  artworkUrl: string | null;
+  source?: string;
+}
+
 // Detect API base URL from environment variable
 const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
@@ -314,6 +342,46 @@ export async function refineGenerationEvent(request: RefineEventRequest): Promis
   if (!response.ok) {
     const error: ApiError = await response.json();
     throw new Error(error.message || error.error || 'Failed to refine event');
+  }
+
+  return response.json();
+}
+
+/**
+ * Name an album title (user can leave blank and let LLM propose).
+ */
+export async function nameAlbumTitle(request: NameAlbumTitleRequest): Promise<NameAlbumTitleResponse> {
+  const response = await fetch(`${API_BASE}/api/album/name`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to name album title');
+  }
+
+  return response.json();
+}
+
+/**
+ * Resolve a legal short preview URL for a recommended track.
+ */
+export async function getMusicPreview(request: MusicPreviewRequest): Promise<MusicPreviewResponse> {
+  const response = await fetch(`${API_BASE}/api/music/preview`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.message || error.error || 'Failed to resolve music preview');
   }
 
   return response.json();

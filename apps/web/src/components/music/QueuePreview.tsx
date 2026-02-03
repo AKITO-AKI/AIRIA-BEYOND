@@ -46,11 +46,11 @@ export const QueuePreview: React.FC<QueuePreviewProps> = ({
           >
             <img
               src={album.imageDataURL}
-              alt={album.mood}
+              alt={album.title || album.mood}
               className="queue-thumbnail"
             />
             <div className="queue-info">
-              <div className="queue-title">{album.mood}</div>
+              <div className="queue-title">{album.title || album.mood}</div>
               <div className="queue-duration">
                 {formatDuration(album.musicMetadata?.duration || album.duration)}
               </div>

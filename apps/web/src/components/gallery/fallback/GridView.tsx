@@ -29,7 +29,7 @@ const GridView: React.FC<GridViewProps> = ({ albums, onAlbumClick }) => {
           }}
         >
           <div className="grid-card-image">
-            <img src={album.imageDataURL} alt={album.mood} />
+            <img src={album.imageDataURL} alt={album.title || album.mood} />
             {album.metadata?.provider && (
               <div className="grid-card-badge">
                 {getProviderBadge(album.metadata.provider)}
@@ -37,7 +37,7 @@ const GridView: React.FC<GridViewProps> = ({ albums, onAlbumClick }) => {
             )}
           </div>
           <div className="grid-card-content">
-            <h3 className="grid-card-title">{album.mood}</h3>
+            <h3 className="grid-card-title">{album.title || album.mood}</h3>
             <p className="grid-card-date">
               {new Date(album.createdAt).toLocaleDateString('ja-JP', {
                 year: 'numeric',

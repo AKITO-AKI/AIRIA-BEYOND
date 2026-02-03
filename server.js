@@ -60,6 +60,8 @@ import jobRoutes from './api/routes/job.js';
 import adminRoutes from './api/routes/admin.js';
 import chatRoutes from './api/routes/chat.js';
 import eventRoutes from './api/routes/event.js';
+import albumRoutes from './api/routes/album.js';
+import socialRoutes from './api/routes/social.js';
 
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/image', imageRoutes);
@@ -68,6 +70,8 @@ app.use('/api/job', jobRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/event', eventRoutes);
+app.use('/api/album', albumRoutes);
+app.use('/api/social', socialRoutes);
 
 // Sitemap
 app.get('/sitemap.xml', (req, res) => {

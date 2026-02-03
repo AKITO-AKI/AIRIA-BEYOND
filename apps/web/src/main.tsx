@@ -11,6 +11,7 @@ import MainRoom from './components/rooms/MainRoom';
 import GalleryRoom from './components/rooms/GalleryRoom';
 import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
+import SocialRoom from './components/rooms/SocialRoom';
 import InfoRoom from './components/rooms/InfoRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
@@ -63,12 +64,13 @@ const AppContent = () => {
         { id: 'gallery' as const, name: 'Gallery', component: <GalleryRoom /> },
         { id: 'album' as const, name: 'Album', component: <AlbumRoom /> },
         { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
+        { id: 'social' as const, name: 'Social', component: <SocialRoom /> },
         { id: 'info' as const, name: 'Info', component: <InfoRoom /> },
       ]
     : [
         {
           id: 'onboarding' as const,
-          name: 'Onboarding',
+          name: 'はじめに',
           component: (
             <OnboardingRoom
               onExit={() => {

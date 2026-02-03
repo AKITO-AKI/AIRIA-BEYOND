@@ -182,3 +182,75 @@ export async function generateMusic(req, res) {
     });
   }
 }
+
+/**
+ * POST /api/music/preview
+ * Resolve a legal short preview URL for a recommended track.
+ * Uses iTunes Search API (no auth) and returns previewUrl + external link if found.
+ */
+export async function getMusicPreview(req, res) {
+  try {
+    const composer = String(req.body?.composer ?? '').trim();
+    const title = String(req.body?.title ?? '').trim();
+
+    if (!composer || !title) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'composer and title are required',
+      });
+    }
+
+    if (typeof fetch !== 'function') {
+      return res.status(500).json({
+        error: 'Fetch not available',
+        message: 'Server runtime does not support fetch()',
+      });
+    }
+
+    const term = `${composer} ${title}`;
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=song&limit=5`;
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!resp.ok) {
+      return res.status(502).json({
+        error: 'Upstream error',
+        message: `iTunes search failed (${resp.status})`,
+      });
+    }
+
+    const data = await resp.json();
+    const results = Array.isArray(data?.results) ? data.results : [];
+
+    const best = results.find((r) => typeof r?.previewUrl === 'string' && r.previewUrl.length > 0) || null;
+    if (!best) {
+      return res.json({
+        found: false,
+        previewUrl: null,
+        trackUrl: null,
+        artistName: null,
+        trackName: null,
+        artworkUrl: null,
+      });
+    }
+
+    return res.json({
+      found: true,
+      previewUrl: best.previewUrl ?? null,
+      trackUrl: best.trackViewUrl ?? null,
+      artistName: best.artistName ?? null,
+      trackName: best.trackName ?? null,
+      artworkUrl: best.artworkUrl100 ?? best.artworkUrl60 ?? null,
+      source: 'itunes',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}

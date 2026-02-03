@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 // Types for onboarding data
 export interface OnboardingData {
+  startMode: 'talk' | 'create' | '';
   recentMomentWhen: string;
   recentMomentEmotion: string;
   recentMomentWhy: string;
@@ -15,6 +16,12 @@ export interface OnboardingData {
 }
 
 const STORAGE_KEY = 'airia_onboarding_data';
+
+const START_MODES: Array<{ value: OnboardingData['startMode']; label: string }> = [
+  { value: '', label: '選択してください' },
+  { value: 'talk', label: '会話からはじめる（やさしく）' },
+  { value: 'create', label: '創作からはじめる（早く作品へ）' },
+];
 
 // Time period options
 const TIME_PERIODS = [
@@ -70,6 +77,7 @@ interface OnboardingFormProps {
 
 const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressChange }) => {
   const [formData, setFormData] = useState<OnboardingData>({
+    startMode: '',
     recentMomentWhen: '',
     recentMomentEmotion: '',
     recentMomentWhy: '',
@@ -92,6 +100,13 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
   };
 
   const steps: Step[] = [
+    {
+      key: 'startMode',
+      title: 'はじめに：どちらから始めたい？',
+      description: '迷ったら「会話から」でOK。後からいつでも変えられます。',
+      kind: 'select',
+      options: START_MODES,
+    },
     {
       key: 'recentMomentWhen',
       title: '最近の感情的な瞬間は「いつ」でしたか？',
@@ -225,9 +240,9 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
   return (
     <div className="onboarding-form">
       <div className="onboarding-header">
-        <h2 className="blend-text">深い自己理解への質問</h2>
+        <h2 className="blend-text">はじめに</h2>
         <p className="onboarding-subtitle">
-          あなたの感情のパターンを理解し、より良い自己認識を築きましょう
+          いまのあなたに合わせて、AIRIAが整えます（所要2分・短文OK）
         </p>
         <div className="progress-bar">
           <div 

@@ -41,6 +41,7 @@ export interface GalleryData {
 export interface Album {
   id: string;
   createdAt: string;
+  title?: string;
   mood: string;
   duration: number;
   imageDataURL: string;
@@ -61,6 +62,7 @@ interface AlbumContextType {
   albums: Album[];
   selectedAlbumId: string | null;
   addAlbum: (album: Omit<Album, 'id' | 'createdAt'>) => void;
+  updateAlbum: (id: string, patch: Partial<Omit<Album, 'id' | 'createdAt'>>) => void;
   selectAlbum: (id: string | null) => void;
   getSelectedAlbum: () => Album | null;
 }
@@ -125,6 +127,34 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     });
   };
 
+  const updateAlbum = (id: string, patch: Partial<Omit<Album, 'id' | 'createdAt'>>) => {
+    setAlbums((prev) =>
+      prev.map((album) => {
+        if (album.id !== id) return album;
+        const next = { ...album, ...patch };
+
+        // Keep gallery derived fields consistent if image changes
+        if (patch.imageDataURL) {
+          const spineColor = next.gallery?.spineColor || getSimpleDominantColor(next.imageDataURL);
+          return {
+            ...next,
+            gallery: {
+              ...(next.gallery || {
+                shelfIndex: 0,
+                positionIndex: 0,
+                thickness: calculateThickness(next.musicMetadata?.duration),
+                spineColor,
+              }),
+              spineColor,
+            },
+          };
+        }
+
+        return next;
+      })
+    );
+  };
+
   const selectAlbum = (id: string | null) => {
     setSelectedAlbumId(id);
   };
@@ -140,6 +170,7 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         albums,
         selectedAlbumId,
         addAlbum,
+        updateAlbum,
         selectAlbum,
         getSelectedAlbum,
       }}

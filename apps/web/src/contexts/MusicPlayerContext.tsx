@@ -120,7 +120,7 @@ export const MusicPlayerProvider: React.FC<{ children: ReactNode }> = ({ childre
       ...prev,
       currentAlbum: album,
       currentAlbumImage: album?.imageDataURL,
-      currentTrackTitle: album?.mood,
+      currentTrackTitle: album ? (album.title || album.mood) : undefined,
     }));
   }, []);
 
@@ -131,7 +131,7 @@ export const MusicPlayerProvider: React.FC<{ children: ReactNode }> = ({ childre
       queueIndex: startIndex,
       currentAlbum: queue[startIndex] || null,
       currentAlbumImage: queue[startIndex]?.imageDataURL,
-      currentTrackTitle: queue[startIndex]?.mood,
+      currentTrackTitle: queue[startIndex] ? (queue[startIndex].title || queue[startIndex].mood) : undefined,
     }));
   }, []);
 
@@ -190,7 +190,7 @@ export const MusicPlayerProvider: React.FC<{ children: ReactNode }> = ({ childre
         queueIndex: startIndex,
         currentAlbum: current,
         currentAlbumImage: current.imageDataURL,
-        currentTrackTitle: current.mood,
+        currentTrackTitle: current.title || current.mood,
         currentTime: 0,
         // Signal EnhancedMiniPlayer to load + start playback
         playRequestId: prev.playRequestId + 1,

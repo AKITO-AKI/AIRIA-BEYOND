@@ -199,7 +199,7 @@ const MiniPlayer: React.FC<MiniPlayerProps> = ({ trackTitle, album }) => {
 
   // Determine title
   const displayTitle = album ? 
-    `${album.mood} - ${album.musicMetadata?.key || 'Classical'} ${album.musicMetadata?.tempo || ''}BPM` :
+    `${album.title || album.mood} - ${album.musicMetadata?.key || 'Classical'} ${album.musicMetadata?.tempo || ''}BPM` :
     trackTitle || 'Ambient Mood';
 
   return (

@@ -39,6 +39,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
       }}
       aria-label="クリックして開始"
     >
+      <div className="splash-bg" aria-hidden="true">
+        <div className="splash-orbit" />
+        <div className="splash-grain" />
+      </div>
+
       <div className="splash-content">
         <div className="splash-mark" aria-hidden="true">
           <div className="splash-monogram">A</div>
