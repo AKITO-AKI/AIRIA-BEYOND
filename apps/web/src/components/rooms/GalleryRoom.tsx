@@ -13,7 +13,7 @@ import SegmentedControl from '../ui/SegmentedControl';
 import './GalleryRoom.css';
 
 const GalleryRoom: React.FC = () => {
-  const { albums, selectAlbum } = useAlbums();
+  const { albums, selectAlbum, updateAlbum } = useAlbums();
   const { getSelectedAlbum } = useAlbums();
   const selectedAlbum = getSelectedAlbum();
   const { requestPlayAlbum } = useMusicPlayer();
@@ -30,21 +30,72 @@ const GalleryRoom: React.FC = () => {
   const canOpen = Boolean(selectedAlbum);
   const canPlay = Boolean(selectedAlbum?.musicData);
 
+  const filteredAlbums = React.useMemo(() => {
+    const base = albums.filter((album) => {
+      if (filterMode === 'public') return album.isPublic;
+      if (filterMode === 'private') return !album.isPublic;
+      if (filterMode === 'favorite') return album.isFavorite;
+      return true;
+    });
+
+    const scorePopular = (album: typeof albums[number]) => {
+      const durationScore = Number(album.duration || 0);
+      const playableScore = album.musicData ? 1000 : 0;
+      return playableScore + durationScore;
+    };
+
+    return base.slice().sort((a, b) => {
+      if (sortMode === 'duration') return (b.duration || 0) - (a.duration || 0);
+      if (sortMode === 'popular') return scorePopular(b) - scorePopular(a);
+      return String(b.createdAt).localeCompare(String(a.createdAt));
+    });
+  }, [albums, filterMode, sortMode]);
+
   const sortLabel = sortMode === 'popular' ? '人気順' : sortMode === 'duration' ? '長さ順' : '新しい順';
 
   const shelfContent = (
     <div className="bookshelf-container">
-      <div className={`gallery-shelf-stage ${albums.length === 0 ? 'empty' : ''}`}>
+      <div className={`gallery-shelf-stage ${filteredAlbums.length === 0 ? 'empty' : ''}`}>
         <BookshelfCanvas
-          albums={albums}
+          albums={filteredAlbums}
           onBookClick={handleAlbumClick}
           constellationEnabled={false}
         />
-        {albums.length === 0 && (
+          <div className="bookshelf-overlay-grid" aria-hidden="true">
+            {filteredAlbums.map((album) => {
+              if (!album.gallery) return null;
+              const hasBadges = album.isPublic || album.isFavorite;
+              if (!hasBadges) return null;
+              return (
+                <div
+                  key={album.id}
+                  className={`bookshelf-badge ${selectedAlbum?.id === album.id ? 'is-selected' : ''}`}
+                  style={{
+                    gridColumn: album.gallery.positionIndex + 1,
+                    gridRow: album.gallery.shelfIndex + 1,
+                  }}
+                >
+                  {[
+                    album.isPublic && (
+                      <span key="public" className="badge-chip badge-public">
+                        <span className="badge-dot" />公開
+                      </span>
+                    ),
+                    album.isFavorite && (
+                      <span key="favorite" className="badge-chip badge-favorite">
+                        <span className="badge-dot" />お気に入り
+                      </span>
+                    ),
+                  ].filter(Boolean)}
+                </div>
+              );
+            })}
+          </div>
+        {filteredAlbums.length === 0 && (
           <div className="empty-shelf-overlay">
             <EmptyState
-              title="まだアルバムがありません"
-              description="Mainルームでセッションを開始すると、棚にアルバムが生まれます。"
+              title="該当するアルバムがありません"
+              description="フィルタ条件を変えるか、Mainルームでセッションを開始してください。"
               actionLabel="セッションを始める"
               onAction={() => navigateToRoom('main')}
               icon={<span className="empty-icon-shape" aria-hidden="true" />}
@@ -111,6 +162,22 @@ const GalleryRoom: React.FC = () => {
                     requestPlayAlbum(selectedAlbum, musicQueue);
                   },
                 },
+                  {
+                    id: 'favorite',
+                    label: selectedAlbum?.isFavorite ? 'お気に入り解除' : 'お気に入り登録',
+                    onSelect: () => {
+                      if (!selectedAlbum) return;
+                      updateAlbum(selectedAlbum.id, { isFavorite: !selectedAlbum.isFavorite });
+                    },
+                  },
+                  {
+                    id: 'public',
+                    label: selectedAlbum?.isPublic ? '非公開にする' : '公開にする',
+                    onSelect: () => {
+                      if (!selectedAlbum) return;
+                      updateAlbum(selectedAlbum.id, { isPublic: !selectedAlbum.isPublic });
+                    },
+                  },
               ]}
             />
           </Popover>
@@ -130,6 +197,8 @@ const GalleryRoom: React.FC = () => {
             meta={`作成日: ${new Date(selectedAlbum.createdAt).toLocaleDateString('ja-JP')}`}
             badges={[
               { label: selectedAlbum.musicData ? '再生可能' : '音声なし', tone: selectedAlbum.musicData ? 'success' : 'default' },
+              ...(selectedAlbum.isPublic ? [{ label: '公開中', tone: 'info' as const }] : []),
+              ...(selectedAlbum.isFavorite ? [{ label: 'お気に入り', tone: 'warning' as const }] : []),
             ]}
           />
           <div className="gallery-focus-actions">
@@ -188,6 +257,10 @@ const GalleryRoom: React.FC = () => {
               { id: 'favorite', label: 'お気に入り' },
             ]}
           />
+          <div className="gallery-filter-tags">
+            <span className="filter-tag">{filterMode === 'all' ? '全件' : filterMode === 'public' ? '公開のみ' : filterMode === 'private' ? '非公開のみ' : 'お気に入り'}</span>
+            <span className="filter-tag">{sortLabel}</span>
+          </div>
         </div>
         <div className="gallery-toolbar-right">
           <Popover

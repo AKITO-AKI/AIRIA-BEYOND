@@ -1,0 +1,58 @@
+.music-room {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.music-header {
+  margin-bottom: 18px;
+}
+
+.music-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.music-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.music-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.album-card-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.music-empty {
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+}
+
+.music-meta-grid {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.music-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.music-meta-label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}

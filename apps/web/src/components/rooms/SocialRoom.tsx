@@ -10,10 +10,12 @@ import {
 } from '../../api/socialApi';
 import SegmentedControl from '../ui/SegmentedControl';
 import AlbumCard from '../gallery/AlbumCard';
+import Popover from '../ui/Popover';
+import Menu from '../ui/Menu';
 import './SocialRoom.css';
 
 const SocialRoom: React.FC = () => {
-  const { albums, getSelectedAlbum } = useAlbums();
+  const { albums, getSelectedAlbum, updateAlbum } = useAlbums();
   const selectedAlbum = getSelectedAlbum();
   const { navigateToRoom } = useRoomNavigation();
 
@@ -29,6 +31,27 @@ const SocialRoom: React.FC = () => {
   const [commentDraftByPostId, setCommentDraftByPostId] = React.useState<Record<string, string>>({});
   const [commentingPostId, setCommentingPostId] = React.useState<string | null>(null);
   const [feedMode, setFeedMode] = React.useState<'all' | 'following' | 'trending'>('all');
+  const [expandedPosts, setExpandedPosts] = React.useState<Record<string, boolean>>({});
+
+  const copyPostLink = async (postId: string) => {
+    const link = `${window.location.origin}/#social/${postId}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const input = document.createElement('input');
+        input.value = link;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      setError('リンクをコピーしました');
+      setTimeout(() => setError(null), 1500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -74,6 +97,9 @@ const SocialRoom: React.FC = () => {
       });
 
       setPosts((prev) => [created, ...prev]);
+      if (!selectedForPost.isPublic) {
+        updateAlbum(selectedForPost.id, { isPublic: true });
+      }
       setCaption('');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -116,6 +142,10 @@ const SocialRoom: React.FC = () => {
     } finally {
       setCommentingPostId(null);
     }
+  };
+
+  const toggleExpanded = (postId: string) => {
+    setExpandedPosts((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   return (
@@ -240,42 +270,62 @@ const SocialRoom: React.FC = () => {
             {post.caption && <div className="social-post-caption">{post.caption}</div>}
 
             <div className="social-post-actions">
-              <button className="btn" onClick={() => void handleLike(post.id)}>
-                いいね {post.likes || 0}
+              <button
+                className={`btn social-action ${expandedPosts[post.id] ? 'is-active' : ''}`}
+                onClick={() => toggleExpanded(post.id)}
+              >
+                <span>{expandedPosts[post.id] ? '閉じる' : 'コメント'}</span>
+                <span className="social-count-chip">{Array.isArray(post.comments) ? post.comments.length : 0}</span>
               </button>
-              <div className="social-post-comments-count">コメント {Array.isArray(post.comments) ? post.comments.length : 0}</div>
-            </div>
-
-            <div className="social-post-comments">
-              {(post.comments || []).slice(-3).map((c) => (
-                <div key={c.id} className="social-comment">
-                  <span className="social-comment-author">{c.authorName || 'anonymous'}</span>
-                  <span className="social-comment-text">{c.text}</span>
-                </div>
-              ))}
-
-              <div className="social-comment-compose">
-                <input
-                  className="social-input"
-                  value={commentDraftByPostId[post.id] || ''}
-                  onChange={(e) =>
-                    setCommentDraftByPostId((prev) => ({
-                      ...prev,
-                      [post.id]: e.target.value,
-                    }))
-                  }
-                  placeholder="コメントを書く"
-                  maxLength={240}
+              <button className="btn social-action" onClick={() => void handleLike(post.id)}>
+                <span>いいね</span>
+                <span className="social-count-chip">{post.likes || 0}</span>
+              </button>
+              <button className="btn social-action" onClick={() => void copyPostLink(post.id)}>
+                共有
+              </button>
+              <Popover triggerClassName="btn" trigger={<span>•••</span>} placement="bottom">
+                <Menu
+                  items={[
+                    { id: 'copy', label: 'リンクをコピー', onSelect: () => void copyPostLink(post.id) },
+                    { id: 'report', label: '通報する', onSelect: () => setError('通報を受け付けました') },
+                  ]}
                 />
-                <button
-                  className="btn btn-primary"
-                  disabled={commentingPostId === post.id}
-                  onClick={() => void handleComment(post.id)}
-                >
-                  {commentingPostId === post.id ? '送信中…' : '送信'}
-                </button>
-              </div>
+              </Popover>
             </div>
+
+            {expandedPosts[post.id] && (
+              <div className="social-post-comments">
+                {(post.comments || []).slice(-6).map((c) => (
+                  <div key={c.id} className="social-comment">
+                    <span className="social-comment-author">{c.authorName || 'anonymous'}</span>
+                    <span className="social-comment-text">{c.text}</span>
+                  </div>
+                ))}
+
+                <div className="social-comment-compose">
+                  <input
+                    className="social-input"
+                    value={commentDraftByPostId[post.id] || ''}
+                    onChange={(e) =>
+                      setCommentDraftByPostId((prev) => ({
+                        ...prev,
+                        [post.id]: e.target.value,
+                      }))
+                    }
+                    placeholder="コメントを書く"
+                    maxLength={240}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    disabled={commentingPostId === post.id}
+                    onClick={() => void handleComment(post.id)}
+                  >
+                    {commentingPostId === post.id ? '送信中…' : '送信'}
+                  </button>
+                </div>
+              </div>
+            )}
           </article>
         ))}
       </div>

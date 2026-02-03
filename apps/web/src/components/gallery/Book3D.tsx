@@ -78,6 +78,22 @@ const Book3D: React.FC<Book3DProps> = ({
         <meshStandardMaterial color={spineColor} roughness={0.9} metalness={0.05} />
       </mesh>
 
+      {/* Status badges (public/favorite) */}
+      <group position={[spineWidth / 2 - 0.05, spineHeight / 2 - 0.12, spineDepth / 2 + 0.03]}>
+        {album.isPublic && (
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[0.06, 0.06, 0.02]} />
+            <meshStandardMaterial color="#63e6be" roughness={0.4} metalness={0.1} />
+          </mesh>
+        )}
+        {album.isFavorite && (
+          <mesh position={[0, -0.08, 0]}>
+            <boxGeometry args={[0.06, 0.06, 0.02]} />
+            <meshStandardMaterial color="#d4af37" roughness={0.4} metalness={0.1} />
+          </mesh>
+        )}
+      </group>
+
       {/* Minimal spine text (2 items max) */}
       <group position={[0, 0, spineDepth / 2 + 0.01]}>
         <Text

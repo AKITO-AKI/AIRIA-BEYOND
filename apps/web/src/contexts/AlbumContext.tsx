@@ -44,6 +44,8 @@ export interface Album {
   title?: string;
   mood: string;
   duration: number;
+  isPublic?: boolean;
+  isFavorite?: boolean;
   imageDataURL: string;
   thumbnailUrl?: string; // P3: Optional thumbnail for performance
   sessionData?: any;
@@ -100,6 +102,8 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const addAlbum = (albumData: Omit<Album, 'id' | 'createdAt'>) => {
     const newAlbum: Album = {
       ...albumData,
+      isPublic: albumData.isPublic ?? false,
+      isFavorite: albumData.isFavorite ?? false,
       id: `album_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       createdAt: new Date().toISOString(),
     };

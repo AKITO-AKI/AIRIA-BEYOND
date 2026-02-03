@@ -34,19 +34,18 @@
 }
 
 .queue-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 4px;
+  background: transparent;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 200px;
+  min-width: 240px;
 }
 
 .queue-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-2px);
 }
 
@@ -54,32 +53,19 @@
   transform: translateY(0);
 }
 
-.queue-thumbnail {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  object-fit: cover;
-  flex-shrink: 0;
+.queue-album-card {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
-.queue-info {
-  flex: 1;
-  min-width: 0;
+.queue-album-card .album-card-title {
+  color: rgba(255, 255, 255, 0.95);
 }
 
-.queue-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.queue-duration {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
-  font-variant-numeric: tabular-nums;
+.queue-album-card .album-card-mood,
+.queue-album-card .album-card-meta {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Accessibility */

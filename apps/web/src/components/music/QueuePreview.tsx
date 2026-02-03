@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Album } from '../../contexts/AlbumContext';
+import AlbumCard from '../gallery/AlbumCard';
 import './QueuePreview.css';
 
 interface QueuePreviewProps {
@@ -44,17 +45,19 @@ export const QueuePreview: React.FC<QueuePreviewProps> = ({
               }
             }}
           >
-            <img
-              src={album.imageDataURL}
-              alt={album.title || album.mood}
-              className="queue-thumbnail"
+            <AlbumCard
+              variant="compact"
+              className="queue-album-card"
+              title={album.title || album.mood}
+              mood={album.mood}
+              imageUrl={album.imageDataURL}
+              meta={formatDuration(album.musicMetadata?.duration || album.duration)}
+              badges={[
+                ...(album.musicData ? [{ label: '再生', tone: 'success' as const }] : []),
+                ...(album.isFavorite ? [{ label: 'お気に入り', tone: 'warning' as const }] : []),
+                ...(album.isPublic ? [{ label: '公開', tone: 'info' as const }] : []),
+              ]}
             />
-            <div className="queue-info">
-              <div className="queue-title">{album.title || album.mood}</div>
-              <div className="queue-duration">
-                {formatDuration(album.musicMetadata?.duration || album.duration)}
-              </div>
-            </div>
           </div>
         ))}
       </div>

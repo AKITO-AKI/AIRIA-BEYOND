@@ -10,10 +10,11 @@ import Aura from '../visual/patterns/Aura';
 import { useMouseProximity } from '../visual/interactions/MouseTracker';
 import Popover from '../ui/Popover';
 import Menu from '../ui/Menu';
+import AlbumCard from '../gallery/AlbumCard';
 import './AlbumRoom.css';
 
 const AlbumRoom: React.FC = () => {
-  const { getSelectedAlbum, selectAlbum, addAlbum } = useAlbums();
+  const { getSelectedAlbum, selectAlbum, addAlbum, updateAlbum } = useAlbums();
   const { getLog } = useCausalLog();
   const { state: musicState, requestPlayAlbum } = useMusicPlayer();
   const { navigateToRoom } = useRoomNavigation();
@@ -192,6 +193,16 @@ const AlbumRoom: React.FC = () => {
                   label: '再生',
                   onSelect: () => requestPlayAlbum(album),
                 },
+                {
+                  id: 'favorite',
+                  label: album.isFavorite ? 'お気に入り解除' : 'お気に入り登録',
+                  onSelect: () => updateAlbum(album.id, { isFavorite: !album.isFavorite }),
+                },
+                {
+                  id: 'public',
+                  label: album.isPublic ? '非公開にする' : '公開にする',
+                  onSelect: () => updateAlbum(album.id, { isPublic: !album.isPublic }),
+                },
               ]}
             />
           </Popover>
@@ -221,7 +232,21 @@ const AlbumRoom: React.FC = () => {
         </div>
 
         <div className="album-metadata">
-          <div className="metadata-section">
+          <div className="album-summary-card">
+            <AlbumCard
+              variant="compact"
+              title={album.title || album.mood}
+              mood={album.mood}
+              imageUrl={album.imageDataURL}
+              meta={`作成日: ${new Date(album.createdAt).toLocaleDateString('ja-JP')}`}
+              badges={[
+                { label: album.musicData ? '再生可能' : '音声なし', tone: album.musicData ? 'success' : 'default' },
+                ...(album.isPublic ? [{ label: '公開中', tone: 'info' as const }] : []),
+                ...(album.isFavorite ? [{ label: 'お気に入り', tone: 'warning' as const }] : []),
+              ]}
+            />
+          </div>
+          <div className="metadata-section room-card">
             <h3 className="metadata-section-title">基本情報</h3>
             
             <div className="metadata-item">
@@ -251,7 +276,7 @@ const AlbumRoom: React.FC = () => {
           {/* P3: Enhanced metadata display */}
           {album.metadata && (
             <>
-              <div className="metadata-section">
+              <div className="metadata-section room-card">
                 <h3 className="metadata-section-title">感情分析 (IR)</h3>
                 
                 {album.metadata.valence !== undefined && (
@@ -317,7 +342,7 @@ const AlbumRoom: React.FC = () => {
                 )}
               </div>
 
-              <div className="metadata-section">
+              <div className="metadata-section room-card">
                 <h3 className="metadata-section-title">生成パラメータ</h3>
                 
                 {album.metadata.stylePreset && (
