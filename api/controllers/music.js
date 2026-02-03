@@ -158,7 +158,7 @@ export async function generateMusic(req, res) {
         focus,
         motif_tags,
         confidence: confidence ?? 0.5,
-        duration: duration ?? 75,
+        duration: duration ?? 180,
         seed,
       },
       maxRetries: 1,

@@ -22,7 +22,7 @@ export async function chatTurn(req, res) {
     }
 
     const base = await respondAndRecommend({ messages, onboardingData });
-    const event = shouldTriggerGenerationEvent(messages);
+    const event = shouldTriggerGenerationEvent(messages, onboardingData);
 
     return res.json({
       ...base,

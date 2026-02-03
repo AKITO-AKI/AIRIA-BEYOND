@@ -31,6 +31,7 @@ if (import.meta.env.PROD) {
 
 const ONBOARDING_STORAGE_KEY = 'airia_onboarding_data';
 const THEME_STORAGE_KEY = 'airia_theme';
+const POST_ONBOARDING_ROOM_KEY = 'airia_post_onboarding_room';
 
 function applyThemePreference() {
   try {
@@ -52,6 +53,18 @@ function isOnboardingCompleted(): boolean {
     return Boolean(parsed?.completedAt);
   } catch {
     return false;
+  }
+}
+
+function consumePostOnboardingRoom(): 'main' | 'gallery' | 'album' | 'music' | 'social' | 'info' | null {
+  try {
+    const raw = localStorage.getItem(POST_ONBOARDING_ROOM_KEY);
+    if (!raw) return null;
+    localStorage.removeItem(POST_ONBOARDING_ROOM_KEY);
+    const room = String(raw);
+    return ['main', 'gallery', 'album', 'music', 'social', 'info'].includes(room) ? (room as any) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -99,7 +112,9 @@ const AppContent = () => {
         },
       ];
 
-  const initialRoom = hasOnboarded ? ('main' as const) : ('onboarding' as const);
+  const initialRoom = hasOnboarded
+    ? ((consumePostOnboardingRoom() ?? 'main') as const)
+    : ('onboarding' as const);
 
   return (
     <>

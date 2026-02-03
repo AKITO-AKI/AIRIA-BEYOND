@@ -132,8 +132,11 @@ export function briefToGenerationInputs(brief) {
   // Mood string for compatibility with existing endpoints
   const mood = valence < -0.2 ? '不安' : valence > 0.2 ? '嬉しい' : arousal < 0.35 ? '穏やか' : '疲れ';
 
-  // Duration heuristic
-  const duration = Math.round(75 + (arousal - 0.5) * 30);
+  // Duration heuristics
+  // - Image/session: keep reasonably short to avoid slowing the visual side
+  // - Music: target a fuller piece by default
+  const imageDuration = Math.round(75 + (arousal - 0.5) * 30);
+  const musicDuration = Math.round(180 + (arousal - 0.5) * 60);
 
   return {
     brief,
@@ -146,7 +149,7 @@ export function briefToGenerationInputs(brief) {
     },
     image: {
       mood,
-      duration,
+      duration: imageDuration,
       motifTags,
       stylePreset,
       valence,
@@ -161,7 +164,7 @@ export function briefToGenerationInputs(brief) {
       arousal,
       focus,
       motif_tags: motifTags,
-      duration,
+      duration: musicDuration,
       genre_palette: brief.music.genre_palette,
       primary_genre: brief.music.primary_genre,
       instrumentation: brief.music.instrumentation,

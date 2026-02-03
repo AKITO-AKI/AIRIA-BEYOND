@@ -63,7 +63,7 @@ export interface Album {
 interface AlbumContextType {
   albums: Album[];
   selectedAlbumId: string | null;
-  addAlbum: (album: Omit<Album, 'id' | 'createdAt'>) => void;
+  addAlbum: (album: Omit<Album, 'id' | 'createdAt'>) => Album;
   updateAlbum: (id: string, patch: Partial<Omit<Album, 'id' | 'createdAt'>>) => void;
   selectAlbum: (id: string | null) => void;
   getSelectedAlbum: () => Album | null;
@@ -100,12 +100,26 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [albums]);
 
   const addAlbum = (albumData: Omit<Album, 'id' | 'createdAt'>) => {
-    const newAlbum: Album = {
+    const baseAlbum: Album = {
       ...albumData,
       isPublic: albumData.isPublic ?? false,
       isFavorite: albumData.isFavorite ?? false,
       id: `album_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       createdAt: new Date().toISOString(),
+    };
+
+    // Ensure derived gallery fields exist on the returned album (index 0).
+    const position0 = calculateBookPosition(0);
+    const thickness0 = calculateThickness(baseAlbum.musicMetadata?.duration);
+    const spineColor0 = getSimpleDominantColor(baseAlbum.imageDataURL);
+    const newAlbum: Album = {
+      ...baseAlbum,
+      gallery: {
+        shelfIndex: position0.shelfIndex,
+        positionIndex: position0.positionIndex,
+        thickness: thickness0,
+        spineColor: spineColor0,
+      },
     };
     
     setAlbums((prev) => {
@@ -129,6 +143,8 @@ export const AlbumProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         };
       });
     });
+
+    return newAlbum;
   };
 
   const updateAlbum = (id: string, patch: Partial<Omit<Album, 'id' | 'createdAt'>>) => {

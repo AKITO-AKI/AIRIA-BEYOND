@@ -75,43 +75,98 @@ function hashString(input) {
   return hash >>> 0;
 }
 
-export function shouldTriggerGenerationEvent(messages) {
+function getOnboardingStartMode(onboardingData) {
+  try {
+    const startMode = onboardingData?.preferences?.startMode;
+    return startMode === 'create' || startMode === 'talk' ? startMode : null;
+  } catch {
+    return null;
+  }
+}
+
+export function shouldTriggerGenerationEvent(messages, onboardingData) {
   const normalized = normalizeMessages(messages);
   const userCount = normalized.filter((m) => m.role === 'user').length;
   const lastUser = [...normalized].reverse().find((m) => m.role === 'user')?.content ?? '';
+  const startMode = getOnboardingStartMode(onboardingData);
 
   // Explicit user intent takes priority
   if (/曲|作曲|生成イベント|アルバム|作って|つくって|生成して/.test(lastUser)) {
     return { shouldTrigger: true, reason: 'ユーザーが生成イベントを明示的に希望しました。' };
   }
 
-  // Suggest event roughly once per ~20 user turns.
-  // Keep deterministic behavior (stable demos) but with a clear cadence.
-  if (userCount < 20) {
-    const remaining = 20 - userCount;
+  // Onboarding preference: if the user chose "create", suggest early.
+  if (startMode === 'create' && userCount >= 1) {
+    return { shouldTrigger: true, reason: 'プロフィールでは「創作から」。まずは1曲つくって流れを作ろう。' };
+  }
+
+  // Suggest more often: every ~6 user turns (deterministic cadence).
+  // This makes "creating" feel like a core loop rather than a rare surprise.
+  const cadence = 6;
+
+  if (userCount < cadence) {
+    const remaining = cadence - userCount;
     return {
       shouldTrigger: false,
-      reason: `もう少し会話を続けよう（生成イベントの提案まで目安あと${remaining}回）。`,
+      reason: `もう少しだけ素材を集めよう（生成イベントまで目安あと${remaining}回）。`,
     };
   }
 
-  const dayKey = new Date().toISOString().slice(0, 10);
-  const seed = hashString(`${dayKey}|${userCount}|${lastUser.slice(0, 80)}`);
-  const hit = seed % 20 === 0; // ~5%
-
+  // Deterministic cadence: suggest on 6, 12, 18...
+  const hit = userCount % cadence === 0;
   return hit
     ? { shouldTrigger: true, reason: 'ここまでの対話を素材に、象徴アルバムを作るタイミングです。' }
-    : { shouldTrigger: false, reason: 'もう少しだけ会話を続けて、素材を増やします。' };
+    : { shouldTrigger: false, reason: '少しだけ続けて、言葉の解像度を上げよう。' };
 }
 
-function fallbackRespond(messages) {
+function extractOnboardingHints(onboardingData) {
+  const prefs = onboardingData?.preferences;
+  if (!prefs || typeof prefs !== 'object') return null;
+
+  const parts = [];
+  const startMode = prefs?.startMode;
+  if (startMode === 'create') parts.push('創作から始めたい');
+  if (startMode === 'talk') parts.push('会話から整えたい');
+
+  const goal = prefs?.emotionalGoal;
+  if (typeof goal === 'string' && goal.trim()) parts.push(`目標: ${goal.trim()}`);
+
+  const recentEmotion = prefs?.recentMomentEmotion;
+  if (typeof recentEmotion === 'string' && recentEmotion.trim()) parts.push(`最近: ${recentEmotion.trim()}`);
+
+  const dailyEmotion = prefs?.dailyPatternEmotion;
+  if (typeof dailyEmotion === 'string' && dailyEmotion.trim()) parts.push(`普段: ${dailyEmotion.trim()}`);
+
+  return parts.length ? parts.join(' / ') : null;
+}
+
+function fallbackRespond(messages, onboardingData) {
   const normalized = normalizeMessages(messages);
   const lastUser = [...normalized].reverse().find((m) => m.role === 'user')?.content ?? '';
+  const lastAssistant = [...normalized].reverse().find((m) => m.role === 'assistant')?.content ?? '';
+  const hints = extractOnboardingHints(onboardingData);
 
   const recs = CURATED_RECS.slice(0, 3);
-  const prompt = lastUser.trim()
-    ? `今の話の中心は「${lastUser.slice(0, 40)}…」ですね。もう少しだけ具体にすると、どの場面（朝/夜・移動中/家・一人/誰かと）で聴きたいですか？`
+
+  const followups = [
+    'その話、もう少しだけ続きが聞きたい。今いちばん強い感情はどれに近い？（落ち着き/不安/疲れ/高揚）',
+    'その出来事って、体の感覚だとどんな感じ？（胸が重い/頭が冴える/眠い/そわそわ）',
+    'もし音にすると、どっちが近い？（静かに包む/少し背中を押す/胸を締める/透明に整える）',
+    '今の気分、どの場面で整えたい？（朝の準備/移動中/仕事前後/夜の一人時間）',
+  ];
+
+  // Avoid repeating the old fixed phrase if it appeared recently.
+  const avoidSceneQuestion = /どの場面.*聴きたい/.test(lastAssistant);
+  const candidates = avoidSceneQuestion ? followups.filter((q) => !q.includes('どの場面')) : followups;
+  const idx = hashString(`${lastUser}|${lastAssistant.slice(0, 60)}|${hints ?? ''}`) % candidates.length;
+  const picked = candidates[idx] ?? candidates[0];
+
+  const opener = lastUser.trim()
+    ? `うん、受け取った。${lastUser.slice(0, 60)}${lastUser.length > 60 ? '…' : ''}`
     : '今日はどんな感じで過ごしていましたか？短くても大丈夫です。';
+
+  const hintLine = hints ? `\n（プロフィール: ${hints}）` : '';
+  const prompt = lastUser.trim() ? `${opener}${hintLine}\n${picked}` : opener;
 
   return {
     assistant_message: prompt,
@@ -176,12 +231,12 @@ export async function respondAndRecommend({ messages, onboardingData }) {
         status: error?.status,
         message: error instanceof Error ? error.message : String(error),
       });
-      return { ...fallbackRespond(normalized), provider: 'rule-based' };
+      return { ...fallbackRespond(normalized, onboardingData), provider: 'rule-based' };
     }
   }
 
   if (!openai) {
-    return { ...fallbackRespond(normalized), provider: 'rule-based' };
+    return { ...fallbackRespond(normalized, onboardingData), provider: 'rule-based' };
   }
 
   const system = `あなたは「レコメンド＋日常会話特化LLM」です。
@@ -226,19 +281,19 @@ export async function respondAndRecommend({ messages, onboardingData }) {
       code: error?.code,
       message: error instanceof Error ? error.message : String(error),
     });
-    return { ...fallbackRespond(normalized), provider: 'rule-based' };
+    return { ...fallbackRespond(normalized, onboardingData), provider: 'rule-based' };
   }
 
   const content = completion?.choices?.[0]?.message?.content;
   if (!content) {
-    return { ...fallbackRespond(normalized), provider: 'rule-based' };
+    return { ...fallbackRespond(normalized, onboardingData), provider: 'rule-based' };
   }
 
   let parsed;
   try {
     parsed = JSON.parse(content);
   } catch {
-    return { ...fallbackRespond(normalized), provider: 'rule-based' };
+    return { ...fallbackRespond(normalized, onboardingData), provider: 'rule-based' };
   }
 
   return {

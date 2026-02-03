@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { useCausalLog } from '../../contexts/CausalLogContext';
+import { useMusicPlayer } from '../../contexts/MusicPlayerContext';
+import { useRoomNavigation } from '../../contexts/RoomNavigationContext';
 import {
   chatTurn,
   refineGenerationEvent,
@@ -16,6 +18,7 @@ import {
   logAlbumStage,
   logError,
 } from '../../utils/causalLogging/loggingHelpers';
+import { loadOnboardingData, onboardingToChatPayload } from '../../utils/onboardingMusic';
 import './ChatSessionUI.css';
 import AlbumTitleModal from '../AlbumTitleModal';
 
@@ -24,8 +27,10 @@ function nowIso() {
 }
 
 export default function ChatSessionUI() {
-  const { addAlbum } = useAlbums();
+  const { albums, addAlbum, selectAlbum } = useAlbums();
   const { createLog, updateLog, getLog } = useCausalLog();
+  const { requestPlayAlbum } = useMusicPlayer();
+  const { navigateToRoom } = useRoomNavigation();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -57,6 +62,13 @@ export default function ChatSessionUI() {
   const [previewError, setPreviewError] = useState<Record<string, string | null>>({});
 
   const userOnlyMessages = useMemo(() => messages.filter((m) => m.role === 'user'), [messages]);
+
+  const onboardingPayload = useMemo(() => {
+    const data = loadOnboardingData();
+    return data ? onboardingToChatPayload(data) : null;
+  }, []);
+
+  const albumsWithMusic = useMemo(() => albums.filter((a) => a.musicData), [albums]);
 
   useEffect(() => {
     return () => {
@@ -140,7 +152,10 @@ export default function ChatSessionUI() {
     setInput('');
 
     try {
-      const resp = await chatTurn({ messages: nextMessages });
+      const resp = await chatTurn({
+        messages: nextMessages,
+        onboardingData: onboardingPayload ?? undefined,
+      });
       setMessages((prev) => [...prev, { role: 'assistant', content: resp.assistant_message }]);
       setRecommendations(resp.recommendations ?? []);
       setEventSuggested(resp.event_suggestion ?? null);
@@ -166,7 +181,10 @@ export default function ChatSessionUI() {
     } as any);
 
     try {
-      const refined = await refineGenerationEvent({ messages });
+      const refined = await refineGenerationEvent({
+        messages,
+        onboardingData: onboardingPayload ?? undefined,
+      });
 
       // Kick image + music jobs using refined inputs
       const imageJob = await generateImage(refined.image);
@@ -271,7 +289,10 @@ export default function ChatSessionUI() {
         }
       }
 
-      addAlbum({ ...pendingAlbum, title: finalTitle || undefined } as any);
+      const created = addAlbum({ ...pendingAlbum, title: finalTitle || undefined } as any);
+      selectAlbum(created.id);
+      requestPlayAlbum(created, [created, ...albumsWithMusic]);
+      navigateToRoom('music');
 
       if (pendingLogId) {
         logAlbumStage(updateLog, pendingLogId, {
@@ -319,16 +340,15 @@ export default function ChatSessionUI() {
           <div className="chatTitleSub">話すだけで、レコメンドと創作が進む</div>
         </div>
         <div className="chatHeaderRight">
-          {eventSuggested?.shouldTrigger ? (
-            <button
-              className="chatPrimary"
-              onClick={handleStartEvent}
-              disabled={isGeneratingEvent}
-              data-no-swipe
-            >
-              {isGeneratingEvent ? '生成中…' : '生成イベントを開始'}
-            </button>
-          ) : null}
+          <button
+            className="chatPrimary"
+            onClick={handleStartEvent}
+            disabled={isGeneratingEvent}
+            data-no-swipe
+            title={eventSuggested?.reason || '会話の内容をもとに1曲生成します'}
+          >
+            {isGeneratingEvent ? '生成中…' : eventSuggested?.shouldTrigger ? '生成イベントを開始' : '今すぐ1曲つくる'}
+          </button>
         </div>
       </div>
 
@@ -336,16 +356,47 @@ export default function ChatSessionUI() {
         <div className="chatHint">{eventSuggested.reason}</div>
       ) : null}
 
-      <div className="chatBody">
-        {messages.map((m, idx) => (
-          <div key={idx} className={`chatMsg ${m.role === 'user' ? 'user' : 'assistant'}`}>
-            <div className="chatBubble">{m.content}</div>
+      <div className="chatLayout">
+        <div className="chatMain">
+          <div className="chatBody">
+            {messages.map((m, idx) => (
+              <div key={idx} className={`chatMsg ${m.role === 'user' ? 'user' : 'assistant'}`}>
+                <div className="chatBubble">{m.content}</div>
+              </div>
+            ))}
           </div>
-        ))}
 
-        {recommendations.length > 0 ? (
-          <details className="chatRecsInline" data-no-swipe open>
-            <summary className="chatRecsSummary">いまのレコメンド</summary>
+          <div className="chatDock" data-no-swipe>
+            {error ? <div className="chatError">{error}</div> : null}
+
+            <div className="chatComposer">
+              <textarea
+                className="chatInput"
+                placeholder={userOnlyMessages.length === 0 ? '今日のことを一言で' : '続けて話して'}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isSending) handleSend();
+                  }
+                }}
+                rows={2}
+              />
+              <button className="chatSend" onClick={handleSend} disabled={isSending || !input.trim()}>
+                {isSending ? '送信中…' : '送信'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <aside className="chatSide" aria-label="レコメンド">
+          <div className="chatSideHeader">
+            <div className="chatSideTitle">いまのレコメンド</div>
+            <div className="chatSideHint">30秒プレビュー（可能な場合）</div>
+          </div>
+
+          {recommendations.length > 0 ? (
             <ul className="chatRecsList">
               {recommendations.slice(0, 4).map((r, i) => (
                 <li key={i} className="chatRecItem">
@@ -363,7 +414,6 @@ export default function ChatSessionUI() {
                       onClick={() => void togglePlayRecommendation(r)}
                       disabled={Boolean(previewLoading[getRecKey(r)])}
                       data-no-swipe
-                      title="プレビューがある場合は30秒再生します"
                     >
                       {playingKey === getRecKey(r) ? '停止' : previewLoading[getRecKey(r)] ? '取得中…' : '再生'}
                     </button>
@@ -387,31 +437,10 @@ export default function ChatSessionUI() {
                 </li>
               ))}
             </ul>
-          </details>
-        ) : null}
-      </div>
-
-      <div className="chatDock" data-no-swipe>
-        {error ? <div className="chatError">{error}</div> : null}
-
-        <div className="chatComposer">
-          <textarea
-            className="chatInput"
-            placeholder={userOnlyMessages.length === 0 ? '今日のことを一言で' : '続けて話して'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!isSending) handleSend();
-              }
-            }}
-            rows={2}
-          />
-          <button className="chatSend" onClick={handleSend} disabled={isSending || !input.trim()}>
-            {isSending ? '送信中…' : '送信'}
-          </button>
-        </div>
+          ) : (
+            <div className="chatRecsEmpty">会話をすると、ここにおすすめが出ます。</div>
+          )}
+        </aside>
       </div>
     </div>
   );

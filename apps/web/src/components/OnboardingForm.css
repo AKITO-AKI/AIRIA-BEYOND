@@ -15,12 +15,12 @@
   font-weight: 600;
   letter-spacing: 0.2px;
   margin: 0 0 16px 0;
-  color: var(--text-primary);
+  color: var(--color-text);
 }
 
 .onboarding-subtitle {
   font-size: 16px;
-  color: var(--text-secondary);
+  color: var(--color-text-muted);
   margin: 0 0 30px 0;
   line-height: 1.6;
 }
@@ -28,7 +28,7 @@
 .progress-bar {
   width: 100%;
   height: 6px;
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-border) 55%, transparent 45%);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 12px;
@@ -36,14 +36,14 @@
 
 .progress-fill {
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--color-text);
   transition: width 0.3s ease;
   border-radius: 3px;
 }
 
 .step-indicator {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--color-text-muted);
   margin: 0;
 }
 
@@ -81,33 +81,33 @@
   text-align: left;
   padding: 16px 16px;
   border-radius: 12px;
-  border: 2px solid rgba(0, 0, 0, 0.15);
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-strong);
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .choice-btn:hover {
   transform: translateY(-2px);
-  border-color: rgba(0, 0, 0, 0.25);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in srgb, var(--color-border) 60%, var(--color-text) 40%);
+  box-shadow: var(--shadow-sm);
 }
 
 .choice-btn.is-selected {
-  border-color: rgba(74, 144, 226, 0.85);
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.12);
+  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-border) 30%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent 82%);
 }
 
 .choice-title {
   font-size: 16px;
   font-weight: 650;
-  color: rgba(0, 0, 0, 0.9);
+  color: var(--color-text);
 }
 
 .choice-desc {
   margin-top: 6px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
@@ -128,14 +128,14 @@
 
 .question-title {
   font-size: clamp(20px, 4vw, 24px);
-  color: rgba(0, 0, 0, 0.9);
+  color: var(--color-text);
   margin: 0 0 12px 0;
   font-weight: 500;
 }
 
 .question-description {
   font-size: 15px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--color-text-muted);
   margin: 0 0 30px 0;
   line-height: 1.6;
 }
@@ -149,7 +149,7 @@
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.7);
+  color: color-mix(in srgb, var(--color-text) 78%, transparent 22%);
 }
 
 .form-select,
@@ -157,10 +157,10 @@
 .form-textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: rgba(0, 0, 0, 0.9);
+  background: var(--color-surface-strong);
+  color: var(--color-text);
   font-size: 16px;
   font-family: inherit;
   transition: all 0.2s ease;
@@ -170,15 +170,14 @@
 .form-select:focus,
 .form-input:focus,
 .form-textarea:focus {
-  border-color: rgba(74, 144, 226, 0.8);
-  background: white;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 18%, transparent 82%);
 }
 
 .form-select:hover,
 .form-input:hover,
 .form-textarea:hover {
-  border-color: rgba(0, 0, 0, 0.25);
+  border-color: color-mix(in srgb, var(--color-border) 60%, var(--color-text) 40%);
 }
 
 .form-textarea {
@@ -189,7 +188,7 @@
 
 .form-input::placeholder,
 .form-textarea::placeholder {
-  color: rgba(0, 0, 0, 0.4);
+  color: color-mix(in srgb, var(--color-text) 40%, transparent 60%);
 }
 
 /* Button group styling */
@@ -205,20 +204,20 @@
   padding: 14px 24px;
   font-size: 16px;
   font-weight: 500;
-  border: 2px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: rgba(0, 0, 0, 0.9);
+  background: var(--color-surface-strong);
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.2s ease;
   outline: none;
 }
 
 .button-group .btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.3);
+  background: var(--color-bg-muted);
+  border-color: color-mix(in srgb, var(--color-border) 60%, var(--color-text) 40%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .button-group .btn:active:not(:disabled) {
@@ -231,31 +230,31 @@
 }
 
 .button-group .btn-primary {
-  background: rgba(74, 144, 226, 0.9);
-  border-color: rgba(74, 144, 226, 0.9);
-  color: white;
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-text-invert);
 }
 
 .button-group .btn-primary:hover:not(:disabled) {
-  background: rgba(74, 144, 226, 1);
-  border-color: rgba(74, 144, 226, 1);
+  background: color-mix(in srgb, var(--color-text) 92%, black 8%);
+  border-color: color-mix(in srgb, var(--color-text) 92%, black 8%);
 }
 
 .button-group .btn-success {
-  background: rgba(76, 175, 80, 0.9);
-  border-color: rgba(76, 175, 80, 0.9);
-  color: white;
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-text-invert);
 }
 
 .button-group .btn-success:hover:not(:disabled) {
-  background: rgba(76, 175, 80, 1);
-  border-color: rgba(76, 175, 80, 1);
+  background: color-mix(in srgb, var(--color-text) 92%, black 8%);
+  border-color: color-mix(in srgb, var(--color-text) 92%, black 8%);
 }
 
 .button-group .btn-secondary {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(0, 0, 0, 0.2);
-  color: rgba(0, 0, 0, 0.7);
+  background: var(--color-surface-strong);
+  border-color: color-mix(in srgb, var(--color-border) 60%, var(--color-text) 40%);
+  color: var(--color-text);
 }
 
 /* Responsive adjustments */
@@ -302,9 +301,19 @@
 
 .completion-message {
   font-size: 16px;
-  color: rgba(0, 0, 0, 0.7);
+  color: var(--color-text-muted);
   line-height: 1.8;
   margin: 24px 0 40px;
+}
+
+.onboarding-generate-status {
+  margin: 10px 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-strong) 72%, transparent 28%);
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 .onboarding-complete .button-group {

@@ -17,57 +17,70 @@ export interface OnboardingData {
 
 const STORAGE_KEY = 'airia_onboarding_data';
 
-const START_MODES: Array<{ value: OnboardingData['startMode']; label: string }> = [
-  { value: '', label: '選択してください' },
-  { value: 'talk', label: '会話からはじめる（やさしく）' },
-  { value: 'create', label: '創作からはじめる（早く作品へ）' },
+type ChoiceOption = { value: string; title: string; desc?: string };
+
+const START_MODE_CHOICES: Array<ChoiceOption & { value: OnboardingData['startMode'] }> = [
+  { value: 'talk', title: '会話から', desc: 'やさしく整えてから、次へ' },
+  { value: 'create', title: '創作から', desc: '早く作品に進みたい' },
 ];
 
-// Time period options
-const TIME_PERIODS = [
-  { value: '', label: '選択してください' },
-  { value: '今日', label: '今日' },
-  { value: '昨日', label: '昨日' },
-  { value: '今週', label: '今週' },
-  { value: '先週', label: '先週' },
-  { value: '今月', label: '今月' },
-  { value: '先月', label: '先月' },
+// Keep onboarding lightweight: each step is 2–4 choices.
+const RECENT_WHEN_CHOICES: ChoiceOption[] = [
+  { value: '今日', title: '今日', desc: 'いちばん最近の出来事' },
+  { value: '今週', title: '今週', desc: '数日の範囲' },
+  { value: '今月', title: '今月', desc: '少し長め' },
+  { value: '少し前', title: '少し前', desc: 'はっきりしない/覚えてない' },
 ];
 
-// Daily time slots
-const DAILY_TIME_SLOTS = [
-  { value: '', label: '選択してください' },
-  { value: '朝（6-9時）', label: '朝（6-9時）' },
-  { value: '午前（9-12時）', label: '午前（9-12時）' },
-  { value: '昼（12-15時）', label: '昼（12-15時）' },
-  { value: '午後（15-18時）', label: '午後（15-18時）' },
-  { value: '夕方（18-21時）', label: '夕方（18-21時）' },
-  { value: '夜（21-24時）', label: '夜（21-24時）' },
-  { value: '深夜（0-6時）', label: '深夜（0-6時）' },
+const DAILY_WHEN_CHOICES: ChoiceOption[] = [
+  { value: '朝', title: '朝', desc: 'スタートを整えたい' },
+  { value: '昼', title: '昼', desc: '途中で乱れやすい' },
+  { value: '夕方', title: '夕方', desc: '疲れが出やすい' },
+  { value: '夜', title: '夜', desc: '余韻が残る/考えが巡る' },
 ];
 
-// Emotion options
-const EMOTIONS = [
-  { value: '', label: '選択してください' },
-  { value: '穏やか', label: '○ 穏やか' },
-  { value: '嬉しい', label: '△ 嬉しい' },
-  { value: '不安', label: '□ 不安' },
-  { value: '疲れ', label: '◇ 疲れ' },
-  { value: '怒り', label: '▲ 怒り' },
-  { value: '悲しい', label: '◆ 悲しい' },
-  { value: '興奮', label: '▽ 興奮' },
-  { value: '退屈', label: '◻︎ 退屈' },
+// Keep to the most common four; downstream mapping supports more, but this is faster.
+const EMOTION_CHOICES: ChoiceOption[] = [
+  { value: '穏やか', title: '穏やか', desc: '静か/落ち着く' },
+  { value: '嬉しい', title: '嬉しい', desc: '軽い高揚/前向き' },
+  { value: '不安', title: '不安', desc: 'ざわつく/心配' },
+  { value: '疲れ', title: '疲れ', desc: '消耗/休みたい' },
 ];
 
-// Timeframe for goals
-const GOAL_TIMEFRAMES = [
-  { value: '', label: '選択してください' },
-  { value: '1週間以内', label: '1週間以内' },
-  { value: '1ヶ月以内', label: '1ヶ月以内' },
-  { value: '3ヶ月以内', label: '3ヶ月以内' },
-  { value: '6ヶ月以内', label: '6ヶ月以内' },
-  { value: '1年以内', label: '1年以内' },
-  { value: '長期的', label: '長期的' },
+const RECENT_WHY_CHOICES: ChoiceOption[] = [
+  { value: '達成/うまくいった', title: '達成', desc: 'うまくいった/進んだ' },
+  { value: '不確実/心配', title: '心配', desc: '先が読めない/不確実' },
+  { value: '人間関係', title: '人', desc: '誰かとのやり取り' },
+  { value: '体力/睡眠', title: '体', desc: '寝不足/疲労/体調' },
+];
+
+const TRIGGER_CHOICES: ChoiceOption[] = [
+  { value: '仕事/学業', title: '仕事', desc: '締切/評価/責任' },
+  { value: '人間関係', title: '人間関係', desc: '距離感/言葉/空気' },
+  { value: '体調/睡眠', title: '体調', desc: '疲れ/睡眠/コンディション' },
+  { value: 'SNS/情報', title: '情報', desc: '比較/ニュース/刺激' },
+];
+
+const TRIGGER_WHY_CHOICES: ChoiceOption[] = [
+  { value: '評価や期待が気になる', title: '評価', desc: '期待に応えたい/怖い' },
+  { value: '比較してしまう', title: '比較', desc: '周りと比べて落ちる' },
+  { value: '疲れると増幅する', title: '疲労', desc: '体力が落ちると不安が増える' },
+  { value: '言語化できず溜まる', title: '未消化', desc: 'うまく言えず残る' },
+];
+
+// Include keywords used by onboardingMusic (集中/安心/眠) to keep downstream behavior strong.
+const GOAL_CHOICES: ChoiceOption[] = [
+  { value: '落ち着いて集中したい', title: '集中', desc: '静かに深く入りたい' },
+  { value: '安心して眠りたい', title: '眠り', desc: '夜にほどけたい' },
+  { value: '不安を小さくしたい', title: '安心', desc: 'ざわつきを鎮めたい' },
+  { value: '気分を切り替えたい', title: '切替', desc: '短時間で整えたい' },
+];
+
+const GOAL_TIMEFRAME_CHOICES: ChoiceOption[] = [
+  { value: '1週間以内', title: '1週間', desc: '短期で変えたい' },
+  { value: '1ヶ月以内', title: '1ヶ月', desc: '少しずつ整える' },
+  { value: '3ヶ月以内', title: '3ヶ月', desc: '習慣化したい' },
+  { value: '長期的', title: '長期', desc: 'ゆっくり育てる' },
 ];
 
 interface OnboardingFormProps {
@@ -93,99 +106,94 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
     key: keyof OnboardingData;
     title: string;
     description?: string;
-    kind: 'select' | 'textarea' | 'input';
-    options?: Array<{ value: string; label: string }>;
-    placeholder?: string;
-    rows?: number;
+    kind: 'choices';
+    options: ChoiceOption[];
   };
 
   const stepStartMode: Step = {
     key: 'startMode',
     title: 'はじめに：どちらから始めたい？',
     description: '迷ったら「会話から」でOK。後からいつでも変えられます。',
-    kind: 'select',
-    options: START_MODES,
+    kind: 'choices',
+    options: START_MODE_CHOICES,
   };
 
   const stepRecentMomentWhen: Step = {
     key: 'recentMomentWhen',
     title: '最近の感情的な瞬間は「いつ」でしたか？',
     description: '時間の粒度はざっくりで大丈夫です。',
-    kind: 'select',
-    options: TIME_PERIODS,
+    kind: 'choices',
+    options: RECENT_WHEN_CHOICES,
   };
 
   const stepRecentMomentEmotion: Step = {
     key: 'recentMomentEmotion',
     title: 'そのときの感情は？',
     description: '一番近いものを選んでください。',
-    kind: 'select',
-    options: EMOTIONS,
+    kind: 'choices',
+    options: EMOTION_CHOICES,
   };
 
   const stepRecentMomentWhy: Step = {
     key: 'recentMomentWhy',
     title: 'なぜその感情が湧きましたか？',
-    description: '短文でもOKです。',
-    kind: 'textarea',
-    placeholder: '例：プロジェクトが成功した／大切な人と話せた／不安な連絡が来た…',
-    rows: 4,
+    description: '一番近い理由を選んでください。',
+    kind: 'choices',
+    options: RECENT_WHY_CHOICES,
   };
 
   const stepDailyPatternWhen: Step = {
     key: 'dailyPatternWhen',
     title: '普段、感情が動きやすい時間帯は？',
     description: '一日の中で特徴的な時間帯を選んでください。',
-    kind: 'select',
-    options: DAILY_TIME_SLOTS,
+    kind: 'choices',
+    options: DAILY_WHEN_CHOICES,
   };
 
   const stepDailyPatternEmotion: Step = {
     key: 'dailyPatternEmotion',
     title: 'その時間帯に感じやすい感情は？',
     description: '一番よく起きるものを選んでください。',
-    kind: 'select',
-    options: EMOTIONS,
+    kind: 'choices',
+    options: EMOTION_CHOICES,
   };
 
   const stepEmotionalTrigger: Step = {
     key: 'emotionalTrigger',
     title: '感情を動かしやすい「きっかけ」は？',
-    description: '要因を一言で書いてください。',
-    kind: 'input',
-    placeholder: '例：仕事の締切／SNS／睡眠不足／人間関係…',
+    description: '一番近いものを選んでください。',
+    kind: 'choices',
+    options: TRIGGER_CHOICES,
   };
 
   const stepEmotionalTriggerWhy: Step = {
     key: 'emotionalTriggerWhy',
     title: 'そのきっかけが影響する理由は？',
-    description: '背景やパターンがあれば。',
-    kind: 'textarea',
-    placeholder: '例：評価が気になる／比較してしまう／体力が落ちると不安が増える…',
-    rows: 4,
+    description: '一番近いものを選んでください。',
+    kind: 'choices',
+    options: TRIGGER_WHY_CHOICES,
   };
 
   const stepEmotionalGoal: Step = {
     key: 'emotionalGoal',
     title: 'これから目指したい感情は？',
     description: 'どんな状態で過ごしたいですか？',
-    kind: 'textarea',
-    placeholder: '例：落ち着いて集中できる／夜に安心して眠れる／穏やかに話せる…',
-    rows: 3,
+    kind: 'choices',
+    options: GOAL_CHOICES,
   };
 
   const stepEmotionalGoalTimeframe: Step = {
     key: 'emotionalGoalTimeframe',
     title: 'その目標はいつ頃までに？',
     description: '時間感覚を選んでください。',
-    kind: 'select',
-    options: GOAL_TIMEFRAMES,
+    kind: 'choices',
+    options: GOAL_TIMEFRAME_CHOICES,
   };
 
   const steps: Step[] = React.useMemo(() => {
     // create: shortest path to get you into making something
     if (formData.startMode === 'create') {
-      return [stepStartMode, stepEmotionalGoal, stepEmotionalGoalTimeframe];
+      return [stepStartMode, stepRecentMomentEmotion, stepEmotionalGoal, stepEmotionalGoalTimeframe];
     }
 
     // talk (default): full introspection path
@@ -236,12 +244,8 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   };
 
-  const updateField = (field: keyof OnboardingData, value: string) => {
-    setFormData({ ...formData, [field]: value });
-  };
-
-  const selectStartMode = (value: OnboardingData['startMode']) => {
-    const nextData = { ...formData, startMode: value };
+  const selectChoice = (field: keyof OnboardingData, value: string) => {
+    const nextData = { ...formData, [field]: value } as OnboardingData;
     setFormData(nextData);
     saveToLocalStorage(nextData);
     if (currentStep < totalSteps - 1) {
@@ -264,10 +268,21 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
   };
 
   const handleSubmit = () => {
-    const completedData = {
+    // Be tolerant of short-path onboarding: fill key fields if empty.
+    const normalized: OnboardingData = {
       ...formData,
+      recentMomentWhen: formData.recentMomentWhen || '最近',
+      dailyPatternWhen: formData.dailyPatternWhen || (formData.startMode === 'create' ? '夜' : ''),
+      recentMomentEmotion: formData.recentMomentEmotion || formData.dailyPatternEmotion,
+      dailyPatternEmotion: formData.dailyPatternEmotion || formData.recentMomentEmotion,
+      recentMomentWhy: formData.recentMomentWhy || '未指定',
+      emotionalTrigger: formData.emotionalTrigger || '未指定',
+      emotionalTriggerWhy: formData.emotionalTriggerWhy || '未指定',
+      emotionalGoal: formData.emotionalGoal || '落ち着いて集中したい',
+      emotionalGoalTimeframe: formData.emotionalGoalTimeframe || '1ヶ月以内',
       completedAt: new Date().toISOString(),
     };
+    const completedData = normalized;
     setFormData(completedData);
     saveToLocalStorage(completedData);
     if (onComplete) {
@@ -278,7 +293,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
   const canProceed = () => {
     const step = steps[currentStep];
     const value = String(formData[step.key] ?? '');
-    return step.kind === 'select' ? value.length > 0 : value.trim().length > 0;
+    return value.trim().length > 0;
   };
 
   return (
@@ -306,56 +321,30 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({ onComplete, onProgressC
               {step.description ? <p className="question-description">{step.description}</p> : null}
 
               <div className="form-group">
-                {step.key === 'startMode' ? (
-                  <div className="choice-grid" role="group" aria-label="開始モード">
-                    <button
-                      type="button"
-                      className={`choice-btn ${formData.startMode === 'talk' ? 'is-selected' : ''}`}
-                      onClick={() => selectStartMode('talk')}
-                      aria-pressed={formData.startMode === 'talk'}
-                    >
-                      <div className="choice-title">会話から</div>
-                      <div className="choice-desc">やさしく整えてから、次へ</div>
-                    </button>
-                    <button
-                      type="button"
-                      className={`choice-btn ${formData.startMode === 'create' ? 'is-selected' : ''}`}
-                      onClick={() => selectStartMode('create')}
-                      aria-pressed={formData.startMode === 'create'}
-                    >
-                      <div className="choice-title">創作から</div>
-                      <div className="choice-desc">早く作品に進みたい</div>
-                    </button>
-                  </div>
-                ) : step.kind === 'select' ? (
-                  <select
-                    className="form-select"
-                    value={String(formData[step.key] ?? '')}
-                    onChange={(e) => updateField(step.key, e.target.value)}
-                  >
-                    {(step.options ?? []).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : step.kind === 'input' ? (
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder={step.placeholder}
-                    value={String(formData[step.key] ?? '')}
-                    onChange={(e) => updateField(step.key, e.target.value)}
-                  />
-                ) : (
-                  <textarea
-                    className="form-textarea"
-                    placeholder={step.placeholder}
-                    value={String(formData[step.key] ?? '')}
-                    onChange={(e) => updateField(step.key, e.target.value)}
-                    rows={step.rows ?? 4}
-                  />
-                )}
+                <div className="choice-grid" role="group" aria-label={step.title}>
+                  {step.options.map((option) => {
+                    const currentValue = String(formData[step.key] ?? '');
+                    const selected = currentValue === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`choice-btn ${selected ? 'is-selected' : ''}`}
+                        onClick={() =>
+                          selectChoice(
+                            step.key,
+                            // Type safety: startMode is constrained, others are string.
+                            option.value
+                          )
+                        }
+                        aria-pressed={selected}
+                      >
+                        <div className="choice-title">{option.title}</div>
+                        {option.desc ? <div className="choice-desc">{option.desc}</div> : null}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );

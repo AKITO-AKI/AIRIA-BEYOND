@@ -499,8 +499,8 @@ export async function generateMusic(
 /**
  * Get music generation job status
  */
-export async function getMusicJobStatus(jobId: string): Promise<MusicJobStatus> {
-  const response = await fetch(`${API_BASE}/api/music/${jobId}`);
+export async function getMusicJobStatus(jobId: string, signal?: AbortSignal): Promise<MusicJobStatus> {
+  const response = await fetch(`${API_BASE}/api/music/${jobId}`, { signal });
 
   if (!response.ok) {
     const error: ApiError = await response.json();
@@ -517,10 +517,15 @@ export async function pollMusicJobStatus(
   jobId: string,
   onUpdate?: (status: MusicJobStatus) => void,
   maxAttempts: number = 60,
-  intervalMs: number = 2000
+  intervalMs: number = 2000,
+  signal?: AbortSignal
 ): Promise<MusicJobStatus> {
   for (let i = 0; i < maxAttempts; i++) {
-    const status = await getMusicJobStatus(jobId);
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
+    const status = await getMusicJobStatus(jobId, signal);
     
     if (onUpdate) {
       onUpdate(status);

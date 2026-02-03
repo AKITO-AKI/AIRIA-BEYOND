@@ -26,7 +26,7 @@ function hasOllamaConfigured() {
  * @param {number} request.arousal - Arousal level (0 to 1)
  * @param {number} request.focus - Focus level (0 to 1)
  * @param {string[]} request.motif_tags - Artistic motif tags
- * @param {number} [request.duration=75] - Target duration in seconds
+ * @param {number} [request.duration=180] - Target duration in seconds
  * @param {string[]} [request.genre_palette] - Allowed genres (event flow uses at least classical+jazz)
  * @param {string} [request.primary_genre] - Primary genre hint (classical|jazz|hybrid)
  * @param {string[]} [request.instrumentation] - Instrument list hint
@@ -43,7 +43,7 @@ export async function generateMusicStructure(request) {
       arousal,
       focus,
       motif_tags,
-      duration = 75,
+      duration = 180,
       genre_palette,
       primary_genre,
       instrumentation,
@@ -128,7 +128,7 @@ Output ONLY valid JSON with this exact structure:
     arousal,
     focus,
     motif_tags,
-    duration = 75,
+    duration = 180,
     genre_palette,
     primary_genre,
     instrumentation,
