@@ -316,6 +316,12 @@
   font-size: 13px;
 }
 
+.onboarding-generate-elapsed {
+  margin-left: 6px;
+  color: color-mix(in srgb, var(--color-text-muted) 82%, transparent 18%);
+  font-variant-numeric: tabular-nums;
+}
+
 .onboarding-complete .button-group {
   justify-content: center;
   max-width: 500px;

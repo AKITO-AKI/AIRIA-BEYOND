@@ -19,6 +19,7 @@ import DebugPanel from './components/DebugPanel';
 import { initSentry } from './lib/sentry';
 import { initWebVitals } from './lib/vitals';
 import { initAnalytics } from './lib/analytics';
+import { loadPendingOnboardingGeneration } from './utils/pendingGeneration';
 import './styles.css';
 import './components/visual/globalInteractions.css';
 
@@ -47,6 +48,9 @@ function applyThemePreference() {
 
 function isOnboardingCompleted(): boolean {
   try {
+    // If an onboarding-triggered music generation is pending, keep the user in onboarding
+    // so they can resume polling and complete the save+autoplay flow.
+    if (loadPendingOnboardingGeneration()) return false;
     const raw = localStorage.getItem(ONBOARDING_STORAGE_KEY);
     if (!raw) return false;
     const parsed = JSON.parse(raw);

@@ -19,8 +19,15 @@ import {
   logError,
 } from '../../utils/causalLogging/loggingHelpers';
 import { loadOnboardingData, onboardingToChatPayload } from '../../utils/onboardingMusic';
+import {
+  clearPendingChatGeneration,
+  loadPendingChatGeneration,
+  savePendingChatGeneration,
+} from '../../utils/pendingGeneration';
 import './ChatSessionUI.css';
 import AlbumTitleModal from '../AlbumTitleModal';
+import ConfirmDialog from '../ConfirmDialog';
+import { useToast } from '../visual/feedback/ToastContainer';
 
 function nowIso() {
   return new Date().toISOString();
@@ -31,6 +38,7 @@ export default function ChatSessionUI() {
   const { createLog, updateLog, getLog } = useCausalLog();
   const { requestPlayAlbum } = useMusicPlayer();
   const { navigateToRoom } = useRoomNavigation();
+  const { addToast } = useToast();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -48,6 +56,14 @@ export default function ChatSessionUI() {
 
   const [eventSuggested, setEventSuggested] = useState<{ shouldTrigger: boolean; reason: string } | null>(null);
   const [isGeneratingEvent, setIsGeneratingEvent] = useState(false);
+  const [generationStatusText, setGenerationStatusText] = useState<string | null>(null);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationElapsedSec, setGenerationElapsedSec] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const [hasPendingResume, setHasPendingResume] = useState(false);
+  const [generationFailed, setGenerationFailed] = useState(false);
+  const pendingToastShownRef = useRef(false);
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 
   const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
   const [pendingAlbum, setPendingAlbum] = useState<any | null>(null);
@@ -71,7 +87,18 @@ export default function ChatSessionUI() {
   const albumsWithMusic = useMemo(() => albums.filter((a) => a.musicData), [albums]);
 
   useEffect(() => {
+    const pending = loadPendingChatGeneration();
+    setHasPendingResume(Boolean(pending));
+    if (pending && !pendingToastShownRef.current) {
+      pendingToastShownRef.current = true;
+      addToast('info', '保留中の生成があります。「生成を再開」で続きを進められます。');
+    }
+  }, []);
+
+  useEffect(() => {
     return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
@@ -79,6 +106,273 @@ export default function ChatSessionUI() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isGeneratingEvent || !generationStartedAt) return;
+
+    setGenerationElapsedSec(Math.max(0, Math.floor((Date.now() - generationStartedAt) / 1000)));
+    const id = window.setInterval(() => {
+      setGenerationElapsedSec(Math.max(0, Math.floor((Date.now() - generationStartedAt) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isGeneratingEvent, generationStartedAt]);
+
+  function handleCancelEvent() {
+    if (!isGeneratingEvent) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsGeneratingEvent(false);
+    setGenerationStatusText('キャンセルしました');
+    setGenerationStartedAt(null);
+    setGenerationElapsedSec(0);
+    setGenerationFailed(false);
+    addToast('info', '生成を中断しました。あとで再開できます。');
+  }
+
+  function doDiscardPending() {
+    clearPendingChatGeneration();
+    setHasPendingResume(false);
+    setGenerationStatusText(null);
+    setError(null);
+    setGenerationFailed(false);
+    addToast('info', '保留中の生成を破棄しました。');
+  }
+
+  async function handleRetryPendingEvent() {
+    const pending = loadPendingChatGeneration();
+    if (!pending) return;
+    if (isGeneratingEvent) return;
+
+    setError(null);
+    setGenerationFailed(false);
+    setIsGeneratingEvent(true);
+    setGenerationStatusText('再生成を開始しています…');
+    setGenerationStartedAt(Date.now());
+    setGenerationElapsedSec(0);
+    addToast('info', '同じ条件で再生成を開始しました。');
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const refined = pending.refined;
+
+      setGenerationStatusText('画像生成を開始しています…');
+      const imageJob = await generateImage(refined.image);
+
+      setGenerationStatusText('作曲を開始しています…');
+      const musicJob = await generateMusic(refined.music as any);
+
+      savePendingChatGeneration({
+        ...pending,
+        startedAt: Date.now(),
+        imageJobId: imageJob.jobId,
+        musicJobId: musicJob.jobId,
+      });
+      setHasPendingResume(true);
+
+      const [imageStatus, musicStatus] = await Promise.all([
+        pollJobStatus(
+          imageJob.jobId,
+          (s) => {
+            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+            else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
+            else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
+            else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+          },
+          90,
+          2000,
+          controller.signal
+        ),
+        pollMusicJobStatus(
+          musicJob.jobId,
+          (s) => {
+            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+            else if (s.status === 'running') setGenerationStatusText('作曲中…');
+            else if (s.status === 'succeeded') setGenerationStatusText('作曲ができました。仕上げ中…');
+            else if (s.status === 'failed') setGenerationStatusText('作曲に失敗しました');
+          },
+          90,
+          2000,
+          controller.signal
+        ),
+      ]);
+
+      if (imageStatus.status !== 'succeeded' || !imageStatus.resultUrl) {
+        throw new Error('画像生成に失敗しました');
+      }
+      if (musicStatus.status !== 'succeeded' || !musicStatus.midiData || !musicStatus.result) {
+        throw new Error('曲生成に失敗しました');
+      }
+
+      const suggestedTitle = refined?.brief?.theme?.title || '';
+      setPendingAlbum({
+        title: suggestedTitle,
+        mood: refined?.image?.mood,
+        duration: refined?.image?.duration,
+        imageDataURL: imageStatus.resultUrl,
+        thumbnailUrl: imageStatus.resultUrl,
+        metadata: {
+          valence: refined?.analysisLike?.valence,
+          arousal: refined?.analysisLike?.arousal,
+          focus: refined?.analysisLike?.focus,
+          motif_tags: refined?.analysisLike?.motif_tags,
+          confidence: refined?.analysisLike?.confidence,
+          stylePreset: refined?.image?.stylePreset,
+          provider: 'replicate',
+        },
+        musicData: musicStatus.midiData,
+        musicFormat: 'midi',
+        musicMetadata: {
+          key: musicStatus.result.key,
+          tempo: musicStatus.result.tempo,
+          timeSignature: musicStatus.result.timeSignature,
+          form: musicStatus.result.form,
+          character: musicStatus.result.character,
+          duration: refined?.music?.duration,
+          createdAt: nowIso(),
+          provider: musicStatus.provider,
+        },
+        sessionData: {
+          brief: refined?.brief,
+          recommendations: pending.sessionRecommendations ?? recommendations,
+          messages: pending.sessionMessages ?? messages,
+        },
+        causalLogId: pending.causalLogId ?? undefined,
+      });
+
+      setPendingLogId(pending.causalLogId ?? null);
+      setIsTitleModalOpen(true);
+      setGenerationStatusText(null);
+      setGenerationFailed(false);
+      addToast('success', '生成が完了しました。タイトルを決めて保存できます。');
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setGenerationStatusText('キャンセルしました');
+        setGenerationFailed(false);
+        return;
+      }
+      const msg = e instanceof Error ? e.message : '再生成に失敗しました';
+      setError(msg);
+      setGenerationFailed(true);
+      addToast('error', msg);
+    } finally {
+      setIsGeneratingEvent(false);
+      abortRef.current = null;
+    }
+  }
+
+  async function handleResumeEvent() {
+    const pending = loadPendingChatGeneration();
+    if (!pending) return;
+    if (isGeneratingEvent) return;
+
+    setError(null);
+    setGenerationFailed(false);
+    setIsGeneratingEvent(true);
+    setGenerationStatusText('再開中…');
+    setGenerationStartedAt(pending.startedAt || Date.now());
+    setGenerationElapsedSec(0);
+    addToast('info', '生成を再開しています…');
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const [imageStatus, musicStatus] = await Promise.all([
+        pollJobStatus(
+          pending.imageJobId,
+          (s) => {
+            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+            else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
+            else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
+            else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+          },
+          90,
+          2000,
+          controller.signal
+        ),
+        pollMusicJobStatus(
+          pending.musicJobId,
+          (s) => {
+            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+            else if (s.status === 'running') setGenerationStatusText('作曲中…');
+            else if (s.status === 'succeeded') setGenerationStatusText('作曲ができました。仕上げ中…');
+            else if (s.status === 'failed') setGenerationStatusText('作曲に失敗しました');
+          },
+          90,
+          2000,
+          controller.signal
+        ),
+      ]);
+
+      if (imageStatus.status !== 'succeeded' || !imageStatus.resultUrl) {
+        throw new Error('画像生成に失敗しました');
+      }
+      if (musicStatus.status !== 'succeeded' || !musicStatus.midiData || !musicStatus.result) {
+        throw new Error('曲生成に失敗しました');
+      }
+
+      const refined = pending.refined;
+      const suggestedTitle = refined?.brief?.theme?.title || '';
+      setPendingAlbum({
+        title: suggestedTitle,
+        mood: refined?.image?.mood,
+        duration: refined?.image?.duration,
+        imageDataURL: imageStatus.resultUrl,
+        thumbnailUrl: imageStatus.resultUrl,
+        metadata: {
+          valence: refined?.analysisLike?.valence,
+          arousal: refined?.analysisLike?.arousal,
+          focus: refined?.analysisLike?.focus,
+          motif_tags: refined?.analysisLike?.motif_tags,
+          confidence: refined?.analysisLike?.confidence,
+          stylePreset: refined?.image?.stylePreset,
+          provider: 'replicate',
+        },
+        musicData: musicStatus.midiData,
+        musicFormat: 'midi',
+        musicMetadata: {
+          key: musicStatus.result.key,
+          tempo: musicStatus.result.tempo,
+          timeSignature: musicStatus.result.timeSignature,
+          form: musicStatus.result.form,
+          character: musicStatus.result.character,
+          duration: refined?.music?.duration,
+          createdAt: nowIso(),
+          provider: musicStatus.provider,
+        },
+        sessionData: {
+          brief: refined?.brief,
+          recommendations: pending.sessionRecommendations ?? recommendations,
+          messages: pending.sessionMessages ?? messages,
+        },
+        causalLogId: pending.causalLogId ?? undefined,
+      });
+
+      setPendingLogId(pending.causalLogId ?? null);
+      setIsTitleModalOpen(true);
+      setGenerationStatusText(null);
+      setHasPendingResume(true);
+      setGenerationFailed(false);
+      addToast('success', '生成が完了しました。タイトルを決めて保存できます。');
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setGenerationStatusText('キャンセルしました');
+        setGenerationFailed(false);
+        return;
+      }
+      const msg = e instanceof Error ? e.message : '再開に失敗しました';
+      setError(msg);
+      setGenerationFailed(true);
+      addToast('error', msg);
+    } finally {
+      setIsGeneratingEvent(false);
+      abortRef.current = null;
+    }
+  }
 
   const getRecKey = (r: { composer: string; title: string }) => `${r.composer}::${r.title}`;
 
@@ -170,7 +464,15 @@ export default function ChatSessionUI() {
 
   async function handleStartEvent() {
     setError(null);
+    setGenerationFailed(false);
     setIsGeneratingEvent(true);
+    setGenerationStatusText('準備中…');
+    setGenerationStartedAt(Date.now());
+    setGenerationElapsedSec(0);
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const sessionId = `chat_${Date.now()}`;
     const logId = createLog(sessionId, {
@@ -181,19 +483,64 @@ export default function ChatSessionUI() {
     } as any);
 
     try {
+      setGenerationStatusText('イベントを整えています…');
       const refined = await refineGenerationEvent({
         messages,
         onboardingData: onboardingPayload ?? undefined,
       });
 
       // Kick image + music jobs using refined inputs
+      setGenerationStatusText('画像生成を開始しています…');
       const imageJob = await generateImage(refined.image);
+
+      setGenerationStatusText('作曲を開始しています…');
       const musicJob = await generateMusic(refined.music as any);
 
+      savePendingChatGeneration({
+        v: 1,
+        kind: 'chat',
+        startedAt: Date.now(),
+        imageJobId: imageJob.jobId,
+        musicJobId: musicJob.jobId,
+        refined,
+        sessionMessages: messages,
+        sessionRecommendations: recommendations,
+        causalLogId: logId,
+      });
+      setHasPendingResume(true);
+      addToast('info', '生成を開始しました。完了まで待つか、あとで再開できます。');
+
       const [imageStatus, musicStatus] = await Promise.all([
-        pollJobStatus(imageJob.jobId),
-        pollMusicJobStatus(musicJob.jobId),
+        pollJobStatus(
+          imageJob.jobId,
+          (s) => {
+            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+            else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
+            else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
+            else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+          },
+          90,
+          2000,
+          controller.signal
+        ),
+        pollMusicJobStatus(
+          musicJob.jobId,
+          (s) => {
+            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+            else if (s.status === 'running') setGenerationStatusText('作曲中…');
+            else if (s.status === 'succeeded') setGenerationStatusText('作曲ができました。仕上げ中…');
+            else if (s.status === 'failed') setGenerationStatusText('作曲に失敗しました');
+          },
+          90,
+          2000,
+          controller.signal
+        ),
       ]);
+
+      if (controller.signal.aborted) {
+        setGenerationStatusText('キャンセルしました');
+        return;
+      }
 
       if (imageStatus.status !== 'succeeded' || !imageStatus.resultUrl) {
         throw new Error('画像生成に失敗しました');
@@ -202,6 +549,7 @@ export default function ChatSessionUI() {
         throw new Error('曲生成に失敗しました');
       }
 
+      setGenerationStatusText('保存の準備をしています…');
       const suggestedTitle = refined?.brief?.theme?.title || '';
       setPendingAlbum({
         title: suggestedTitle,
@@ -240,6 +588,13 @@ export default function ChatSessionUI() {
       setPendingLogId(logId);
       setIsTitleModalOpen(true);
 
+      addToast('success', '生成が完了しました。タイトルを決めて保存できます。');
+      setGenerationFailed(false);
+
+      setGenerationStatusText(null);
+      setGenerationStartedAt(null);
+      setGenerationElapsedSec(0);
+
       setEventSuggested(null);
       setMessages((prev) => [
         ...prev,
@@ -249,8 +604,29 @@ export default function ChatSessionUI() {
         },
       ]);
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setGenerationStatusText('キャンセルしました');
+        setGenerationStartedAt(null);
+        setGenerationElapsedSec(0);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: '生成をキャンセルしたよ。必要ならまた「今すぐ1曲つくる」で再開できる。',
+          },
+        ]);
+        addToast('info', '生成をキャンセルしました。あとで再開できます。');
+        setGenerationFailed(false);
+        return;
+      }
+
       const msg = e instanceof Error ? e.message : '生成イベントに失敗しました';
+      setGenerationStatusText(null);
+      setGenerationStartedAt(null);
+      setGenerationElapsedSec(0);
       setError(msg);
+      addToast('error', msg);
+      setGenerationFailed(true);
       logError(updateLog, getLog, logId, 'generation-event', msg);
       setMessages((prev) => [
         ...prev,
@@ -261,6 +637,7 @@ export default function ChatSessionUI() {
       ]);
     } finally {
       setIsGeneratingEvent(false);
+      abortRef.current = null;
     }
   }
 
@@ -294,6 +671,11 @@ export default function ChatSessionUI() {
       requestPlayAlbum(created, [created, ...albumsWithMusic]);
       navigateToRoom('music');
 
+      addToast('success', '保存して再生を開始しました。');
+
+      clearPendingChatGeneration();
+      setHasPendingResume(false);
+
       if (pendingLogId) {
         logAlbumStage(updateLog, pendingLogId, {
           albumId: 'local',
@@ -319,6 +701,19 @@ export default function ChatSessionUI() {
 
   return (
     <div className="chatSession">
+      <ConfirmDialog
+        open={confirmDiscardOpen}
+        title="保留中の生成を破棄しますか？"
+        description={'中断した生成を破棄します。\nこの生成は再開できなくなります。'}
+        cancelLabel="キャンセル"
+        confirmLabel="破棄する"
+        confirmTone="danger"
+        onCancel={() => setConfirmDiscardOpen(false)}
+        onConfirm={() => {
+          setConfirmDiscardOpen(false);
+          doDiscardPending();
+        }}
+      />
       <AlbumTitleModal
         open={isTitleModalOpen}
         mood={pendingAlbum?.mood || '穏やか'}
@@ -349,8 +744,47 @@ export default function ChatSessionUI() {
           >
             {isGeneratingEvent ? '生成中…' : eventSuggested?.shouldTrigger ? '生成イベントを開始' : '今すぐ1曲つくる'}
           </button>
+          {!isGeneratingEvent && hasPendingResume ? (
+            <button className="chatCancel" onClick={() => void handleResumeEvent()} data-no-swipe type="button">
+              生成を再開
+            </button>
+          ) : null}
+          {!isGeneratingEvent && hasPendingResume && generationFailed ? (
+            <button
+              className="chatCancel"
+              onClick={() => void handleRetryPendingEvent()}
+              data-no-swipe
+              type="button"
+              title="同じ条件で生成をやり直します（失敗・停止時向け）"
+            >
+              再生成
+            </button>
+          ) : null}
+          {isGeneratingEvent ? (
+            <button className="chatCancel" onClick={handleCancelEvent} data-no-swipe type="button">
+              キャンセル
+            </button>
+          ) : null}
+          {!isGeneratingEvent && hasPendingResume ? (
+            <button
+              className="chatCancel"
+              onClick={() => setConfirmDiscardOpen(true)}
+              data-no-swipe
+              type="button"
+              title="保留中の生成を破棄します"
+            >
+              破棄
+            </button>
+          ) : null}
         </div>
       </div>
+
+      {generationStatusText ? (
+        <div className="chatGenStatus">
+          {generationStatusText}
+          {generationStartedAt ? <span className="chatGenElapsed">（{generationElapsedSec}s）</span> : null}
+        </div>
+      ) : null}
 
       {eventSuggested && !eventSuggested.shouldTrigger ? (
         <div className="chatHint">{eventSuggested.reason}</div>

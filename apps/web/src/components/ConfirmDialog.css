@@ -1,0 +1,86 @@
+.confirm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+}
+
+.confirm-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 32px));
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.18);
+  z-index: 51;
+  padding: 16px;
+}
+
+.confirm-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.confirm-dialog-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.confirm-dialog-title {
+  margin: 3px 0 0;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.confirm-dialog-close {
+  appearance: none;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.confirm-dialog-body {
+  padding: 10px 2px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.72);
+  white-space: pre-wrap;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.confirm-dialog-danger {
+  background: color-mix(in srgb, var(--accent-danger) 70%, #111 30%);
+  border-color: color-mix(in srgb, var(--accent-danger) 70%, #111 30%);
+}
+
+.confirm-dialog-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-danger) 78%, #111 22%);
+  border-color: color-mix(in srgb, var(--accent-danger) 78%, #111 22%);
+}
+
+.confirm-dialog-shortcut {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  text-align: right;
+}

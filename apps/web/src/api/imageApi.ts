@@ -220,8 +220,8 @@ export async function generateImage(
 /**
  * Get job status
  */
-export async function getJobStatus(jobId: string): Promise<JobStatus> {
-  const response = await fetch(`${API_BASE}/api/job/${jobId}`);
+export async function getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobStatus> {
+  const response = await fetch(`${API_BASE}/api/job/${jobId}`, { signal });
 
   if (!response.ok) {
     const error: ApiError = await response.json();
@@ -242,10 +242,15 @@ export async function pollJobStatus(
   jobId: string,
   onUpdate?: (status: JobStatus) => void,
   maxAttempts: number = 60,
-  intervalMs: number = 2000
+  intervalMs: number = 2000,
+  signal?: AbortSignal
 ): Promise<JobStatus> {
   for (let i = 0; i < maxAttempts; i++) {
-    const status = await getJobStatus(jobId);
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
+    const status = await getJobStatus(jobId, signal);
     
     if (onUpdate) {
       onUpdate(status);
