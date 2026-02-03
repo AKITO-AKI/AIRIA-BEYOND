@@ -1,0 +1,41 @@
+.playback-backdrop {
+  position: fixed;
+  inset: -40px;
+  z-index: 0;
+  pointer-events: none;
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  opacity: 0;
+  filter: blur(34px) saturate(0.75) brightness(0.92);
+  transform: scale(1.08);
+  transition: opacity 380ms ease, filter 900ms ease;
+}
+
+.playback-backdrop.is-active {
+  opacity: 0.70;
+}
+
+.playback-backdrop.is-playing {
+  animation: playbackBloom 14s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes playbackBloom {
+  0% {
+    filter: blur(36px) saturate(0.65) brightness(0.90);
+  }
+  60% {
+    filter: blur(34px) saturate(1.05) brightness(0.98);
+  }
+  100% {
+    filter: blur(32px) saturate(1.25) brightness(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playback-backdrop.is-playing {
+    animation: none;
+  }
+}

@@ -42,6 +42,7 @@ export interface Album {
   id: string;
   createdAt: string;
   title?: string;
+  memo?: string;
   mood: string;
   duration: number;
   isPublic?: boolean;

@@ -28,6 +28,7 @@ import './ChatSessionUI.css';
 import AlbumTitleModal from '../AlbumTitleModal';
 import ConfirmDialog from '../ConfirmDialog';
 import { useToast } from '../visual/feedback/ToastContainer';
+import GenerationFrostOverlay from '../visual/GenerationFrostOverlay';
 
 function nowIso() {
   return new Date().toISOString();
@@ -701,6 +702,12 @@ export default function ChatSessionUI() {
 
   return (
     <div className="chatSession">
+      <GenerationFrostOverlay
+        active={isGeneratingEvent}
+        statusText={generationStatusText}
+        elapsedSec={generationElapsedSec}
+        onCancel={handleCancelEvent}
+      />
       <ConfirmDialog
         open={confirmDiscardOpen}
         title="保留中の生成を破棄しますか？"

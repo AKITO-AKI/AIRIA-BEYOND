@@ -15,6 +15,7 @@ import SocialRoom from './components/rooms/SocialRoom';
 import InfoRoom from './components/rooms/InfoRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
+import PlaybackBackdrop from './components/music/PlaybackBackdrop';
 import { initSentry } from './lib/sentry';
 import { initWebVitals } from './lib/vitals';
 import { initAnalytics } from './lib/analytics';
@@ -124,12 +125,12 @@ const AppContent = () => {
       {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
       {!showSplash && (
         <>
-          <RoomNavigator key={hasOnboarded ? 'onboarded' : 'needs-onboarding'} rooms={rooms} initialRoom={initialRoom} />
-          {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
-          <EnhancedMiniPlayer 
-            album={selectedAlbum || undefined} 
-            queue={musicQueue}
-          />
+          <PlaybackBackdrop />
+          <div className="app-ui-layer">
+            <RoomNavigator key={hasOnboarded ? 'onboarded' : 'needs-onboarding'} rooms={rooms} initialRoom={initialRoom} />
+            {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
+            <EnhancedMiniPlayer album={selectedAlbum || undefined} queue={musicQueue} />
+          </div>
         </>
       )}
     </>

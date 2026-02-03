@@ -51,8 +51,31 @@ export const MiniPlayerBar: React.FC<MiniPlayerBarProps> = ({
 
   const hasTrack = Boolean(album);
 
+  const handleRootClick = () => {
+    if (!hasTrack) return;
+    onExpand();
+  };
+
+  const stop = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className={`mini-player-bar ${hasTrack ? 'has-track' : 'empty'}`}>
+    <div
+      className={`mini-player-bar ${hasTrack ? 'has-track' : 'empty'}`}
+      role="button"
+      tabIndex={hasTrack ? 0 : -1}
+      aria-label={hasTrack ? '再生バーを開く' : '再生バー'}
+      onClick={handleRootClick}
+      onKeyDown={(e) => {
+        if (!hasTrack) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onExpand();
+        }
+      }}
+      data-no-swipe
+    >
       <div className="mini-player-bar-content">
         {/* Album thumbnail */}
         {album && (
@@ -74,7 +97,7 @@ export const MiniPlayerBar: React.FC<MiniPlayerBarProps> = ({
         </div>
 
         {/* Playback controls */}
-        <div className="mini-player-controls-section">
+        <div className="mini-player-controls-section" onClick={stop} onMouseDown={stop} onTouchStart={stop}>
           <PlaybackControls
             isPlaying={isPlaying}
             canPrevious={canPrevious}
@@ -95,7 +118,7 @@ export const MiniPlayerBar: React.FC<MiniPlayerBarProps> = ({
         </div>
 
         {/* Volume control */}
-        <div className="mini-player-volume-section">
+        <div className="mini-player-volume-section" onClick={stop} onMouseDown={stop} onTouchStart={stop}>
           <VolumeControl
             volume={volume}
             isMuted={isMuted}
@@ -120,11 +143,14 @@ export const MiniPlayerBar: React.FC<MiniPlayerBarProps> = ({
         {/* Expand button */}
         <button
           className="mini-player-expand-button"
-          onClick={onExpand}
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
           aria-label="Expand player"
           title="Expand player"
         >
-          ⌃
+          詳細
         </button>
       </div>
     </div>

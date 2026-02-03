@@ -45,13 +45,13 @@
 
 .seek-thumb {
   position: absolute;
-  right: -8px;
+  right: -3px;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: 6px;
+  height: 14px;
   background: rgba(212, 175, 55, 0.95);
-  border-radius: 50%;
+  border-radius: 2px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   opacity: 0;
   transition: opacity 0.2s ease;

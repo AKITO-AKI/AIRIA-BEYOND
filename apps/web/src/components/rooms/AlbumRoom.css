@@ -206,6 +206,30 @@
   line-height: 1.6;
 }
 
+.album-memo-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 84px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-strong) 72%, transparent 28%);
+  color: var(--color-text);
+  outline: none;
+  line-height: 1.6;
+}
+
+.album-memo-input:focus {
+  border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-border) 30%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent 78%);
+}
+
+.album-memo-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
 /* P3: Album actions */
 .album-actions {
   margin-top: 12px;

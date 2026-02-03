@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { PlaybackControls } from './PlaybackControls';
 import { SeekBar } from './SeekBar';
 import { VolumeControl } from './VolumeControl';
@@ -7,6 +7,7 @@ import { VisualizationCanvas } from './visualizations/VisualizationCanvas';
 import { MotifOrbit } from './MotifOrbit';
 import type { Album } from '../../contexts/AlbumContext';
 import type { VisualizationMode, RepeatMode } from '../../contexts/MusicPlayerContext';
+import { useAlbums } from '../../contexts/AlbumContext';
 import './ExpandedPlayer.css';
 
 interface ExpandedPlayerProps {
@@ -66,6 +67,15 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   onSkipToIndex,
   onClose,
 }) => {
+  const { updateAlbum } = useAlbums();
+
+  const albumId = album?.id || null;
+  const [memoDraft, setMemoDraft] = useState('');
+
+  useEffect(() => {
+    setMemoDraft(album?.memo || '');
+  }, [albumId]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,6 +110,11 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 
   // Get motif tags
   const motifTags = album?.metadata?.motif_tags || [];
+
+  const memoPlaceholder = useMemo(
+    () => 'メモ（ひとこと）。聴きながら思い出したこと、今の気分、景色…',
+    []
+  );
 
   return (
     <>
@@ -167,6 +182,23 @@ export const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                     {album.musicMetadata.character}
                   </p>
                 )}
+
+                <div className="expanded-player-memo">
+                  <div className="expanded-player-memo-label">メモ</div>
+                  <textarea
+                    className="expanded-player-memo-input"
+                    value={memoDraft}
+                    onChange={(e) => setMemoDraft(e.target.value)}
+                    onBlur={() => {
+                      if (!album) return;
+                      const next = memoDraft.trim();
+                      if ((album.memo || '') === next) return;
+                      updateAlbum(album.id, { memo: next || undefined });
+                    }}
+                    placeholder={memoPlaceholder}
+                    rows={2}
+                  />
+                </div>
               </div>
             )}
           </div>

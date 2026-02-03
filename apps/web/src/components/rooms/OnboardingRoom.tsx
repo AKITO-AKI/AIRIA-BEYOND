@@ -16,6 +16,7 @@ import {
 } from '../../utils/pendingGeneration';
 import ConfirmDialog from '../ConfirmDialog';
 import { useToast } from '../visual/feedback/ToastContainer';
+import GenerationFrostOverlay from '../visual/GenerationFrostOverlay';
 
 type Props = {
   onExit?: () => void;
@@ -436,6 +437,17 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
     addToast('info', '保留中の生成を破棄しました。');
   };
 
+  const handleCancelGeneration = () => {
+    if (!isGenerating) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsGenerating(false);
+    setGenerateStatusText('キャンセルしました');
+    setGenerateStartedAt(null);
+    setGenerateElapsedSec(0);
+    addToast('info', '生成をキャンセルしました。あとで再開できます。');
+  };
+
   useEffect(() => {
     if (!isCompleted || !completedData) return;
     if (autoTriggeredRef.current) return;
@@ -453,6 +465,12 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
 
   return (
     <div className="room-content onboarding-room" data-no-swipe="true">
+      <GenerationFrostOverlay
+        active={isGenerating}
+        statusText={generateStatusText}
+        elapsedSec={generateElapsedSec}
+        onCancel={handleCancelGeneration}
+      />
       <ConfirmDialog
         open={confirmDiscardOpen}
         title="保留中の生成を破棄しますか？"

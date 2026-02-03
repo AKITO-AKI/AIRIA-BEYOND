@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { useCausalLog } from '../../contexts/CausalLogContext';
 import { PlaybackState, useMusicPlayer } from '../../contexts/MusicPlayerContext';
@@ -19,6 +19,12 @@ const AlbumRoom: React.FC = () => {
   const { state: musicState, requestPlayAlbum } = useMusicPlayer();
   const { navigateToRoom } = useRoomNavigation();
   const album = getSelectedAlbum();
+
+  const [memoDraft, setMemoDraft] = useState('');
+
+  useEffect(() => {
+    setMemoDraft(album?.memo || '');
+  }, [album?.id]);
   
   // P5: Get causal log for this album
   const causalLog = album?.causalLogId ? getLog(album.causalLogId) : undefined;
@@ -268,6 +274,23 @@ const AlbumRoom: React.FC = () => {
               ]}
             />
           </div>
+
+          <section className="metadata-section" aria-label="アルバムメモ">
+            <h2 className="metadata-section-title">メモ（ひとこと）</h2>
+            <textarea
+              className="album-memo-input"
+              value={memoDraft}
+              onChange={(e) => setMemoDraft(e.target.value)}
+              onBlur={() => {
+                const next = memoDraft.trim();
+                if ((album.memo || '') === next) return;
+                updateAlbum(album.id, { memo: next || undefined });
+              }}
+              placeholder="この作品にひとこと。気づき、風景、だれにも見せないメモでも。"
+              rows={3}
+            />
+            <div className="album-memo-hint">フォーカスが外れると自動で保存します。</div>
+          </section>
           <div className="metadata-section room-card">
             <h3 className="metadata-section-title">基本情報</h3>
             
