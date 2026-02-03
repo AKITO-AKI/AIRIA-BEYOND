@@ -24,6 +24,7 @@ import {
   loadPendingChatGeneration,
   savePendingChatGeneration,
 } from '../../utils/pendingGeneration';
+import { createPlaceholderCoverDataUrl } from '../../utils/placeholderCover';
 import './ChatSessionUI.css';
 import AlbumTitleModal from '../AlbumTitleModal';
 import ConfirmDialog from '../ConfirmDialog';
@@ -32,6 +33,23 @@ import GenerationFrostOverlay from '../visual/GenerationFrostOverlay';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function makeFallbackCoverDataUrl(refined: any, note: string) {
+  return createPlaceholderCoverDataUrl({
+    title: refined?.brief?.theme?.title,
+    mood: refined?.image?.mood,
+    seed: refined?.image?.seed,
+    note,
+  });
+}
+
+function getCoverProvider(imageStatus: any | null): string {
+  return (
+    imageStatus?.effectiveProvider ||
+    imageStatus?.provider ||
+    (imageStatus?.status === 'succeeded' ? 'image' : 'placeholder')
+  );
 }
 
 export default function ChatSessionUI() {
@@ -158,9 +176,19 @@ export default function ChatSessionUI() {
 
     try {
       const refined = pending.refined;
+      const fallbackCover = makeFallbackCoverDataUrl(refined, 'Image unavailable');
 
-      setGenerationStatusText('画像生成を開始しています…');
-      const imageJob = await generateImage(refined.image);
+      let imageJobId: string | null = null;
+      try {
+        setGenerationStatusText('画像生成を開始しています…');
+        const imageJob = await generateImage(refined.image);
+        imageJobId = imageJob.jobId;
+      } catch (e) {
+        imageJobId = null;
+        addToast('warning', '画像生成が開始できなかったため、プレースホルダーで続行します。');
+        const msg = e instanceof Error ? e.message : 'image job start failed';
+        if (pending.causalLogId) logError(updateLog, getLog, pending.causalLogId, 'image-generation-start', msg);
+      }
 
       setGenerationStatusText('作曲を開始しています…');
       const musicJob = await generateMusic(refined.music as any);
@@ -168,24 +196,33 @@ export default function ChatSessionUI() {
       savePendingChatGeneration({
         ...pending,
         startedAt: Date.now(),
-        imageJobId: imageJob.jobId,
+        imageJobId,
         musicJobId: musicJob.jobId,
+        coverDataUrl: pending.coverDataUrl || fallbackCover,
       });
       setHasPendingResume(true);
 
+      const imagePromise = imageJobId
+        ? pollJobStatus(
+            imageJobId,
+            (s) => {
+              if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+              else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
+              else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
+              else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+            },
+            90,
+            2000,
+            controller.signal
+          ).catch((e) => {
+            const msg = e instanceof Error ? e.message : 'image polling failed';
+            if (pending.causalLogId) logError(updateLog, getLog, pending.causalLogId, 'image-generation-poll', msg);
+            return null;
+          })
+        : Promise.resolve(null);
+
       const [imageStatus, musicStatus] = await Promise.all([
-        pollJobStatus(
-          imageJob.jobId,
-          (s) => {
-            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-            else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
-            else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
-            else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
-          },
-          90,
-          2000,
-          controller.signal
-        ),
+        imagePromise,
         pollMusicJobStatus(
           musicJob.jobId,
           (s) => {
@@ -200,8 +237,10 @@ export default function ChatSessionUI() {
         ),
       ]);
 
-      if (imageStatus.status !== 'succeeded' || !imageStatus.resultUrl) {
-        throw new Error('画像生成に失敗しました');
+      const finalCoverUrl =
+        imageStatus?.status === 'succeeded' && imageStatus?.resultUrl ? imageStatus.resultUrl : fallbackCover;
+      if (!(imageStatus?.status === 'succeeded' && imageStatus?.resultUrl)) {
+        addToast('warning', '画像が取得できなかったため、プレースホルダーで続行します。');
       }
       if (musicStatus.status !== 'succeeded' || !musicStatus.midiData || !musicStatus.result) {
         throw new Error('曲生成に失敗しました');
@@ -212,8 +251,8 @@ export default function ChatSessionUI() {
         title: suggestedTitle,
         mood: refined?.image?.mood,
         duration: refined?.image?.duration,
-        imageDataURL: imageStatus.resultUrl,
-        thumbnailUrl: imageStatus.resultUrl,
+        imageDataURL: finalCoverUrl,
+        thumbnailUrl: finalCoverUrl,
         metadata: {
           valence: refined?.analysisLike?.valence,
           arousal: refined?.analysisLike?.arousal,
@@ -221,7 +260,7 @@ export default function ChatSessionUI() {
           motif_tags: refined?.analysisLike?.motif_tags,
           confidence: refined?.analysisLike?.confidence,
           stylePreset: refined?.image?.stylePreset,
-          provider: 'replicate',
+          provider: getCoverProvider(imageStatus),
         },
         musicData: musicStatus.midiData,
         musicFormat: 'midi',
@@ -282,19 +321,30 @@ export default function ChatSessionUI() {
     abortRef.current = controller;
 
     try {
+      const refined = pending.refined;
+      const fallbackCover = pending.coverDataUrl || makeFallbackCoverDataUrl(refined, 'Image unavailable');
+
+      const imagePromise = pending.imageJobId
+        ? pollJobStatus(
+            pending.imageJobId,
+            (s) => {
+              if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+              else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
+              else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
+              else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+            },
+            90,
+            2000,
+            controller.signal
+          ).catch((e) => {
+            const msg = e instanceof Error ? e.message : 'image polling failed';
+            if (pending.causalLogId) logError(updateLog, getLog, pending.causalLogId, 'image-generation-poll', msg);
+            return null;
+          })
+        : Promise.resolve(null);
+
       const [imageStatus, musicStatus] = await Promise.all([
-        pollJobStatus(
-          pending.imageJobId,
-          (s) => {
-            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-            else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
-            else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
-            else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
-          },
-          90,
-          2000,
-          controller.signal
-        ),
+        imagePromise,
         pollMusicJobStatus(
           pending.musicJobId,
           (s) => {
@@ -309,21 +359,22 @@ export default function ChatSessionUI() {
         ),
       ]);
 
-      if (imageStatus.status !== 'succeeded' || !imageStatus.resultUrl) {
-        throw new Error('画像生成に失敗しました');
+      const finalCoverUrl =
+        imageStatus?.status === 'succeeded' && imageStatus?.resultUrl ? imageStatus.resultUrl : fallbackCover;
+      if (!(imageStatus?.status === 'succeeded' && imageStatus?.resultUrl)) {
+        addToast('warning', '画像が取得できなかったため、プレースホルダーで続行します。');
       }
       if (musicStatus.status !== 'succeeded' || !musicStatus.midiData || !musicStatus.result) {
         throw new Error('曲生成に失敗しました');
       }
 
-      const refined = pending.refined;
       const suggestedTitle = refined?.brief?.theme?.title || '';
       setPendingAlbum({
         title: suggestedTitle,
         mood: refined?.image?.mood,
         duration: refined?.image?.duration,
-        imageDataURL: imageStatus.resultUrl,
-        thumbnailUrl: imageStatus.resultUrl,
+        imageDataURL: finalCoverUrl,
+        thumbnailUrl: finalCoverUrl,
         metadata: {
           valence: refined?.analysisLike?.valence,
           arousal: refined?.analysisLike?.arousal,
@@ -331,7 +382,7 @@ export default function ChatSessionUI() {
           motif_tags: refined?.analysisLike?.motif_tags,
           confidence: refined?.analysisLike?.confidence,
           stylePreset: refined?.image?.stylePreset,
-          provider: 'replicate',
+          provider: getCoverProvider(imageStatus),
         },
         musicData: musicStatus.midiData,
         musicFormat: 'midi',
@@ -490,9 +541,20 @@ export default function ChatSessionUI() {
         onboardingData: onboardingPayload ?? undefined,
       });
 
+      const fallbackCover = makeFallbackCoverDataUrl(refined, 'Image unavailable');
+
       // Kick image + music jobs using refined inputs
-      setGenerationStatusText('画像生成を開始しています…');
-      const imageJob = await generateImage(refined.image);
+      let imageJobId: string | null = null;
+      try {
+        setGenerationStatusText('画像生成を開始しています…');
+        const imageJob = await generateImage(refined.image);
+        imageJobId = imageJob.jobId;
+      } catch (e) {
+        imageJobId = null;
+        addToast('warning', '画像生成が開始できなかったため、プレースホルダーで続行します。');
+        const msg = e instanceof Error ? e.message : 'image job start failed';
+        logError(updateLog, getLog, logId, 'image-generation-start', msg);
+      }
 
       setGenerationStatusText('作曲を開始しています…');
       const musicJob = await generateMusic(refined.music as any);
@@ -501,8 +563,9 @@ export default function ChatSessionUI() {
         v: 1,
         kind: 'chat',
         startedAt: Date.now(),
-        imageJobId: imageJob.jobId,
+        imageJobId,
         musicJobId: musicJob.jobId,
+        coverDataUrl: fallbackCover,
         refined,
         sessionMessages: messages,
         sessionRecommendations: recommendations,
@@ -511,19 +574,27 @@ export default function ChatSessionUI() {
       setHasPendingResume(true);
       addToast('info', '生成を開始しました。完了まで待つか、あとで再開できます。');
 
+      const imagePromise = imageJobId
+        ? pollJobStatus(
+            imageJobId,
+            (s) => {
+              if (s.status === 'queued') setGenerationStatusText('順番待ち…');
+              else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
+              else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
+              else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+            },
+            90,
+            2000,
+            controller.signal
+          ).catch((e) => {
+            const msg = e instanceof Error ? e.message : 'image polling failed';
+            logError(updateLog, getLog, logId, 'image-generation-poll', msg);
+            return null;
+          })
+        : Promise.resolve(null);
+
       const [imageStatus, musicStatus] = await Promise.all([
-        pollJobStatus(
-          imageJob.jobId,
-          (s) => {
-            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-            else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
-            else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
-            else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
-          },
-          90,
-          2000,
-          controller.signal
-        ),
+        imagePromise,
         pollMusicJobStatus(
           musicJob.jobId,
           (s) => {
@@ -543,8 +614,10 @@ export default function ChatSessionUI() {
         return;
       }
 
-      if (imageStatus.status !== 'succeeded' || !imageStatus.resultUrl) {
-        throw new Error('画像生成に失敗しました');
+      const finalCoverUrl =
+        imageStatus?.status === 'succeeded' && imageStatus?.resultUrl ? imageStatus.resultUrl : fallbackCover;
+      if (!(imageStatus?.status === 'succeeded' && imageStatus?.resultUrl)) {
+        addToast('warning', '画像が取得できなかったため、プレースホルダーで続行します。');
       }
       if (musicStatus.status !== 'succeeded' || !musicStatus.midiData || !musicStatus.result) {
         throw new Error('曲生成に失敗しました');
@@ -556,8 +629,8 @@ export default function ChatSessionUI() {
         title: suggestedTitle,
         mood: refined.image.mood,
         duration: refined.image.duration,
-        imageDataURL: imageStatus.resultUrl,
-        thumbnailUrl: imageStatus.resultUrl,
+        imageDataURL: finalCoverUrl,
+        thumbnailUrl: finalCoverUrl,
         metadata: {
           valence: refined.analysisLike.valence,
           arousal: refined.analysisLike.arousal,
@@ -565,7 +638,7 @@ export default function ChatSessionUI() {
           motif_tags: refined.analysisLike.motif_tags,
           confidence: refined.analysisLike.confidence,
           stylePreset: refined.image.stylePreset,
-          provider: 'replicate',
+          provider: getCoverProvider(imageStatus),
         },
         musicData: musicStatus.midiData,
         musicFormat: 'midi',

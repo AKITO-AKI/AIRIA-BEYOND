@@ -54,6 +54,7 @@ export async function submitFeedback(req, res) {
     const allowFollowUp = toOptionalBoolean(body.allowFollowUp) ?? false;
     const rating = toOptionalString(body.rating, 10);
     const mood = toOptionalString(body.mood, 80);
+    const diagnostics = toOptionalString(body.diagnostics, 12000);
 
     const hasAnyContent = Boolean(title || message || steps || expected || actual);
     if (!hasAnyContent) {
@@ -77,6 +78,7 @@ export async function submitFeedback(req, res) {
       allowFollowUp,
       rating,
       mood,
+      diagnostics,
       meta: {
         ip: clientId,
         userAgent: toOptionalString(req.headers['user-agent'], 240),

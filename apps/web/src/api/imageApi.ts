@@ -67,6 +67,7 @@ export interface GenerateImageResponse {
   jobId: string;
   status: string;
   message: string;
+  provider?: string;
 }
 
 export interface JobStatus {
@@ -101,6 +102,13 @@ export interface JobStatus {
   };
   result?: string;
   resultUrl?: string;
+
+  // Optional diagnostics fields (server may attach these)
+  warnings?: string[];
+  fallbackUsed?: boolean;
+  effectiveProvider?: string;
+  fallbackReason?: string;
+  generationError?: string;
 }
 
 export interface ApiError {
@@ -473,10 +481,17 @@ export interface MusicJobStatus {
   errorMessage?: string;
   retryCount: number;
   maxRetries: number;
-  provider: 'openai' | 'rule-based';
+  provider: 'openai' | 'ollama' | 'rule-based' | 'emergency' | string;
   input: GenerateMusicRequest;
   result?: MusicStructure;
   midiData?: string;
+
+  // Optional diagnostics fields (server may attach these)
+  warnings?: string[];
+  fallbackUsed?: boolean;
+  effectiveProvider?: string;
+  fallbackReason?: string;
+  generationError?: string;
 }
 
 /**

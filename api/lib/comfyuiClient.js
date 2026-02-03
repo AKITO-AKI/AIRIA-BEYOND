@@ -9,6 +9,28 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function isAbortError(err) {
+  return err instanceof DOMException ? err.name === 'AbortError' : false;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 20_000) {
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { ...options, signal: controller.signal });
+    return resp;
+  } catch (err) {
+    if (isAbortError(err)) {
+      const e = new Error(`ComfyUI request timeout after ${Math.round(timeoutMs / 1000)}s: ${url}`);
+      e.code = 'COMFYUI_HTTP_TIMEOUT';
+      throw e;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
 export function buildBasicComfyWorkflow({
   prompt,
   negativePrompt,
@@ -81,11 +103,15 @@ export async function comfyuiSubmitPrompt({ workflow, clientId, debugTag }) {
   debugAiConsole(`${debugTag || 'ComfyUI'}.prompt`, { url, clientId: body.client_id });
   debugAiLog(`${debugTag || 'ComfyUI'}_prompt`, { url, body });
 
-  const resp = await fetch(url, {
+  const resp = await fetchWithTimeout(
+    url,
+    {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+    },
+    Number(process.env.COMFYUI_HTTP_TIMEOUT_MS) || 20_000
+  );
 
   const text = await resp.text();
   if (!resp.ok) {
@@ -104,7 +130,7 @@ export async function comfyuiGetHistory(promptId) {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/history/${encodeURIComponent(promptId)}`;
 
-  const resp = await fetch(url);
+  const resp = await fetchWithTimeout(url, {}, Number(process.env.COMFYUI_HTTP_TIMEOUT_MS) || 12_000);
   const text = await resp.text();
   if (!resp.ok) {
     const err = new Error(`ComfyUI /history HTTP ${resp.status}: ${text.slice(0, 200)}`);
@@ -167,7 +193,7 @@ export async function comfyuiFetchImageBytes({ filename, subfolder, type }) {
   if (type) params.set('type', type);
 
   const url = `${baseUrl}/view?${params.toString()}`;
-  const resp = await fetch(url);
+  const resp = await fetchWithTimeout(url, {}, Number(process.env.COMFYUI_HTTP_TIMEOUT_MS) || 20_000);
   if (!resp.ok) {
     const text = await resp.text();
     const err = new Error(`ComfyUI /view HTTP ${resp.status}: ${text.slice(0, 200)}`);

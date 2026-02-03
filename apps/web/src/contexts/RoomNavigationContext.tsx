@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 
-export type RoomType = 'onboarding' | 'main' | 'gallery' | 'album' | 'music' | 'social' | 'info';
+export type RoomType = 'onboarding' | 'main' | 'gallery' | 'album' | 'music' | 'social' | 'info' | 'feedback';
 
 export interface RoomNavigationContextValue {
   currentRoomId: RoomType;

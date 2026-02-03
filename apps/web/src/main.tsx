@@ -13,6 +13,7 @@ import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
 import SocialRoom from './components/rooms/SocialRoom';
 import InfoRoom from './components/rooms/InfoRoom';
+import FeedbackRoom from './components/rooms/FeedbackRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
 import PlaybackBackdrop from './components/music/PlaybackBackdrop';
@@ -60,13 +61,13 @@ function isOnboardingCompleted(): boolean {
   }
 }
 
-function consumePostOnboardingRoom(): 'main' | 'gallery' | 'album' | 'music' | 'social' | 'info' | null {
+function consumePostOnboardingRoom(): 'main' | 'gallery' | 'album' | 'music' | 'social' | 'info' | 'feedback' | null {
   try {
     const raw = localStorage.getItem(POST_ONBOARDING_ROOM_KEY);
     if (!raw) return null;
     localStorage.removeItem(POST_ONBOARDING_ROOM_KEY);
     const room = String(raw);
-    return ['main', 'gallery', 'album', 'music', 'social', 'info'].includes(room) ? (room as any) : null;
+    return ['main', 'gallery', 'album', 'music', 'social', 'info', 'feedback'].includes(room) ? (room as any) : null;
   } catch {
     return null;
   }
@@ -100,6 +101,7 @@ const AppContent = () => {
         { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
         { id: 'social' as const, name: 'Social', component: <SocialRoom /> },
         { id: 'info' as const, name: 'Info', component: <InfoRoom /> },
+        { id: 'feedback' as const, name: 'Feedback', component: <FeedbackRoom /> },
       ]
     : [
         {

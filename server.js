@@ -63,6 +63,7 @@ import eventRoutes from './api/routes/event.js';
 import albumRoutes from './api/routes/album.js';
 import socialRoutes from './api/routes/social.js';
 import feedbackRoutes from './api/routes/feedback.js';
+import diagnosticsRoutes from './api/routes/diagnostics.js';
 
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/image', imageRoutes);
@@ -74,6 +75,7 @@ app.use('/api/event', eventRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Sitemap
 app.get('/sitemap.xml', (req, res) => {

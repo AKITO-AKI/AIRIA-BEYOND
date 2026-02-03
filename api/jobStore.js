@@ -45,6 +45,11 @@
  * @property {string} [result]
  * @property {string} [resultUrl]
  * @property {string} [replicatePredictionId]
+ * @property {string[]} [warnings]
+ * @property {boolean} [fallbackUsed]
+ * @property {string} [effectiveProvider]
+ * @property {string} [fallbackReason]
+ * @property {string} [generationError]
  */
 
 // In-memory store (simple for prototype)

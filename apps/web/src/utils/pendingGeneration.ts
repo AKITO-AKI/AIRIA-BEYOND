@@ -2,8 +2,9 @@ export type PendingChatGenerationV1 = {
   v: 1;
   kind: 'chat';
   startedAt: number;
-  imageJobId: string;
+  imageJobId?: string | null;
   musicJobId: string;
+  coverDataUrl?: string;
   refined: any;
   sessionMessages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   sessionRecommendations?: Array<{ composer: string; title: string; era?: string; why: string }>;
@@ -38,7 +39,7 @@ export function loadPendingChatGeneration(): PendingChatGenerationV1 | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || parsed.v !== 1 || parsed.kind !== 'chat') return null;
-    if (!parsed.imageJobId || !parsed.musicJobId) return null;
+    if (!parsed.musicJobId) return null;
     return parsed as PendingChatGenerationV1;
   } catch {
     return null;

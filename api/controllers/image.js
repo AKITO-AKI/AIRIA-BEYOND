@@ -45,7 +45,91 @@ const ERROR_CODES = {
   RATE_LIMIT: 'RATE_LIMIT',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
+  FALLBACK_PLACEHOLDER: 'FALLBACK_PLACEHOLDER',
 };
+
+async function quickProbe(url, timeoutMs = 800) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    return { ok: true, status: resp.status };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function toNumberOrUndefined(value) {
+  if (value === null || value === undefined || value === '') return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function normalizeMotifTags(raw) {
+  let tags = [];
+  if (Array.isArray(raw)) tags = raw;
+  else if (typeof raw === 'string') tags = raw.split(',');
+
+  return tags
+    .map((t) => String(t).trim())
+    .filter(Boolean)
+    .slice(0, 24);
+}
+
+function escapeXml(input) {
+  return String(input ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function createPlaceholderCoverDataUrl({ title, mood, seed, note }) {
+  const safeTitle = String(title ?? '').trim() || 'AIRIA';
+  const safeMood = String(mood ?? '').trim() || 'mood';
+  const s = String(seed ?? '0');
+  const hue =
+    Math.abs(
+      s
+        .split('')
+        .reduce((acc, ch) => acc * 33 + ch.charCodeAt(0), 7)
+    ) % 360;
+
+  const subtitle = note ? String(note).slice(0, 60) : 'Placeholder cover';
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="hsl(${hue} 70% 52%)" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="hsl(${(hue + 35) % 360} 65% 42%)" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="hsl(${(hue + 120) % 360} 55% 28%)" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="n">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.16"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#g)"/>
+  <rect width="1024" height="1024" filter="url(#n)" opacity="0.6"/>
+  <circle cx="770" cy="300" r="240" fill="rgba(255,255,255,0.14)"/>
+  <circle cx="820" cy="270" r="120" fill="rgba(0,0,0,0.10)"/>
+
+  <g fill="rgba(255,255,255,0.92)" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="72" y="794" font-size="54" font-weight="720" letter-spacing="0.02em">${escapeXml(safeTitle).slice(0, 28)}</text>
+    <text x="72" y="858" font-size="28" font-weight="600" opacity="0.9">${escapeXml(safeMood).slice(0, 24)}</text>
+    <text x="72" y="916" font-size="18" opacity="0.8">${escapeXml(subtitle)}</text>
+  </g>
+</svg>`;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
 
 function resolveImageProvider(requestedProvider) {
   const pref = String(requestedProvider ?? process.env.IMAGE_PROVIDER ?? '').toLowerCase();
@@ -328,64 +412,159 @@ export async function generateImage(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const provider = resolveImageProvider(req.body?.provider);
+  const providerRequestedRaw = req.body?.provider;
+  let provider = resolveImageProvider(providerRequestedRaw);
   const apiToken = process.env.REPLICATE_API_TOKEN;
+  const providerWarnings = [];
   if (provider === 'replicate' && !apiToken) {
-    return res.status(503).json({
-      error: 'External image generation is not configured',
-      message: 'REPLICATE_API_TOKEN is not set. Set IMAGE_PROVIDER=comfyui or start ComfyUI locally.',
-    });
+    // Do not hard-fail: fall back so the product can still be debugged.
+    providerWarnings.push('REPLICATE_API_TOKEN is not set; falling back to placeholder cover.');
+    provider = 'placeholder';
   }
 
   // Get client identifier for rate limiting
   const clientId = getClientIdentifier(req);
 
+  // Minimal input extraction for emergency placeholder responses (rate-limit/concurrency, etc.)
+  const emergencyMood = typeof req.body?.mood === 'string' ? req.body.mood.trim() : '';
+  const emergencyDuration = Math.max(1, Math.min(600, Number(req.body?.duration ?? 60) || 60));
+  const emergencySeed = toNumberOrUndefined(req.body?.seed);
+
   // Check rate limit
   if (!checkRateLimit(clientId)) {
-    return res.status(429).json({
-      error: 'Rate limit exceeded',
-      message: 'Too many requests. Please wait a minute and try again.',
+    const job = createJob({
+      provider: 'placeholder',
+      model: 'placeholder:svg',
+      input: {
+        mood: emergencyMood || 'mood',
+        duration: emergencyDuration,
+        seed: emergencySeed,
+      },
+      maxRetries: 0,
+    });
+
+    const resultUrl = createPlaceholderCoverDataUrl({
+      title: 'AIRIA',
+      mood: emergencyMood || 'mood',
+      seed: emergencySeed ?? job.id,
+      note: 'Rate limited — placeholder used',
+    });
+
+    updateJob(job.id, {
+      status: 'succeeded',
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      result: resultUrl,
+      resultUrl,
+      warnings: ['Rate limited; returned placeholder cover to keep the experience moving.'],
+      fallbackUsed: true,
+      effectiveProvider: 'placeholder',
+      fallbackReason: ERROR_CODES.RATE_LIMIT,
+    });
+
+    return res.status(202).json({
+      jobId: job.id,
+      status: 'queued',
+      message: 'Image generation started',
     });
   }
 
   // Check concurrency limit
   if (!checkConcurrency(clientId)) {
-    return res.status(429).json({
-      error: 'Too many concurrent jobs',
-      message: 'You have too many images generating. Please wait for one to complete.',
+    const job = createJob({
+      provider: 'placeholder',
+      model: 'placeholder:svg',
+      input: {
+        mood: emergencyMood || 'mood',
+        duration: emergencyDuration,
+        seed: emergencySeed,
+      },
+      maxRetries: 0,
+    });
+
+    const resultUrl = createPlaceholderCoverDataUrl({
+      title: 'AIRIA',
+      mood: emergencyMood || 'mood',
+      seed: emergencySeed ?? job.id,
+      note: 'Too many concurrent jobs — placeholder used',
+    });
+
+    updateJob(job.id, {
+      status: 'succeeded',
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      result: resultUrl,
+      resultUrl,
+      warnings: ['Too many concurrent jobs; returned placeholder cover immediately.'],
+      fallbackUsed: true,
+      effectiveProvider: 'placeholder',
+      fallbackReason: 'CONCURRENCY',
+    });
+
+    return res.status(202).json({
+      jobId: job.id,
+      status: 'queued',
+      message: 'Image generation started',
     });
   }
 
   try {
-    // Parse request body
-    const {
-      mood,
-      duration,
-      motifTags = [],
-      stylePreset,
-      seed,
-      valence,
-      arousal,
-      focus,
-      confidence,
-    } = req.body;
+    // Parse + sanitize request body
+    const rawMood = req.body?.mood;
+    let mood = typeof rawMood === 'string' ? rawMood.trim() : '';
+    const duration = Math.max(1, Math.min(600, Number(req.body?.duration ?? 60) || 60));
+    const motifTags = normalizeMotifTags(req.body?.motifTags);
+    const stylePreset = typeof req.body?.stylePreset === 'string' ? req.body.stylePreset : undefined;
+    const seed = toNumberOrUndefined(req.body?.seed);
+    const valence = toNumberOrUndefined(req.body?.valence);
+    const arousal = toNumberOrUndefined(req.body?.arousal);
+    const focus = toNumberOrUndefined(req.body?.focus);
+    const confidence = toNumberOrUndefined(req.body?.confidence);
 
-    // Validate required fields
+    // If mood is missing, do not hard-fail. Use placeholder so the user can still proceed.
     if (!mood) {
-      releaseJob(clientId);
-      return res.status(400).json({ error: 'mood is required' });
+      providerWarnings.push('mood is missing; using placeholder cover to keep the flow running.');
+      mood = 'mood';
+      provider = 'placeholder';
     }
 
-    // Build prompt from IR (P3 Enhanced)
-    const { prompt, negativePrompt } = buildPrompt({
-      mood,
-      duration,
-      motifTags,
-      stylePreset,
-      valence,
-      arousal,
-      focus,
-    });
+    // If ComfyUI is selected but unreachable, fall back immediately.
+    if (provider === 'comfyui') {
+      const base = String(process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188').replace(/\/$/, '');
+      const probe = await quickProbe(base, 900);
+      if (!probe.ok) {
+        providerWarnings.push(`ComfyUI not reachable (${probe.error || 'unknown'}); falling back to placeholder cover.`);
+        provider = 'placeholder';
+      }
+    }
+
+    // Build prompt from IR (P3 Enhanced) — never hard-fail due to malformed inputs.
+    let prompt;
+    let negativePrompt;
+    try {
+      const out = buildPrompt({
+        mood,
+        duration,
+        motifTags,
+        stylePreset,
+        valence,
+        arousal,
+        focus,
+      });
+      prompt = out.prompt;
+      negativePrompt = out.negativePrompt;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      providerWarnings.push(`Prompt builder failed; using safe fallback prompt. (${msg.slice(0, 120)})`);
+      prompt = [
+        `artistic album cover`,
+        `mood: ${mood}`,
+        motifTags.length ? `motifs: ${motifTags.join(', ')}` : null,
+      ]
+        .filter(Boolean)
+        .join(', ');
+      negativePrompt = 'text, watermark, logo, low quality, blurry';
+    }
 
     debugAiConsole('image.generate.request', {
       provider,
@@ -398,7 +577,12 @@ export async function generateImage(req, res) {
     // Create job with full input data
     const job = createJob({
       provider,
-      model: provider === 'replicate' ? SDXL_MODEL : `comfyui:${process.env.COMFYUI_CHECKPOINT || 'workflow'}`,
+      model:
+        provider === 'replicate'
+          ? SDXL_MODEL
+          : provider === 'comfyui'
+            ? `comfyui:${process.env.COMFYUI_CHECKPOINT || 'workflow'}`
+            : 'placeholder:svg',
       input: {
         mood,
         duration,
@@ -409,7 +593,8 @@ export async function generateImage(req, res) {
         arousal,
         focus,
         confidence,
-        provider,
+        providerRequested: providerRequestedRaw,
+        providerResolved: provider,
       },
       inputSummary: {
         mood,
@@ -418,6 +603,12 @@ export async function generateImage(req, res) {
         seed,
       },
     });
+
+    if (providerWarnings.length) {
+      updateJob(job.id, {
+        warnings: providerWarnings,
+      });
+    }
 
     debugAiLog('image_generate', {
       jobId: job.id,
@@ -433,23 +624,64 @@ export async function generateImage(req, res) {
     // Start async generation with retry logic
     (async () => {
       try {
-        const finalSeed = seed || Math.floor(Math.random() * 1000000);
+        const finalSeed = seed ?? Math.floor(Math.random() * 1000000);
         let resultUrl;
         let extraMeta;
 
-        if (provider === 'replicate') {
-          resultUrl = await executeGeneration(
-            new Replicate({ auth: apiToken }),
-            job.id,
-            prompt,
-            negativePrompt,
-            finalSeed,
-            clientId
-          );
-        } else {
-          const out = await executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed);
-          resultUrl = out.resultUrl;
-          extraMeta = { comfyuiPromptId: out.promptId };
+        try {
+          if (provider === 'replicate') {
+            resultUrl = await executeGeneration(
+              new Replicate({ auth: apiToken }),
+              job.id,
+              prompt,
+              negativePrompt,
+              finalSeed,
+              clientId
+            );
+          } else if (provider === 'comfyui') {
+            const out = await executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed);
+            resultUrl = out.resultUrl;
+            extraMeta = { comfyuiPromptId: out.promptId };
+          } else {
+            // placeholder provider
+            resultUrl = createPlaceholderCoverDataUrl({
+              title: mood,
+              mood,
+              seed: finalSeed,
+              note: 'Image provider unavailable — placeholder used',
+            });
+            extraMeta = {
+              fallbackUsed: true,
+              effectiveProvider: 'placeholder',
+              fallbackReason: 'provider_unavailable',
+            };
+          }
+        } catch (error) {
+          // Defense-in-depth: if image generation fails, still succeed with a placeholder.
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`[Generation] Job ${job.id} image provider failed, using placeholder:`, errorMessage);
+
+          const placeholder = createPlaceholderCoverDataUrl({
+            title: mood,
+            mood,
+            seed: finalSeed,
+            note: 'Image generation failed — placeholder used',
+          });
+
+          resultUrl = placeholder;
+          extraMeta = {
+            fallbackUsed: true,
+            effectiveProvider: 'placeholder',
+            fallbackReason: 'generation_failed',
+            generationError: errorMessage,
+            errorCode: getJob(job.id)?.errorCode || ERROR_CODES.FALLBACK_PLACEHOLDER,
+          };
+          updateJob(job.id, {
+            warnings: [
+              ...(getJob(job.id)?.warnings || []),
+              `Image generation failed; placeholder used. (${errorMessage.slice(0, 120)})`,
+            ],
+          });
         }
 
         // Update job as succeeded
@@ -487,6 +719,7 @@ export async function generateImage(req, res) {
       jobId: job.id,
       status: 'queued',
       message: 'Image generation started',
+      provider,
     });
   } catch (error) {
     console.error('Request handling error:', error);
