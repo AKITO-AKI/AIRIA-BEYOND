@@ -15,7 +15,6 @@ import SocialRoom from './components/rooms/SocialRoom';
 import InfoRoom from './components/rooms/InfoRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
-import DebugPanel from './components/DebugPanel';
 import { initSentry } from './lib/sentry';
 import { initWebVitals } from './lib/vitals';
 import { initAnalytics } from './lib/analytics';
@@ -131,8 +130,6 @@ const AppContent = () => {
             album={selectedAlbum || undefined} 
             queue={musicQueue}
           />
-          {/* P5: Debug panel for developers */}
-          <DebugPanel />
         </>
       )}
     </>

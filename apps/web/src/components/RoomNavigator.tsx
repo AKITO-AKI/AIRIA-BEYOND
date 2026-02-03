@@ -18,7 +18,9 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const [currentIndex, setCurrentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
+  const [dragAxis, setDragAxis] = useState<'horizontal' | 'vertical' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isInteractiveTarget = (target: EventTarget | null) => {
@@ -34,13 +36,36 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
     if (isInteractiveTarget(e.target)) return;
     setIsDragging(true);
     setStartX(e.touches[0].clientX);
+    setStartY(e.touches[0].clientY);
+    setDragAxis(null);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
     const currentX = e.touches[0].clientX;
-    const diff = currentX - startX;
-    setOffsetX(diff);
+    const currentY = e.touches[0].clientY;
+    const dx = currentX - startX;
+    const dy = currentY - startY;
+
+    // Decide whether user intent is scrolling (vertical) or room swipe (horizontal)
+    if (!dragAxis) {
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+      if (ax < 6 && ay < 6) return;
+      if (ay > ax * 1.2) {
+        setDragAxis('vertical');
+        setIsDragging(false);
+        setOffsetX(0);
+        return;
+      }
+      setDragAxis('horizontal');
+    }
+
+    if (dragAxis === 'horizontal') {
+      // Prevent vertical scroll only when we are actively swiping rooms
+      e.preventDefault();
+      setOffsetX(dx);
+    }
   };
 
   const handleTouchEnd = () => {
@@ -58,19 +83,39 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
       }
     }
     setOffsetX(0);
+    setDragAxis(null);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isInteractiveTarget(e.target)) return;
     setIsDragging(true);
     setStartX(e.clientX);
+    setStartY(e.clientY);
+    setDragAxis(null);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
     e.preventDefault();
-    const diff = e.clientX - startX;
-    setOffsetX(diff);
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!dragAxis) {
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+      if (ax < 6 && ay < 6) return;
+      if (ay > ax * 1.2) {
+        setDragAxis('vertical');
+        setIsDragging(false);
+        setOffsetX(0);
+        return;
+      }
+      setDragAxis('horizontal');
+    }
+
+    if (dragAxis === 'horizontal') {
+      setOffsetX(dx);
+    }
   };
 
   const handleMouseUp = () => {
@@ -86,6 +131,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
       }
     }
     setOffsetX(0);
+    setDragAxis(null);
   };
 
   const handleMouseLeave = () => {
@@ -100,6 +146,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
       }
       setIsDragging(false);
       setOffsetX(0);
+      setDragAxis(null);
     }
   };
 

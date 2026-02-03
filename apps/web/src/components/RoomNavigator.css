@@ -1,6 +1,6 @@
 .room-navigator {
   width: 100%;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   position: relative;
   background: var(--bg-primary);
@@ -82,17 +82,20 @@
   min-width: 100%;
   height: 100%;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   flex-shrink: 0;
   background: var(--bg-primary);
   position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .room-content {
   width: 100%;
   max-width: 1040px;
-  padding: clamp(56px, 7vh, 84px) 24px clamp(28px, 5vh, 56px);
+  padding: clamp(56px, 7vh, 84px) 24px calc(clamp(28px, 5vh, 56px) + var(--player-safe-area, 96px));
   display: flex;
   flex-direction: column;
   align-items: stretch;

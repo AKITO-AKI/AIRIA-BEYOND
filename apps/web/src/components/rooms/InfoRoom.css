@@ -3,6 +3,124 @@
   margin: 0 auto;
 }
 
+.feedback-hero {
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent 45%);
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-surface-glass) 86%, white 14%),
+    color-mix(in srgb, var(--color-surface-glass) 92%, white 8%)
+  );
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+.feedback-hero-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.feedback-hero-sub {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.feedback-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.feedback-field {
+  display: grid;
+  gap: 6px;
+}
+
+.feedback-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--color-text-muted) 90%, var(--color-text) 10%);
+}
+
+.feedback-input,
+.feedback-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent 40%);
+  background: color-mix(in srgb, var(--color-surface-strong) 70%, transparent 30%);
+  color: var(--color-text);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.feedback-textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.6;
+}
+
+.feedback-span-2 {
+  grid-column: 1 / -1;
+}
+
+.feedback-split {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 760px) {
+  .feedback-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .feedback-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.feedback-check {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent 55%);
+  background: color-mix(in srgb, var(--color-surface-glass) 75%, transparent 25%);
+  color: var(--color-text);
+}
+
+.feedback-actions {
+  display: grid;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.feedback-submit {
+  width: 100%;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 900;
+}
+
+.feedback-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.feedback-error {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--accent-danger) 70%, var(--color-text) 30%);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 55%, transparent 45%);
+  background: color-mix(in srgb, var(--accent-danger) 10%, transparent 90%);
+}
+
 .info-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
