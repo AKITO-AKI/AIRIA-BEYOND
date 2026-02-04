@@ -1,5 +1,6 @@
 import { checkRateLimit } from '../lib/rate-limit.js';
 import { verifyAppleIdToken, verifyGoogleIdToken } from '../lib/oidc.js';
+import { appendAuditEventFromReq } from '../lib/auditLog.js';
 import {
   authenticateUser,
   createSession,
@@ -51,6 +52,12 @@ export async function registerHandler(req, res) {
     const user = await registerUser({ handle, password, displayName });
     const session = await createSession(user.id);
     const rec = await getUserRecordById(user.id);
+    appendAuditEventFromReq(req, {
+      type: 'auth.register',
+      target: { kind: 'user', id: user.id },
+      summary: `registered @${user.handle}`,
+      data: { provider: 'password' },
+    });
     return res.status(201).json({
       token: session.token,
       expiresAt: session.expiresAt,
@@ -90,6 +97,12 @@ export async function loginHandler(req, res) {
     }
     const session = await createSession(user.id);
     const rec = await getUserRecordById(user.id);
+    appendAuditEventFromReq(req, {
+      type: 'auth.login',
+      target: { kind: 'user', id: user.id },
+      summary: `login @${user.handle}`,
+      data: { provider: 'password' },
+    });
     return res.json({
       token: session.token,
       expiresAt: session.expiresAt,
@@ -124,7 +137,17 @@ export async function meHandler(req, res) {
 export async function logoutHandler(req, res) {
   try {
     const token = getBearerToken(req);
-    if (token) await deleteSession(token);
+    if (token) {
+      const user = await getUserBySessionToken(token);
+      await deleteSession(token);
+      if (user) {
+        appendAuditEventFromReq(req, {
+          type: 'auth.logout',
+          target: { kind: 'user', id: user.id },
+          summary: `logout @${user.handle}`,
+        });
+      }
+    }
     return res.json({ ok: true });
   } catch (error) {
     return res.status(500).json({
@@ -147,6 +170,12 @@ export async function updateProfileHandler(req, res) {
 
     const user = await updateMyProfile(me.id, req.body || {});
     const rec = await getUserRecordById(me.id);
+    appendAuditEventFromReq(req, {
+      type: 'auth.profile.update',
+      target: { kind: 'user', id: me.id },
+      summary: `profile updated @${me.handle}`,
+      data: { fields: Object.keys(req.body || {}).slice(0, 10) },
+    });
     return res.json({ user: { ...user, followingIds: Array.isArray(rec?.followingIds) ? rec.followingIds : [] } });
   } catch (error) {
     return res.status(400).json({
@@ -189,6 +218,13 @@ export async function oauthGoogleHandler(req, res) {
     });
     const session = await createSession(user.id);
     const rec = await getUserRecordById(user.id);
+    appendAuditEventFromReq(req, {
+      type: 'auth.login',
+      target: { kind: 'user', id: user.id },
+      summary: `login @${user.handle}`,
+      data: { provider: 'google', email: claims.email ? String(claims.email).slice(0, 254) : '' },
+      actor: { id: user.id, handle: user.handle, displayName: user.displayName },
+    });
     return res.json({
       token: session.token,
       expiresAt: session.expiresAt,
@@ -229,6 +265,13 @@ export async function oauthAppleHandler(req, res) {
     });
     const session = await createSession(user.id);
     const rec = await getUserRecordById(user.id);
+    appendAuditEventFromReq(req, {
+      type: 'auth.login',
+      target: { kind: 'user', id: user.id },
+      summary: `login @${user.handle}`,
+      data: { provider: 'apple', email: claims.email ? String(claims.email).slice(0, 254) : '' },
+      actor: { id: user.id, handle: user.handle, displayName: user.displayName },
+    });
     return res.json({
       token: session.token,
       expiresAt: session.expiresAt,

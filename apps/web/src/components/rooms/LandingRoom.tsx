@@ -53,8 +53,31 @@ const LandingRoom: React.FC<Props> = ({ onStart, onOpenTerms, onOpenPrivacy }) =
             </p>
 
             <div className="landing-cta">
-              <button className="btn btn-primary landing-cta-primary" onClick={onStart}>
-                ログインしてはじめる
+              <button
+                className="btn btn-primary landing-cta-primary"
+                onClick={() => {
+                  try {
+                    window.location.hash = '#signup';
+                  } catch {
+                    // ignore
+                  }
+                  onStart();
+                }}
+              >
+                無料で新規登録
+              </button>
+              <button
+                className="btn landing-cta-secondary"
+                onClick={() => {
+                  try {
+                    window.location.hash = '#login';
+                  } catch {
+                    // ignore
+                  }
+                  onStart();
+                }}
+              >
+                ログイン
               </button>
               <button className="btn landing-cta-secondary" onClick={() => scrollTo('landing-how')}
                 aria-label="AIRIAの使い方へスクロール"
@@ -68,6 +91,10 @@ const LandingRoom: React.FC<Props> = ({ onStart, onOpenTerms, onOpenPrivacy }) =
               <span className="landing-chip">Google / Apple ログイン</span>
               <span className="landing-chip">生成失敗でも止めない設計</span>
               <span className="landing-chip">最短ルート：ログイン → 「創作から」</span>
+            </div>
+
+            <div className="landing-signup-note">
+              初めての方も、このボタンでOKです（初回ログイン＝新規登録）。パスワード登録はありません。
             </div>
           </div>
 

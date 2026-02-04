@@ -173,6 +173,15 @@ body {
     z-index: 1;
 }
 
+/* Pre-login views (Landing/Auth/Legal) live outside RoomNavigator.
+   Body scrolling is disabled by design, so provide a dedicated scroll container here. */
+.preauth-shell {
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
 /* Header */
 header {
     text-align: center;

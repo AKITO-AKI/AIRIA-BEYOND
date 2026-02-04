@@ -18,6 +18,7 @@ import MusicRoom from './components/rooms/MusicRoom';
 import SocialRoom from './components/rooms/SocialRoom';
 import MyPageRoom from './components/rooms/MyPageRoom';
 import SettingsRoom from './components/rooms/SettingsRoom';
+import AdminRoom from './components/rooms/AdminRoom';
 import InfoRoom from './components/rooms/InfoRoom';
 import FeedbackRoom from './components/rooms/FeedbackRoom';
 import SplashScreen from './components/SplashScreen';
@@ -29,6 +30,7 @@ import { initAnalytics } from './lib/analytics';
 import { loadPendingOnboardingGeneration } from './utils/pendingGeneration';
 import './styles.css';
 import './components/visual/globalInteractions.css';
+import { getAdminToken } from './api/adminApi';
 
 // Initialize monitoring in production
 if (import.meta.env.PROD) {
@@ -50,6 +52,7 @@ function viewFromHash(): PreAuthView | null {
     if (hash === '#terms') return 'terms';
     if (hash === '#privacy') return 'privacy';
     if (hash === '#login') return 'auth';
+    if (hash === '#signup') return 'auth';
     return null;
   } catch {
     return null;
@@ -90,6 +93,7 @@ function consumePostOnboardingRoom():
   | 'social'
   | 'me'
   | 'settings'
+  | 'admin'
   | 'info'
   | 'feedback'
   | null {
@@ -98,7 +102,7 @@ function consumePostOnboardingRoom():
     if (!raw) return null;
     localStorage.removeItem(POST_ONBOARDING_ROOM_KEY);
     const room = String(raw);
-    return ['main', 'gallery', 'album', 'music', 'social', 'me', 'settings', 'info', 'feedback'].includes(room)
+    return ['main', 'gallery', 'album', 'music', 'social', 'me', 'settings', 'admin', 'info', 'feedback'].includes(room)
       ? (room as any)
       : null;
   } catch {
@@ -204,6 +208,8 @@ const AppContent = () => {
   // Create queue from all albums with music data
   const musicQueue = albums.filter(album => album.musicData);
 
+  const adminEnabled = Boolean(getAdminToken() || String(import.meta.env.VITE_ADMIN_ENABLED || '').toLowerCase() === 'true');
+
   const rooms = hasOnboarded
     ? [
         { id: 'main' as const, name: 'Main', component: <MainRoom /> },
@@ -213,6 +219,7 @@ const AppContent = () => {
         { id: 'social' as const, name: 'Social', component: <SocialRoom /> },
         { id: 'me' as const, name: 'My', component: <MyPageRoom /> },
         { id: 'settings' as const, name: 'Settings', component: <SettingsRoom /> },
+        ...(adminEnabled ? [{ id: 'admin' as const, name: 'Admin', component: <AdminRoom /> }] : []),
         { id: 'info' as const, name: 'Info', component: <InfoRoom /> },
         { id: 'feedback' as const, name: 'Feedback', component: <FeedbackRoom /> },
       ]
@@ -245,15 +252,17 @@ const AppContent = () => {
             {authLoading ? (
               <div style={{ padding: 24, opacity: 0.8 }}>Loading...</div>
             ) : !authUser ? (
-              preAuthView === 'auth' ? (
-                <AuthRoom onBack={showLanding} />
-              ) : preAuthView === 'terms' ? (
-                <LegalRoom kind="terms" onBack={showLanding} onStart={showAuth} />
-              ) : preAuthView === 'privacy' ? (
-                <LegalRoom kind="privacy" onBack={showLanding} onStart={showAuth} />
-              ) : (
-                <LandingRoom onStart={showAuth} onOpenTerms={showTerms} onOpenPrivacy={showPrivacy} />
-              )
+              <div className="preauth-shell">
+                {preAuthView === 'auth' ? (
+                  <AuthRoom onBack={showLanding} />
+                ) : preAuthView === 'terms' ? (
+                  <LegalRoom kind="terms" onBack={showLanding} onStart={showAuth} />
+                ) : preAuthView === 'privacy' ? (
+                  <LegalRoom kind="privacy" onBack={showLanding} onStart={showAuth} />
+                ) : (
+                  <LandingRoom onStart={showAuth} onOpenTerms={showTerms} onOpenPrivacy={showPrivacy} />
+                )}
+              </div>
             ) : (
               <>
                 <RoomNavigator

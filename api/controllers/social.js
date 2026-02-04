@@ -2,6 +2,7 @@ import { checkRateLimit } from '../lib/rate-limit.js';
 import { addCommentV2, createPostV2, deletePostV2, getPostById, listPosts, toggleLike, updatePostVisibilityV2 } from '../socialStore.js';
 import { getFollowingIds, getPublicUserById, getUserRecordById, toggleFollow } from '../authStore.js';
 import { makeEngagementEmail, sendEmail } from '../lib/notifications.js';
+import { appendAuditEventFromReq } from '../lib/auditLog.js';
 
 function getClientIdentifier(req) {
   const forwarded = req.headers['x-forwarded-for'];
@@ -135,6 +136,15 @@ export async function createPostHandler(req, res) {
     const { caption, album } = req.body || {};
     const created = await createPostV2({ authorId: req.user.id, caption, album });
     const author = await getPublicUserById(req.user.id);
+    appendAuditEventFromReq(req, {
+      type: 'social.post.create',
+      target: { kind: 'post', id: created.id },
+      summary: `post created ${created.id}`,
+      data: {
+        visibility: created.visibility,
+        albumTitle: String(created?.album?.title || ''),
+      },
+    });
     return res.status(201).json({
       ...created,
       author,
@@ -183,6 +193,13 @@ export async function likePostHandler(req, res) {
     const authorName = author ? String(author.displayName || `@${author.handle}`) : String(updated?.authorName || 'anonymous');
     const likedBy = Array.isArray(updated?.likedBy) ? updated.likedBy.map(String) : [];
     const didLike = likedBy.includes(String(req.user.id));
+
+    appendAuditEventFromReq(req, {
+      type: didLike ? 'social.post.like' : 'social.post.unlike',
+      target: { kind: 'post', id: updated.id },
+      summary: `${didLike ? 'liked' : 'unliked'} ${updated.id}`,
+      data: { likes: updated.likes, postAuthorId: String(updated.authorId || '') },
+    });
 
     if (didLike && updated?.authorId && String(updated.authorId) !== String(req.user.id)) {
       const authorRec = await getUserRecordById(String(updated.authorId));
@@ -246,6 +263,13 @@ export async function commentPostHandler(req, res) {
     const { text } = req.body || {};
     const created = await addCommentV2(req.params.id, { authorId: req.user.id, text });
     if (!created) return res.status(404).json({ error: 'Not found' });
+
+    appendAuditEventFromReq(req, {
+      type: 'social.post.comment',
+      target: { kind: 'post', id: String(req.params.id) },
+      summary: `commented ${String(req.params.id)}`,
+      data: { commentId: created.id, length: String(text || '').length },
+    });
 
     const author = await getPublicUserById(req.user.id);
     const authorName = author ? String(author.displayName || `@${author.handle}`) : 'anonymous';
@@ -311,6 +335,13 @@ export async function updatePostHandler(req, res) {
     const updated = await updatePostVisibilityV2(req.params.id, { authorId: req.user.id, visibility });
     if (!updated) return res.status(404).json({ error: 'Not found' });
 
+    appendAuditEventFromReq(req, {
+      type: 'social.post.visibility',
+      target: { kind: 'post', id: updated.id },
+      summary: `visibility ${updated.id} -> ${String(updated.visibility || '')}`,
+      data: { visibility: updated.visibility },
+    });
+
     const viewerId = String(req.user.id);
     const hydrated = await hydratePostForViewer(updated, viewerId);
     return res.json(hydrated);
@@ -346,6 +377,12 @@ export async function deletePostHandler(req, res) {
 
     const result = await deletePostV2(req.params.id, { authorId: req.user.id });
     if (!result) return res.status(404).json({ error: 'Not found' });
+
+    appendAuditEventFromReq(req, {
+      type: 'social.post.delete',
+      target: { kind: 'post', id: String(req.params.id) },
+      summary: `post deleted ${String(req.params.id)}`,
+    });
     return res.json({ ok: true });
   } catch (error) {
     // @ts-ignore
@@ -378,6 +415,13 @@ export async function followToggleHandler(req, res) {
     }
     const targetUserId = String(req.params.id || '');
     const result = await toggleFollow(req.user.id, targetUserId);
+
+    appendAuditEventFromReq(req, {
+      type: result?.isFollowing ? 'social.user.follow' : 'social.user.unfollow',
+      target: { kind: 'user', id: targetUserId },
+      summary: `${result?.isFollowing ? 'followed' : 'unfollowed'} ${targetUserId}`,
+      data: { targetUserId },
+    });
 
     if (result?.isFollowing && targetUserId && targetUserId !== String(req.user.id)) {
       const followeeRec = await getUserRecordById(targetUserId);

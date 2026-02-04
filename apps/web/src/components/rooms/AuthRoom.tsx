@@ -19,6 +19,24 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const { loginWithGoogle, loginWithApple, loading } = useAuth();
   const googleBtnRef = React.useRef<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [mode, setMode] = React.useState<'signup' | 'login'>(() => {
+    try {
+      const h = String(window.location.hash || '').toLowerCase();
+      return h === '#signup' ? 'signup' : 'login';
+    } catch {
+      return 'login';
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      const h = String(window.location.hash || '').toLowerCase();
+      if (h === '#signup') setMode('signup');
+      if (h === '#login') setMode('login');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   React.useEffect(() => {
     setError(null);
@@ -98,8 +116,78 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </button>
           </div>
         ) : null}
+
+        <div className="auth-tabs" role="tablist" aria-label="認証モード">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'signup'}
+            className={`auth-tab ${mode === 'signup' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('signup');
+              try {
+                window.location.hash = '#signup';
+              } catch {
+                // ignore
+              }
+            }}
+            disabled={loading}
+          >
+            新規登録
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'login'}
+            className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('login');
+              try {
+                window.location.hash = '#login';
+              } catch {
+                // ignore
+              }
+            }}
+            disabled={loading}
+          >
+            ログイン
+          </button>
+        </div>
+
         <h1 className="auth-title">AIRIA</h1>
-        <p className="auth-subtitle">はじめるにはログインが必要です</p>
+        <p className="auth-subtitle">{mode === 'signup' ? '無料で始める（初回ログイン＝登録）' : 'おかえりなさい。ログインして続ける'}</p>
+
+        <div className="auth-note">
+          {mode === 'signup' ? (
+            <>
+              <p>Google / Apple を選ぶだけでアカウントが作成されます（新規登録）。</p>
+              <p>プレリリースでは OAuth-only（パスワード登録なし）です。</p>
+            </>
+          ) : (
+            <>
+              <p>以前使った Google / Apple でログインしてください。</p>
+              <p>
+                初めての方は{' '}
+                <button
+                  type="button"
+                  className="auth-inline-link"
+                  onClick={() => {
+                    setMode('signup');
+                    try {
+                      window.location.hash = '#signup';
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  新規登録
+                </button>
+                。
+              </p>
+            </>
+          )}
+        </div>
 
         <div className="auth-actions">
           <div className={`auth-google ${googleReady ? '' : 'disabled'}`}>
@@ -119,9 +207,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
         {error && <div className="auth-error">{error}</div>}
 
-        <div className="auth-note">
-          <p>プレリリースでは Google / Apple ログインのみ対応します。</p>
-        </div>
+        
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useRoomNavigation } from '../../contexts/RoomNavigationContext';
 import { useToast } from '../visual/feedback/ToastContainer';
+import { getAdminToken, setAdminToken } from '../../api/adminApi';
 import './SettingsRoom.css';
 
 function formatDate(iso: string) {
@@ -11,16 +13,22 @@ function formatDate(iso: string) {
 
 const SettingsRoom: React.FC = () => {
   const { user, logout, updateProfile, loading } = useAuth();
+  const { navigateToRoom } = useRoomNavigation();
   const { addToast } = useToast();
 
   const [displayName, setDisplayName] = React.useState(user?.displayName || '');
   const [bio, setBio] = React.useState(user?.bio || '');
   const [saving, setSaving] = React.useState(false);
+  const [adminToken, setAdminTokenState] = React.useState(getAdminToken());
 
   React.useEffect(() => {
     setDisplayName(user?.displayName || '');
     setBio(user?.bio || '');
   }, [user?.displayName, user?.bio]);
+
+  React.useEffect(() => {
+    setAdminTokenState(getAdminToken());
+  }, []);
 
   const canSave = Boolean(user) && !saving && (displayName.trim() !== (user?.displayName || '') || bio.trim() !== (user?.bio || ''));
 
@@ -46,6 +54,12 @@ const SettingsRoom: React.FC = () => {
     } catch {
       // ignore
     }
+  };
+
+  const saveAdmin = () => {
+    const t = adminToken.trim();
+    setAdminToken(t || null);
+    addToast('success', t ? 'Admin token を保存しました' : 'Admin token をクリアしました');
   };
 
   return (
@@ -115,6 +129,39 @@ const SettingsRoom: React.FC = () => {
         <section className="settings-section">
           <h2 className="settings-title">通知</h2>
           <p className="settings-muted">メール通知は次フェーズで追加予定です。</p>
+        </section>
+
+        <section className="settings-section" data-no-swipe="true">
+          <h2 className="settings-title">Admin</h2>
+          <div className="settings-grid">
+            <label className="settings-field settings-field-wide">
+              <span className="settings-label">ADMIN_TOKEN</span>
+              <input
+                className="settings-input"
+                value={adminToken}
+                onChange={(e) => setAdminTokenState(e.target.value)}
+                placeholder="サーバの ADMIN_TOKEN"
+                type="password"
+                autoComplete="off"
+              />
+            </label>
+          </div>
+          <div className="settings-actions">
+            <button className="btn btn-primary" onClick={saveAdmin}>
+              保存
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                saveAdmin();
+                if (adminToken.trim()) navigateToRoom('admin');
+              }}
+              disabled={!adminToken.trim()}
+            >
+              Adminログへ
+            </button>
+            <div className="settings-muted">Adminログは ADMIN_TOKEN を知っている人のみ利用できます。</div>
+          </div>
         </section>
       </div>
     </div>

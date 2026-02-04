@@ -344,6 +344,17 @@ export async function listPublicUsers({ limit = 50 } = {}) {
   return users.slice(0, safeLimit).map(toPublicUser);
 }
 
+export async function getAdminUserMetrics() {
+  await loadIfNeeded();
+  return {
+    totalUsers: users.length,
+    users: users.map((u) => ({
+      id: String(u?.id || ''),
+      createdAt: String(u?.createdAt || ''),
+    })),
+  };
+}
+
 export function toPublicUser(user) {
   if (!user) return null;
   return {

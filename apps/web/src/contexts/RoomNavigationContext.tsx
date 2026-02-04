@@ -9,6 +9,7 @@ export type RoomType =
   | 'social'
   | 'me'
   | 'settings'
+  | 'admin'
   | 'info'
   | 'feedback';
 

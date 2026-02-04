@@ -15,6 +15,55 @@
   backdrop-filter: blur(14px);
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  margin-bottom: 14px;
+}
+
+:root[data-theme='light'] .auth-tabs {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.auth-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  padding: 10px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+:root[data-theme='light'] .auth-tab {
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.auth-tab.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme='light'] .auth-tab.active {
+  background: rgba(255, 255, 255, 0.86);
+  color: rgba(0, 0, 0, 0.86);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.10);
+}
+
+.auth-tab:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 :root[data-theme='light'] .auth-card {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -64,4 +113,21 @@
   margin-top: 14px;
   opacity: 0.75;
   font-size: 13px;
+}
+
+.auth-inline-link {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.auth-inline-link:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
