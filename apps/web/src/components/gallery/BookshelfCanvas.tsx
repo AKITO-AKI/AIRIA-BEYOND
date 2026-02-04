@@ -14,6 +14,7 @@ export interface BookshelfInputState {
   dragPx: number;
   isDragging: boolean;
   lastPointerX: number;
+  blockPan: boolean;
 }
 
 const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
@@ -26,6 +27,7 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
     dragPx: 0,
     isDragging: false,
     lastPointerX: 0,
+    blockPan: false,
   });
 
   return (
@@ -40,15 +42,18 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
       onWheel={(e) => {
         // Treat wheel as horizontal time-axis scroll.
         e.preventDefault();
+        if (inputRef.current.blockPan) return;
         const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
         inputRef.current.wheelPx += delta;
       }}
       onPointerDown={(e) => {
+        if (inputRef.current.blockPan) return;
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
         inputRef.current.isDragging = true;
         inputRef.current.lastPointerX = e.clientX;
       }}
       onPointerMove={(e) => {
+        if (inputRef.current.blockPan) return;
         if (!inputRef.current.isDragging) return;
         const dx = e.clientX - inputRef.current.lastPointerX;
         inputRef.current.lastPointerX = e.clientX;
@@ -61,17 +66,19 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
           // ignore
         }
         inputRef.current.isDragging = false;
+        inputRef.current.blockPan = false;
       }}
       onPointerCancel={() => {
         inputRef.current.isDragging = false;
+        inputRef.current.blockPan = false;
       }}
     >
       <Canvas
         shadows
         camera={{
           // Fixed, front-facing camera.
-          position: [0, 1.1, 6.5],
-          fov: 32,
+          position: [0, 0.55, 7.2],
+          fov: 34,
         }}
         gl={{
           alpha: true,

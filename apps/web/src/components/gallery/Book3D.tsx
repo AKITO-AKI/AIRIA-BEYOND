@@ -7,15 +7,21 @@ import { Album } from '../../contexts/AlbumContext';
 interface Book3DProps {
   album: Album;
   position: [number, number, number];
-  onClick: () => void;
-  isSelected: boolean;
+  faceOut: boolean;
+  dragging?: boolean;
+  onPointerDown?: (e: any) => void;
+  onPointerMove?: (e: any) => void;
+  onPointerUp?: (e: any) => void;
 }
 
 const Book3D: React.FC<Book3DProps> = ({
   album,
   position,
-  onClick,
-  isSelected,
+  faceOut,
+  dragging,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
 }) => {
   const spineMeshRef = useRef<THREE.Mesh>(null);
   const coverGroupRef = useRef<THREE.Group>(null);
@@ -23,7 +29,7 @@ const Book3D: React.FC<Book3DProps> = ({
 
   // Dimensions (kept consistent for snapping/readability)
   const spineWidth = 0.22;
-  const spineHeight = 1.8;
+  const spineHeight = 1.45;
   const spineDepth = 0.55;
 
   const spineColor = album.gallery?.spineColor || '#111111';
@@ -41,7 +47,7 @@ const Book3D: React.FC<Book3DProps> = ({
   }, [coverTexture]);
 
   useFrame((_, dt) => {
-    const target = isSelected ? 1 : 0;
+    const target = faceOut || dragging ? 1 : 0;
     const speed = 8;
     coverProgressRef.current = THREE.MathUtils.lerp(
       coverProgressRef.current,
@@ -51,9 +57,9 @@ const Book3D: React.FC<Book3DProps> = ({
 
     if (coverGroupRef.current) {
       const t = coverProgressRef.current;
-      // Slide forward + slight lift; depth is mostly shadow.
-      coverGroupRef.current.position.z = (spineDepth / 2 + 0.04) + t * 0.7;
-      coverGroupRef.current.position.y = t * 0.08;
+      // Slide forward + slight lift.
+      coverGroupRef.current.position.z = (spineDepth / 2 + 0.04) + t * 0.85;
+      coverGroupRef.current.position.y = 0.05 + t * 0.06;
       coverGroupRef.current.scale.setScalar(0.92 + t * 0.08);
       coverGroupRef.current.visible = t > 0.01;
     }
@@ -70,7 +76,9 @@ const Book3D: React.FC<Book3DProps> = ({
       {/* Spine (minimal info only) */}
       <mesh
         ref={spineMeshRef}
-        onClick={onClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
         castShadow
         receiveShadow
       >
@@ -120,7 +128,7 @@ const Book3D: React.FC<Book3DProps> = ({
 
       {/* Cover: only when selected (slides forward) */}
       <group ref={coverGroupRef} position={[0, 0.05, spineDepth / 2 + 0.04]} visible={false}>
-        <mesh onClick={onClick} castShadow>
+        <mesh onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} castShadow>
           <planeGeometry args={[1.1, 1.55]} />
           <meshStandardMaterial map={coverTexture} roughness={0.85} metalness={0.0} />
         </mesh>

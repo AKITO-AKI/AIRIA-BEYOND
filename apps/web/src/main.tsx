@@ -16,7 +16,6 @@ import GalleryRoom from './components/rooms/GalleryRoom';
 import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
 import SocialRoom from './components/rooms/SocialRoom';
-import MyPageRoom from './components/rooms/MyPageRoom';
 import SettingsRoom from './components/rooms/SettingsRoom';
 import AdminRoom from './components/rooms/AdminRoom';
 import InfoRoom from './components/rooms/InfoRoom';
@@ -217,8 +216,7 @@ const AppContent = () => {
         { id: 'album' as const, name: 'Album', component: <AlbumRoom /> },
         { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
         { id: 'social' as const, name: 'Social', component: <SocialRoom /> },
-        { id: 'me' as const, name: 'My', component: <MyPageRoom /> },
-        { id: 'settings' as const, name: 'Settings', component: <SettingsRoom /> },
+        { id: 'me' as const, name: 'My', component: <SettingsRoom /> },
         ...(adminEnabled ? [{ id: 'admin' as const, name: 'Admin', component: <AdminRoom /> }] : []),
         { id: 'info' as const, name: 'Info', component: <InfoRoom /> },
         { id: 'feedback' as const, name: 'Feedback', component: <FeedbackRoom /> },
@@ -238,8 +236,9 @@ const AppContent = () => {
         },
       ];
 
+  const postOnboardingRoom = hasOnboarded ? (consumePostOnboardingRoom() ?? 'main') : null;
   const initialRoom = hasOnboarded
-    ? ((consumePostOnboardingRoom() ?? 'main') as const)
+    ? ((postOnboardingRoom === 'settings' ? 'me' : postOnboardingRoom) as const)
     : ('onboarding' as const);
 
   return (

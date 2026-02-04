@@ -163,7 +163,8 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const showIndicators = currentRoomId !== 'onboarding';
 
   const navigateToRoomId = (roomId: RoomType) => {
-    const idx = rooms.findIndex(r => r.id === roomId);
+    const normalized = roomId === 'settings' ? 'me' : roomId;
+    const idx = rooms.findIndex(r => r.id === normalized);
     if (idx >= 0) navigateToRoom(idx);
   };
 

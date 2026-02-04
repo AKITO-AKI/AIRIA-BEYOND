@@ -62,39 +62,6 @@ const GalleryRoom: React.FC = () => {
           onBookClick={handleAlbumClick}
           constellationEnabled={false}
         />
-          <div className="bookshelf-overlay-grid" aria-hidden="true">
-            {filteredAlbums.map((album) => {
-              if (!album.gallery) return null;
-              const hasBadges = album.isPublic || album.isFavorite;
-              if (!hasBadges) return null;
-              return (
-                <div
-                  key={album.id}
-                  className={`bookshelf-badge ${selectedAlbum?.id === album.id ? 'is-selected' : ''}`}
-                  style={{
-                    gridColumn: album.gallery.positionIndex + 1,
-                    gridRow: album.gallery.shelfIndex + 1,
-                  }}
-                >
-                  {album.isPublic || album.isFavorite ? (
-                    badgePriority === 'favorite' && album.isFavorite ? (
-                      <span className="badge-chip badge-favorite badge-compact is-priority">
-                        <span className="badge-dot" />お気に入り
-                      </span>
-                    ) : album.isPublic ? (
-                      <span className={`badge-chip badge-public badge-compact ${badgePriority === 'public' ? 'is-priority' : ''}`.trim()}>
-                        <span className="badge-dot" />公開
-                      </span>
-                    ) : (
-                      <span className="badge-chip badge-favorite badge-compact">
-                        <span className="badge-dot" />お気に入り
-                      </span>
-                    )
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
         {filteredAlbums.length === 0 && (
           <div className="empty-shelf-overlay">
             <EmptyState
