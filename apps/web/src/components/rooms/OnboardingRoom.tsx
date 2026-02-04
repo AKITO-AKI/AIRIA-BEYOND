@@ -16,7 +16,7 @@ import {
 } from '../../utils/pendingGeneration';
 import ConfirmDialog from '../ConfirmDialog';
 import { useToast } from '../visual/feedback/ToastContainer';
-import GenerationFrostOverlay from '../visual/GenerationFrostOverlay';
+import { useGenerationOverlay } from '../../contexts/GenerationOverlayContext';
 
 type Props = {
   onExit?: () => void;
@@ -26,6 +26,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
   const { albums, addAlbum, selectAlbum } = useAlbums();
   const { requestPlayAlbum } = useMusicPlayer();
   const { addToast } = useToast();
+  const { setOverlay, clearOverlay } = useGenerationOverlay();
   const [isCompleted, setIsCompleted] = useState(false);
   const [completedData, setCompletedData] = useState<OnboardingData | null>(null);
   const [progress, setProgress] = useState(0);
@@ -449,6 +450,19 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
   };
 
   useEffect(() => {
+    if (!isGenerating) {
+      clearOverlay('onboarding');
+      return;
+    }
+    setOverlay('onboarding', {
+      active: true,
+      statusText: generateStatusText,
+      elapsedSec: generateElapsedSec,
+      onCancel: handleCancelGeneration,
+    });
+  }, [isGenerating, generateStatusText, generateElapsedSec, setOverlay, clearOverlay]);
+
+  useEffect(() => {
     if (!isCompleted || !completedData) return;
     if (autoTriggeredRef.current) return;
     if (completedData.startMode !== 'create') return;
@@ -465,12 +479,6 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
 
   return (
     <div className="room-content onboarding-room" data-no-swipe="true">
-      <GenerationFrostOverlay
-        active={isGenerating}
-        statusText={generateStatusText}
-        elapsedSec={generateElapsedSec}
-        onCancel={handleCancelGeneration}
-      />
       <ConfirmDialog
         open={confirmDiscardOpen}
         title="保留中の生成を破棄しますか？"

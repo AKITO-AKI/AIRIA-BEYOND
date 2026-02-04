@@ -23,6 +23,7 @@ import FeedbackRoom from './components/rooms/FeedbackRoom';
 import SplashScreen from './components/SplashScreen';
 import { EnhancedMiniPlayer } from './components/music';
 import PlaybackBackdrop from './components/music/PlaybackBackdrop';
+import GenerationOverlayHost from './components/visual/GenerationOverlayHost';
 import { initSentry } from './lib/sentry';
 import { initWebVitals } from './lib/vitals';
 import { initAnalytics } from './lib/analytics';
@@ -30,6 +31,7 @@ import { loadPendingOnboardingGeneration } from './utils/pendingGeneration';
 import './styles.css';
 import './components/visual/globalInteractions.css';
 import { getAdminToken } from './api/adminApi';
+import { GenerationOverlayProvider } from './contexts/GenerationOverlayContext';
 
 // Initialize monitoring in production
 if (import.meta.env.PROD) {
@@ -248,6 +250,7 @@ const AppContent = () => {
         <>
           <PlaybackBackdrop />
           <div className="app-ui-layer">
+            <GenerationOverlayHost />
             {authBootLoading ? (
               <div className="preauth-shell">
                 <div className="loading-panel" aria-live="polite" aria-busy="true">
@@ -303,7 +306,9 @@ const App = () => {
             <AlbumProvider>
               <MusicPlayerProvider>
                 <ToastProvider>
-                  <AppContent />
+                  <GenerationOverlayProvider>
+                    <AppContent />
+                  </GenerationOverlayProvider>
                 </ToastProvider>
               </MusicPlayerProvider>
             </AlbumProvider>

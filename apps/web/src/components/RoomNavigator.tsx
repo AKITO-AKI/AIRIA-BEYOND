@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { RoomNavigationProvider, type RoomType } from '../contexts/RoomNavigationContext';
 import FeedbackNudgePopup from './visual/feedback/FeedbackNudgePopup';
 import './RoomNavigator.css';
@@ -17,12 +17,34 @@ interface RoomNavigatorProps {
 const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'main' }) => {
   const initialIndex = rooms.findIndex(r => r.id === initialRoom);
   const [currentIndex, setCurrentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [dragAxis, setDragAxis] = useState<'horizontal' | 'vertical' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 860px)');
+    const update = () => {
+      setIsNarrow(mq.matches);
+    };
+    update();
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
+    }
+    // Safari fallback
+    mq.addListener(update);
+    return () => mq.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    // Default: open sidebar on desktop, closed on mobile.
+    setSidebarOpen(!isNarrow);
+  }, [isNarrow]);
 
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!(target instanceof Element)) return false;
@@ -162,55 +184,114 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const currentRoomId = rooms[currentIndex]?.id;
   const showIndicators = currentRoomId !== 'onboarding';
 
+  const visibleRooms = useMemo(() => {
+    // Keep onboarding isolated (no global navigation).
+    if (!showIndicators) return [] as Room[];
+    return rooms;
+  }, [rooms, showIndicators]);
+
   const navigateToRoomId = (roomId: RoomType) => {
     const normalized = roomId === 'settings' ? 'me' : roomId;
     const idx = rooms.findIndex(r => r.id === normalized);
     if (idx >= 0) navigateToRoom(idx);
   };
 
+  const handleNavClick = (index: number) => {
+    navigateToRoom(index);
+    if (isNarrow) setSidebarOpen(false);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
     <RoomNavigationProvider value={{ currentRoomId, navigateToRoom: navigateToRoomId }}>
       <FeedbackNudgePopup />
       <div className={`room-navigator ${showIndicators ? '' : 'indicators-hidden'}`}>
-        {/* Room indicator (navigation tool) */}
         {showIndicators && (
-          <div className="room-indicators" aria-label="ルームナビゲーション">
-            {rooms.map((room, index) => (
+          <>
+            <div
+              className={`room-sidebar-backdrop ${sidebarOpen && isNarrow ? 'open' : ''}`}
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden="true"
+            />
+            <aside
+              className={`room-sidebar ${sidebarOpen ? 'open' : 'closed'} ${isNarrow ? 'narrow' : 'wide'}`}
+              aria-label="ナビゲーション"
+            >
+              <div className="room-sidebar-top">
+                <button
+                  type="button"
+                  className="room-sidebar-toggle"
+                  onClick={() => setSidebarOpen((v) => !v)}
+                  aria-label={sidebarOpen ? 'サイドバーを閉じる' : 'サイドバーを開く'}
+                  aria-expanded={sidebarOpen}
+                >
+                  <span className="room-sidebar-toggle-bar" />
+                  <span className="room-sidebar-toggle-bar" />
+                  <span className="room-sidebar-toggle-bar" />
+                </button>
+                <div className="room-sidebar-brand">AIRIA</div>
+              </div>
+
+              <nav className="room-sidebar-nav" aria-label="ルーム一覧">
+                {visibleRooms.map((room, index) => (
+                  <button
+                    key={room.id}
+                    type="button"
+                    className={`room-sidebar-item ${index === currentIndex ? 'active' : ''}`}
+                    onClick={() => handleNavClick(index)}
+                    aria-current={index === currentIndex ? 'page' : undefined}
+                  >
+                    <span className="room-sidebar-item-label">{room.name}</span>
+                  </button>
+                ))}
+              </nav>
+            </aside>
+
+            {isNarrow && !sidebarOpen ? (
               <button
-                key={room.id}
-                className={`room-indicator ${index === currentIndex ? 'active' : ''}`}
-                onClick={() => navigateToRoom(index)}
-                aria-current={index === currentIndex ? 'page' : undefined}
-                aria-label={`${room.name}へ移動`}
+                type="button"
+                className="room-sidebar-fab"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="ナビゲーションを開く"
               >
-                <span className="room-indicator-label">{room.name}</span>
+                <span className="room-sidebar-fab-bar" />
+                <span className="room-sidebar-fab-bar" />
+                <span className="room-sidebar-fab-bar" />
               </button>
-            ))}
-          </div>
+            ) : null}
+          </>
         )}
 
-        {/* Rooms container */}
-        <div
-          ref={containerRef}
-          className="rooms-container"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          style={{
-            transform: `translateX(${translateX}%)`,
-            transition: isDragging ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)',
-          }}
-        >
-          {rooms.map((room) => (
-            <div key={room.id} className="room">
-              {room.component}
-            </div>
-          ))}
-        </div>
+        <main className={`room-stage ${showIndicators ? 'with-sidebar' : ''} ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+          <div
+            ref={containerRef}
+            className="rooms-container"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            style={{
+              transform: `translateX(${translateX}%)`,
+              transition: isDragging ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)',
+            }}
+          >
+            {rooms.map((room) => (
+              <div key={room.id} className="room">
+                {room.component}
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     </RoomNavigationProvider>
   );

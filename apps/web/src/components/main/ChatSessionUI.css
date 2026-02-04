@@ -2,34 +2,15 @@
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
-  padding: 18px clamp(14px, 3vw, 24px);
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   /* RoomNavigator uses overflow:hidden; keep chat usable by making this self-contained */
-  height: calc(100dvh - 190px);
-  max-height: calc(100dvh - 190px);
+  height: 100%;
+  max-height: none;
   overflow: hidden;
   min-height: 0;
-}
-
-.chatHeader {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.chatTitleMain {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.chatTitleSub {
-  margin-top: 4px;
-  color: rgba(0, 0, 0, 0.58);
-  font-size: 13px;
 }
 
 .chatPrimary {
@@ -60,26 +41,6 @@
   display: flex;
   gap: 10px;
   align-items: center;
-}
-
-.chatHint {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.58);
-}
-
-.chatGenStatus {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.62);
-  padding: 8px 10px;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.chatGenElapsed {
-  margin-left: 6px;
-  color: rgba(0, 0, 0, 0.52);
-  font-variant-numeric: tabular-nums;
 }
 
 .chatLayout {
@@ -153,6 +114,57 @@
     rgba(255, 255, 255, 0.65) 22%,
     rgba(255, 255, 255, 0.82)
   );
+}
+
+.chatDockTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+}
+
+.chatDockMeta {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.chatMetaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.62);
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatMetaElapsed {
+  color: rgba(0, 0, 0, 0.50);
+  font-variant-numeric: tabular-nums;
+}
+
+.chatMetaHint {
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.52);
+  padding: 6px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatDockActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .chatMsg {
@@ -316,5 +328,16 @@
   .chatSide {
     order: 2;
     max-height: 260px;
+  }
+
+  .chatDockTop {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .chatDockActions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }

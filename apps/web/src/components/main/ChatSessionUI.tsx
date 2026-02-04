@@ -29,7 +29,7 @@ import './ChatSessionUI.css';
 import AlbumTitleModal from '../AlbumTitleModal';
 import ConfirmDialog from '../ConfirmDialog';
 import { useToast } from '../visual/feedback/ToastContainer';
-import GenerationFrostOverlay from '../visual/GenerationFrostOverlay';
+import { useGenerationOverlay } from '../../contexts/GenerationOverlayContext';
 
 function nowIso() {
   return new Date().toISOString();
@@ -58,6 +58,7 @@ export default function ChatSessionUI() {
   const { requestPlayAlbum } = useMusicPlayer();
   const { navigateToRoom } = useRoomNavigation();
   const { addToast } = useToast();
+  const { setOverlay, clearOverlay } = useGenerationOverlay();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -135,6 +136,19 @@ export default function ChatSessionUI() {
     }, 1000);
     return () => window.clearInterval(id);
   }, [isGeneratingEvent, generationStartedAt]);
+
+  useEffect(() => {
+    if (!isGeneratingEvent) {
+      clearOverlay('chat');
+      return;
+    }
+    setOverlay('chat', {
+      active: true,
+      statusText: generationStatusText,
+      elapsedSec: generationElapsedSec,
+      onCancel: handleCancelEvent,
+    });
+  }, [isGeneratingEvent, generationStatusText, generationElapsedSec, setOverlay, clearOverlay]);
 
   function handleCancelEvent() {
     if (!isGeneratingEvent) return;
@@ -775,12 +789,6 @@ export default function ChatSessionUI() {
 
   return (
     <div className="chatSession">
-      <GenerationFrostOverlay
-        active={isGeneratingEvent}
-        statusText={generationStatusText}
-        elapsedSec={generationElapsedSec}
-        onCancel={handleCancelEvent}
-      />
       <ConfirmDialog
         open={confirmDiscardOpen}
         title="保留中の生成を破棄しますか？"
@@ -809,66 +817,6 @@ export default function ChatSessionUI() {
           void finalizeAlbumTitle(title);
         }}
       />
-      <div className="chatHeader">
-        <div className="chatTitle">
-          <div className="chatTitleMain">対話</div>
-          <div className="chatTitleSub">話すだけで、レコメンドと創作が進む</div>
-        </div>
-        <div className="chatHeaderRight">
-          <button
-            className="chatPrimary"
-            onClick={handleStartEvent}
-            disabled={isGeneratingEvent}
-            data-no-swipe
-            title={eventSuggested?.reason || '会話の内容をもとに1曲生成します'}
-          >
-            {isGeneratingEvent ? '生成中…' : eventSuggested?.shouldTrigger ? '生成イベントを開始' : '今すぐ1曲つくる'}
-          </button>
-          {!isGeneratingEvent && hasPendingResume ? (
-            <button className="chatCancel" onClick={() => void handleResumeEvent()} data-no-swipe type="button">
-              生成を再開
-            </button>
-          ) : null}
-          {!isGeneratingEvent && hasPendingResume && generationFailed ? (
-            <button
-              className="chatCancel"
-              onClick={() => void handleRetryPendingEvent()}
-              data-no-swipe
-              type="button"
-              title="同じ条件で生成をやり直します（失敗・停止時向け）"
-            >
-              再生成
-            </button>
-          ) : null}
-          {isGeneratingEvent ? (
-            <button className="chatCancel" onClick={handleCancelEvent} data-no-swipe type="button">
-              キャンセル
-            </button>
-          ) : null}
-          {!isGeneratingEvent && hasPendingResume ? (
-            <button
-              className="chatCancel"
-              onClick={() => setConfirmDiscardOpen(true)}
-              data-no-swipe
-              type="button"
-              title="保留中の生成を破棄します"
-            >
-              破棄
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {generationStatusText ? (
-        <div className="chatGenStatus">
-          {generationStatusText}
-          {generationStartedAt ? <span className="chatGenElapsed">（{generationElapsedSec}s）</span> : null}
-        </div>
-      ) : null}
-
-      {eventSuggested && !eventSuggested.shouldTrigger ? (
-        <div className="chatHint">{eventSuggested.reason}</div>
-      ) : null}
 
       <div className="chatLayout">
         <div className="chatMain">
@@ -881,6 +829,69 @@ export default function ChatSessionUI() {
           </div>
 
           <div className="chatDock" data-no-swipe>
+            <div className="chatDockTop" aria-label="生成コントロール">
+              <div className="chatDockMeta">
+                {generationStatusText ? (
+                  <div className="chatMetaPill" aria-live="polite">
+                    {generationStatusText}
+                    {generationStartedAt ? <span className="chatMetaElapsed">（{generationElapsedSec}s）</span> : null}
+                  </div>
+                ) : eventSuggested && !eventSuggested.shouldTrigger ? (
+                  <div className="chatMetaHint" title={eventSuggested.reason}>
+                    {eventSuggested.reason}
+                  </div>
+                ) : (
+                  <div className="chatMetaHint" aria-hidden="true" />
+                )}
+              </div>
+
+              <div className="chatDockActions" data-no-swipe>
+                <button
+                  className="chatPrimary"
+                  onClick={handleStartEvent}
+                  disabled={isGeneratingEvent}
+                  title={eventSuggested?.reason || '会話の内容をもとに1曲生成します'}
+                  type="button"
+                >
+                  {isGeneratingEvent ? '生成中…' : eventSuggested?.shouldTrigger ? '生成イベントを開始' : '今すぐ1曲つくる'}
+                </button>
+
+                {!isGeneratingEvent && hasPendingResume ? (
+                  <button className="chatCancel" onClick={() => void handleResumeEvent()} type="button">
+                    再開
+                  </button>
+                ) : null}
+
+                {!isGeneratingEvent && hasPendingResume && generationFailed ? (
+                  <button
+                    className="chatCancel"
+                    onClick={() => void handleRetryPendingEvent()}
+                    type="button"
+                    title="同じ条件で生成をやり直します（失敗・停止時向け）"
+                  >
+                    再生成
+                  </button>
+                ) : null}
+
+                {isGeneratingEvent ? (
+                  <button className="chatCancel" onClick={handleCancelEvent} type="button">
+                    キャンセル
+                  </button>
+                ) : null}
+
+                {!isGeneratingEvent && hasPendingResume ? (
+                  <button
+                    className="chatCancel"
+                    onClick={() => setConfirmDiscardOpen(true)}
+                    type="button"
+                    title="保留中の生成を破棄します"
+                  >
+                    破棄
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
             {error ? <div className="chatError">{error}</div> : null}
 
             <div className="chatComposer">
