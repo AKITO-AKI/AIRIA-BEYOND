@@ -27,6 +27,11 @@ const GalleryRoom: React.FC = () => {
     selectAlbum(albumId);
   };
 
+  const handleAlbumOpen = (albumId: string) => {
+    selectAlbum(albumId);
+    navigateToRoom('album');
+  };
+
   const musicQueue = React.useMemo(() => albums.filter(a => a.musicData), [albums]);
   const canOpen = Boolean(selectedAlbum);
   const canPlay = Boolean(selectedAlbum?.musicData);
@@ -60,6 +65,7 @@ const GalleryRoom: React.FC = () => {
         <BookshelfCanvas
           albums={filteredAlbums}
           onBookClick={handleAlbumClick}
+          onBookOpen={handleAlbumOpen}
           constellationEnabled={false}
         />
         {filteredAlbums.length === 0 && (

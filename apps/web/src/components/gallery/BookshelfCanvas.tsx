@@ -6,6 +6,7 @@ import { Album } from '../../contexts/AlbumContext';
 interface BookshelfCanvasProps {
   albums: Album[];
   onBookClick: (albumId: string) => void;
+  onBookOpen?: (albumId: string) => void;
   constellationEnabled: boolean;
 }
 
@@ -20,6 +21,7 @@ export interface BookshelfInputState {
 const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
   albums,
   onBookClick,
+  onBookOpen,
   constellationEnabled,
 }) => {
   const inputRef = useRef<BookshelfInputState>({
@@ -89,6 +91,7 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
           <Bookshelf3D
             albums={albums}
             onBookClick={onBookClick}
+            onBookOpen={onBookOpen}
             constellationEnabled={constellationEnabled}
             inputRef={inputRef}
           />

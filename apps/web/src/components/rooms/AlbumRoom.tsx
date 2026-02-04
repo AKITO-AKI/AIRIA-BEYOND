@@ -20,6 +20,12 @@ const AlbumRoom: React.FC = () => {
   const { navigateToRoom } = useRoomNavigation();
   const album = getSelectedAlbum();
 
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+
   const [memoDraft, setMemoDraft] = useState('');
 
   useEffect(() => {
@@ -238,6 +244,22 @@ const AlbumRoom: React.FC = () => {
       </div>
 
       <div className="album-details">
+        <div className="album-meta-card" data-no-swipe="true">
+          <div className="album-meta-title">作品情報</div>
+          <div className="album-meta-grid">
+            <div className="album-meta-k">作成</div>
+            <div className="album-meta-v">{album.createdAt ? formatDateTime(album.createdAt) : ''}</div>
+            <div className="album-meta-k">公開</div>
+            <div className="album-meta-v">{album.isPublic ? '公開' : '非公開'}</div>
+            <div className="album-meta-k">お気に入り</div>
+            <div className="album-meta-v">{album.isFavorite ? 'Yes' : 'No'}</div>
+            <div className="album-meta-k">長さ</div>
+            <div className="album-meta-v">{album.duration ? `${album.duration} sec` : ''}</div>
+            <div className="album-meta-k">ムード</div>
+            <div className="album-meta-v">{album.mood}</div>
+          </div>
+        </div>
+
         <div
           className={`album-image-container ${isPlaying ? 'is-playing' : ''}`}
           ref={imageContainerRef}

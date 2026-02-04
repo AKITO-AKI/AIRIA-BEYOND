@@ -60,6 +60,41 @@
   margin: 0 auto;
 }
 
+.album-meta-card {
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 16px 16px 12px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+}
+
+.album-meta-title {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.album-meta-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px 10px;
+}
+
+.album-meta-k {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.album-meta-v {
+  color: var(--color-text);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .album-image-container {
   position: relative;
   background: var(--surface-porcelain);

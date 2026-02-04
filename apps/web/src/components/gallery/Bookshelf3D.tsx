@@ -8,6 +8,7 @@ import type { BookshelfInputState } from './BookshelfCanvas';
 interface Bookshelf3DProps {
   albums: Album[];
   onBookClick: (albumId: string) => void;
+  onBookOpen?: (albumId: string) => void;
   constellationEnabled: boolean;
   inputRef: React.MutableRefObject<BookshelfInputState>;
 }
@@ -15,6 +16,7 @@ interface Bookshelf3DProps {
 const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   albums,
   onBookClick,
+  onBookOpen,
   constellationEnabled: _constellationEnabled,
   inputRef,
 }) => {
@@ -23,6 +25,7 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
 
   const [orderIds, setOrderIds] = useState<string[]>(() => albums.map((a) => a.id));
   const [faceOutIds, setFaceOutIds] = useState<Record<string, boolean>>({});
+  const [focusedBookId, setFocusedBookId] = useState<string | null>(null);
 
   const panXRef = useRef(0);
   const panVRef = useRef(0);
@@ -108,6 +111,8 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     const z = 0;
     return { x, y, z, shelfIndex, col };
   };
+
+  const focusedPosition: [number, number, number] = [0, 0.55, 1.55];
 
   const pointToSlot = (p: THREE.Vector3) => {
     // p is in shelfGroup local coords.
@@ -268,9 +273,13 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     }
 
     if (!moved) {
-      // Treat as click/tap: select + toggle face-out.
-      setFaceOutIds((prev) => ({ ...prev, [albumId]: !prev[albumId] }));
-      onBookClick(albumId);
+      // Click/tap.
+      if (focusedBookId === albumId) {
+        // When already focused, a click opens the album.
+        (onBookOpen || onBookClick)(albumId);
+      } else {
+        onBookClick(albumId);
+      }
       return;
     }
 
@@ -281,6 +290,13 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         return moveItem(prev, safeFrom, safeTo);
       });
     }
+  };
+
+  const handleDoubleClick = (albumId: string) => {
+    // Pull book to camera and show cover.
+    setFocusedBookId((prev) => (prev === albumId ? null : albumId));
+    setFaceOutIds((prev) => ({ ...prev, [albumId]: true }));
+    onBookClick(albumId);
   };
 
   const endDragAny = (e: any) => {
@@ -366,20 +382,31 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           const p = slotToPos(slotIndex);
           const isDragging = dragRef.current.activeId === albumId;
           const dragPos = isDragging ? dragRef.current.dragPos : null;
-          const position: [number, number, number] = dragPos
+          const basePosition: [number, number, number] = dragPos
             ? [dragPos.x, dragPos.y, dragPos.z]
             : [p.x, p.y, 0.25];
+          const isFocused = focusedBookId === albumId;
 
           return (
             <Book3D
               key={album.id}
               album={album}
-              position={position}
+              basePosition={basePosition}
+              isFocused={isFocused}
+              focusedPosition={focusedPosition}
               faceOut={Boolean(faceOutIds[album.id])}
               dragging={isDragging}
               onPointerDown={(e) => beginDrag(album.id, e, slotIndex)}
               onPointerMove={(e) => updateDrag(e)}
               onPointerUp={(e) => endDrag(album.id, e)}
+              onClick={() => {
+                if (focusedBookId === albumId) {
+                  (onBookOpen || onBookClick)(albumId);
+                } else {
+                  onBookClick(albumId);
+                }
+              }}
+              onDoubleClick={() => handleDoubleClick(albumId)}
             />
           );
         })}

@@ -1,31 +1,41 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { Album } from '../../contexts/AlbumContext';
 
 interface Book3DProps {
   album: Album;
-  position: [number, number, number];
+  basePosition: [number, number, number];
+  isFocused?: boolean;
+  focusedPosition?: [number, number, number];
   faceOut: boolean;
   dragging?: boolean;
   onPointerDown?: (e: any) => void;
   onPointerMove?: (e: any) => void;
   onPointerUp?: (e: any) => void;
+  onClick?: () => void;
+  onDoubleClick?: () => void;
 }
 
 const Book3D: React.FC<Book3DProps> = ({
   album,
-  position,
+  basePosition,
+  isFocused,
+  focusedPosition,
   faceOut,
   dragging,
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onClick,
+  onDoubleClick,
 }) => {
+  const groupRef = useRef<THREE.Group>(null);
   const spineMeshRef = useRef<THREE.Mesh>(null);
   const coverGroupRef = useRef<THREE.Group>(null);
   const coverProgressRef = useRef(0);
+  const [hovered, setHovered] = React.useState(false);
 
   // Dimensions (kept consistent for snapping/readability)
   const spineWidth = 0.22;
@@ -36,7 +46,7 @@ const Book3D: React.FC<Book3DProps> = ({
   const labelPrimary = album.title || album.mood;
   const labelSecondary = useMemo(() => {
     const d = new Date(album.createdAt);
-    return d.toLocaleDateString('ja-JP', { year: '2-digit', month: '2-digit', day: '2-digit' });
+    return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
   }, [album.createdAt]);
 
   const coverTexture = useLoader(THREE.TextureLoader, album.imageDataURL);
@@ -47,6 +57,18 @@ const Book3D: React.FC<Book3DProps> = ({
   }, [coverTexture]);
 
   useFrame((_, dt) => {
+    // Position (smooth focus animation)
+    if (groupRef.current) {
+      const target = (isFocused && focusedPosition) ? focusedPosition : basePosition;
+      if (dragging) {
+        groupRef.current.position.set(target[0], target[1], target[2]);
+      } else {
+        const speed = isFocused ? 10 : 12;
+        const a = 1 - Math.exp(-speed * dt);
+        groupRef.current.position.lerp(new THREE.Vector3(target[0], target[1], target[2]), a);
+      }
+    }
+
     const target = faceOut || dragging ? 1 : 0;
     const speed = 8;
     coverProgressRef.current = THREE.MathUtils.lerp(
@@ -72,13 +94,29 @@ const Book3D: React.FC<Book3DProps> = ({
   });
 
   return (
-    <group position={position}>
+    <group ref={groupRef}>
       {/* Spine (minimal info only) */}
       <mesh
         ref={spineMeshRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick?.();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+        }}
         castShadow
         receiveShadow
       >
@@ -102,33 +140,38 @@ const Book3D: React.FC<Book3DProps> = ({
         )}
       </group>
 
-      {/* Minimal spine text (2 items max) */}
-      <group position={[0, 0, spineDepth / 2 + 0.01]}>
-        <Text
-          fontSize={0.12}
-          color={spineColor === '#111111' ? '#f5f5f5' : '#111111'}
-          anchorX="center"
-          anchorY="middle"
-          maxWidth={0.9}
+      {/* Hover tooltip instead of spine text (prevents overflow) */}
+      {hovered && !dragging ? (
+        <Html
+          position={[0, spineHeight / 2 + 0.22, spineDepth / 2 + 0.06]}
+          center
+          style={{ pointerEvents: 'none' }}
+          transform
+          distanceFactor={8}
         >
-          {labelPrimary}
-        </Text>
-        <Text
-          position={[0, -0.16, 0]}
-          fontSize={0.08}
-          color={spineColor === '#111111' ? '#f5f5f5' : '#111111'}
-          fillOpacity={spineColor === '#111111' ? 0.75 : 0.55}
-          anchorX="center"
-          anchorY="middle"
-          maxWidth={0.9}
-        >
-          {labelSecondary}
-        </Text>
-      </group>
+          <div className="book-tooltip">
+            <div className="book-tooltip-title">{labelPrimary}</div>
+            <div className="book-tooltip-sub">{labelSecondary}</div>
+          </div>
+        </Html>
+      ) : null}
 
       {/* Cover: only when selected (slides forward) */}
       <group ref={coverGroupRef} position={[0, 0.05, spineDepth / 2 + 0.04]} visible={false}>
-        <mesh onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} castShadow>
+        <mesh
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onDoubleClick?.();
+          }}
+          castShadow
+        >
           <planeGeometry args={[1.1, 1.55]} />
           <meshStandardMaterial map={coverTexture} roughness={0.85} metalness={0.0} />
         </mesh>
