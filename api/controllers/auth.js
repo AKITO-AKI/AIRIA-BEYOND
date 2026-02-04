@@ -18,9 +18,13 @@ function isPasswordAuthEnabled() {
   const allow = String(process.env.AUTH_ALLOW_PASSWORD || '').trim().toLowerCase();
   if (allow === 'true') return true;
   if (allow === 'false') return false;
-  const googleConfigured = Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
-  const appleConfigured = Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
-  return !googleConfigured && !appleConfigured;
+  // Default to enabled for pre-release unless explicitly disabled.
+  return true;
+}
+
+function isOAuthDisabled() {
+  const v = String(process.env.AUTH_DISABLE_OAUTH || '').trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes';
 }
 
 function getClientIdentifier(req) {
@@ -211,8 +215,8 @@ export async function publicUserHandler(req, res) {
 
 export async function authConfigHandler(req, res) {
   try {
-    const googleConfigured = Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
-    const appleConfigured = Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
+    const googleConfigured = !isOAuthDisabled() && Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
+    const appleConfigured = !isOAuthDisabled() && Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
     return res.json({
       passwordEnabled: isPasswordAuthEnabled(),
       oauth: { google: googleConfigured, apple: appleConfigured },
@@ -226,6 +230,12 @@ export async function authConfigHandler(req, res) {
 }
 
 export async function oauthGoogleHandler(req, res) {
+  if (isOAuthDisabled()) {
+    return res.status(404).json({
+      error: 'Not found',
+      message: 'OAuth login is disabled',
+    });
+  }
   const clientId = getClientIdentifier(req);
   if (!checkRateLimit(clientId)) {
     return res.status(429).json({
@@ -268,6 +278,12 @@ export async function oauthGoogleHandler(req, res) {
 }
 
 export async function oauthAppleHandler(req, res) {
+  if (isOAuthDisabled()) {
+    return res.status(404).json({
+      error: 'Not found',
+      message: 'OAuth login is disabled',
+    });
+  }
   const clientId = getClientIdentifier(req);
   if (!checkRateLimit(clientId)) {
     return res.status(429).json({

@@ -1,27 +1,11 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { authConfig as apiAuthConfig } from '../../api/authApi';
 import './AuthRoom.css';
 
-declare global {
-  interface Window {
-    google?: any;
-    AppleID?: any;
-  }
-}
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID as string | undefined;
-const APPLE_REDIRECT_URI =
-  (import.meta.env.VITE_APPLE_REDIRECT_URI as string | undefined) ||
-  `${window.location.origin}${window.location.pathname}`;
-
 const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
-  const { loginWithGoogle, loginWithApple, loginWithPassword, registerWithPassword, busy } = useAuth();
-  const googleBtnRef = React.useRef<HTMLDivElement | null>(null);
+  const { loginWithPassword, registerWithPassword, busy } = useAuth();
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
-  const [passwordEnabled, setPasswordEnabled] = React.useState<boolean>(true);
   const [mode, setMode] = React.useState<'signup' | 'login'>(() => {
     try {
       const h = String(window.location.hash || '').toLowerCase();
@@ -40,97 +24,6 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       // ignore
     }
   }, []);
-
-  React.useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const cfg = await apiAuthConfig();
-        if (!alive) return;
-        setPasswordEnabled(Boolean(cfg?.passwordEnabled));
-      } catch {
-        // If config can't be loaded (e.g. API base misconfigured), keep password UI visible.
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  React.useEffect(() => {
-    setError(null);
-    setSuccess(null);
-
-    if (!GOOGLE_CLIENT_ID) return;
-    const google = window.google;
-    if (!google?.accounts?.id) return;
-    if (!googleBtnRef.current) return;
-
-    try {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async (resp: any) => {
-          try {
-            const idToken = String(resp?.credential || '');
-            if (!idToken) throw new Error('Google credential is missing');
-            await loginWithGoogle(idToken);
-          } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
-          }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      googleBtnRef.current.innerHTML = '';
-      google.accounts.id.renderButton(googleBtnRef.current, {
-        theme: 'outline',
-        size: 'large',
-        width: 280,
-        text: 'signin_with',
-        shape: 'pill',
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [loginWithGoogle]);
-
-  const handleApple = async () => {
-    setError(null);
-    setSuccess(null);
-    if (!APPLE_CLIENT_ID) {
-      setError('Apple Client ID が未設定です');
-      return;
-    }
-    const AppleID = window.AppleID;
-    if (!AppleID?.auth) {
-      setError('Apple のログインスクリプトが読み込まれていません');
-      return;
-    }
-
-    try {
-      AppleID.auth.init({
-        clientId: APPLE_CLIENT_ID,
-        scope: 'name email',
-        redirectURI: APPLE_REDIRECT_URI,
-        usePopup: true,
-      });
-
-      const res = await AppleID.auth.signIn();
-      const idToken = String(res?.authorization?.id_token || '');
-      if (!idToken) throw new Error('Apple id_token が取得できませんでした');
-      await loginWithApple(idToken, res?.user);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const googleReady = Boolean(GOOGLE_CLIENT_ID);
-  const appleReady = Boolean(APPLE_CLIENT_ID);
-  const missingOAuthProviders = [
-    ...(googleReady ? [] : ['Google']),
-    ...(appleReady ? [] : ['Apple']),
-  ];
 
   const [signupEmail, setSignupEmail] = React.useState('');
   const [signupPassword, setSignupPassword] = React.useState('');
@@ -161,6 +54,9 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     setError(null);
     setSuccess(null);
     try {
+      if (!String(loginIdentifier || '').includes('@')) {
+        throw new Error('メールアドレスを入力してください');
+      }
       await loginWithPassword({ identifier: loginIdentifier, password: loginPassword });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -218,24 +114,6 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <h1 className="auth-title">AIRIA</h1>
         <p className="auth-subtitle">{mode === 'signup' ? '無料で始める（初回ログイン＝登録）' : 'おかえりなさい。ログインして続ける'}</p>
 
-        {missingOAuthProviders.length ? (
-          <div className="auth-loading" role="note">
-            <div className="auth-loading-title">OAuth が未設定です</div>
-            <div className="auth-loading-sub">
-              {missingOAuthProviders.join(' / ')} の Client ID がフロントエンド側で未投入です。
-              GitHub Pages では環境変数はビルド時に埋め込まれるため、管理者が GitHub Secrets に
-              `VITE_GOOGLE_CLIENT_ID` / `VITE_APPLE_CLIENT_ID` を設定して再デプロイする必要があります。
-            </div>
-          </div>
-        ) : null}
-
-        {!passwordEnabled ? (
-          <div className="auth-loading" role="note">
-            <div className="auth-loading-title">メール/パスワードは無効です</div>
-            <div className="auth-loading-sub">この環境では OAuth（Google / Apple）でログインしてください。</div>
-          </div>
-        ) : null}
-
         {busy ? (
           <div className="auth-loading" aria-live="polite" aria-busy="true">
             <div className="auth-loading-row">
@@ -253,11 +131,11 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <div className="auth-note">
           {mode === 'signup' ? (
             <>
-              <p>メール/パスワード、または Google / Apple でアカウントを作成できます。</p>
+              <p>プレリリースはメールアドレスとパスワードでアカウントを作成します。</p>
             </>
           ) : (
             <>
-              <p>メール/パスワード、または以前使った Google / Apple でログインしてください。</p>
+              <p>メールアドレスとパスワードでログインしてください。</p>
               <p>
                 初めての方は{' '}
                 <button
@@ -281,7 +159,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           )}
         </div>
 
-        {passwordEnabled && mode === 'signup' ? (
+        {mode === 'signup' ? (
           <form className="auth-form" onSubmit={(e) => void submitSignup(e)}>
             <label className="auth-label">
               メールアドレス
@@ -329,17 +207,17 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               {busy ? '作成中…' : 'メールで新規登録'}
             </button>
           </form>
-        ) : passwordEnabled && mode === 'login' ? (
+        ) : (
           <form className="auth-form" onSubmit={(e) => void submitLogin(e)}>
             <label className="auth-label">
-              メールアドレス / ハンドル
+              メールアドレス
               <input
                 className="auth-input"
-                type="text"
+                type="email"
                 value={loginIdentifier}
                 onChange={(e) => setLoginIdentifier(e.target.value)}
-                placeholder="you@example.com または your_handle"
-                autoComplete="username"
+                placeholder="you@example.com"
+                autoComplete="email"
                 disabled={busy}
                 required
               />
@@ -363,29 +241,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               {busy ? 'ログイン中…' : 'メールでログイン'}
             </button>
           </form>
-        ) : null}
-
-        <div className="auth-sep" aria-hidden="true">
-          <span />
-          <div>または</div>
-          <span />
-        </div>
-
-        <div className="auth-actions">
-          <div className={`auth-google ${googleReady ? '' : 'disabled'}`}>
-            {googleReady ? (
-              <div ref={googleBtnRef} />
-            ) : (
-              <button className="btn" disabled>
-                Googleでログイン（未設定）
-              </button>
-            )}
-          </div>
-
-          <button className="btn btn-apple" onClick={() => void handleApple()} disabled={busy || !APPLE_CLIENT_ID}>
-            Appleでログイン{APPLE_CLIENT_ID ? '' : '（未設定）'}
-          </button>
-        </div>
+        )}
 
         {error && <div className="auth-error">{error}</div>}
 

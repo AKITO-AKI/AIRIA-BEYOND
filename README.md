@@ -12,7 +12,7 @@ An AI-powered session management and mood tracking application.
 - https://akito-aki.github.io/AIRIA-BEYOND/
 
 2) 「ログインしてはじめる」
-- Google / Apple ログイン（OAuth-only）
+- メールアドレスでログイン（Email / Password）
 
 3) はじめに（所要 30秒〜2分）
 - 早く試したい場合は「創作から」を選ぶ（ステップ数が短い）
@@ -30,17 +30,12 @@ An AI-powered session management and mood tracking application.
 
 ### つまずきやすいポイント
 
-- ログインボタンが「未設定」と表示される場合: OAuthのClient ID設定が未投入です（`VITE_GOOGLE_CLIENT_ID` / `VITE_APPLE_CLIENT_ID`）。
-- GitHub Pages では環境変数は「実行時」ではなく「ビルド時」に埋め込まれます。公開版で OAuth を有効にするには、GitHub リポジトリの Secrets に以下を設定してください。
-  - `VITE_API_BASE_URL`（例: `https://airia-beyond.onrender.com`）
-  - `VITE_GOOGLE_CLIENT_ID`
-  - `VITE_APPLE_CLIENT_ID`
-  - `VITE_APPLE_REDIRECT_URI`（例: `https://akito-aki.github.io/AIRIA-BEYOND/`）
-- Appleログインは「Apple Developer 側のリダイレクトURI登録」と一致が必要です（`VITE_APPLE_REDIRECT_URI`）。
+- APIに繋がらない/エラーになる場合: フロントエンドの `VITE_API_BASE_URL` が未設定か、API 側の CORS 設定に現在のURLが入っていません（`APP_PUBLIC_URL` / `APP_ALLOWED_ORIGINS`）。
+- Vite の環境変数は「実行時」ではなく「ビルド時」に埋め込まれます。Netlify/GitHub Pages いずれでも、環境変数を入れたら **再デプロイ（再ビルド）** が必要です。
 - 生成はネットワーク状況で 1〜2分程度かかることがあります（失敗しても進行するフォールバック設計です）。
 
 補足:
-- 「Invalid credentials」はメール/パスワードが違う場合に出ます。プレリリースは OAuth-only の想定（`AUTH_ALLOW_PASSWORD=false`）なので、基本は Google / Apple でログインしてください。
+- 「Invalid credentials」はメール/パスワードが違う場合に出ます。
 
 ### 印刷用チラシ（QR/URL）
 
@@ -145,34 +140,27 @@ OPENAI_API_KEY=your_openai_api_key_here
 - Without `OPENAI_API_KEY`, the app uses rule-based (or Ollama if configured)
 - Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control)
 
-### OAuth-only Login (Google / Apple)
+### Email/Password Login (Pre-release)
 
-Pre-release uses **OAuth-only** login. Password login/registration is disabled by default.
+Pre-release uses **email/password-only** login.
 
 Backend (Render / `server.js`) env vars:
 ```
-GOOGLE_CLIENT_ID=...
-APPLE_CLIENT_ID=...
+# Enable password endpoints (/api/auth/login & /api/auth/register)
+AUTH_ALLOW_PASSWORD=true
 
-# Optional (DEV only): enable password endpoints /api/auth/login & /register
-AUTH_ALLOW_PASSWORD=false
+# Hard-disable OAuth endpoints (/api/auth/oauth/*)
+AUTH_DISABLE_OAUTH=true
 ```
 
 Frontend (Vite) env vars:
 ```
-VITE_GOOGLE_CLIENT_ID=...
-VITE_APPLE_CLIENT_ID=...
+# Backend API base URL
+VITE_API_BASE_URL=https://airia-beyond.onrender.com
 
 # Base path (GitHub Pages: /AIRIA-BEYOND/, custom domain: /)
 VITE_PUBLIC_BASE_PATH=/AIRIA-BEYOND/
-
-# Optional (recommended for Apple): exact redirect URI registered in Apple Developer
-VITE_APPLE_REDIRECT_URI=https://akito-aki.github.io/AIRIA-BEYOND/
 ```
-
-Notes:
-- Google uses Google Identity Services and sends an `id_token` to the backend for verification.
-- Apple requires domain/redirect configuration in Apple Developer; `usePopup: true` is used.
 
 ### Email Notifications (Optional)
 

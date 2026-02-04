@@ -84,17 +84,6 @@ export async function loginWithEmail(input: { email: string; password: string })
   return json as { token: string; expiresAt: string; user: AuthUser };
 }
 
-export async function oauthLogin(provider: 'google' | 'apple', input: { idToken: string; user?: any }) {
-  const response = await fetch(`${API_BASE}/api/auth/oauth/${encodeURIComponent(provider)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  const json = await readJsonSafe(response);
-  if (!response.ok) throw new Error(json?.message || `Failed to login: ${response.status}`);
-  return json as { token: string; expiresAt: string; user: AuthUser };
-}
-
 export async function me() {
   const response = await authFetch(`${API_BASE}/api/auth/me`);
   const json = await readJsonSafe(response);
@@ -118,11 +107,4 @@ export async function updateProfile(input: { displayName?: string; bio?: string 
   const json = await readJsonSafe(response);
   if (!response.ok) throw new Error(json?.message || `Failed to update profile: ${response.status}`);
   return json as { user: AuthUser };
-}
-
-export async function authConfig() {
-  const response = await fetch(`${API_BASE}/api/auth/config`);
-  const json = await readJsonSafe(response);
-  if (!response.ok) throw new Error(json?.message || `Failed to load auth config: ${response.status}`);
-  return json as { passwordEnabled: boolean; oauth: { google: boolean; apple: boolean } };
 }
