@@ -13,10 +13,8 @@ function isPasswordAuthEnabled() {
   const allow = String(process.env.AUTH_ALLOW_PASSWORD || '').trim().toLowerCase();
   if (allow === 'true') return true;
   if (allow === 'false') return false;
-  // Fallback: if OAuth is not configured at all, allow password auth so the app is usable.
-  const googleConfigured = Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
-  const appleConfigured = Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
-  return !googleConfigured && !appleConfigured;
+  // Pre-release default: password auth is ON unless explicitly disabled.
+  return true;
 }
 
 async function ensureDirExists(filePath) {
@@ -30,9 +28,23 @@ async function loadIfNeeded() {
 
   try {
     const raw = await fs.readFile(STORE_PATH, 'utf-8');
-    const parsed = JSON.parse(raw);
-    users = Array.isArray(parsed?.users) ? parsed.users : [];
-    sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+    try {
+      const parsed = JSON.parse(raw);
+      users = Array.isArray(parsed?.users) ? parsed.users : [];
+      sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+    } catch {
+      // If the store is corrupted (e.g., partial write), back it up and start fresh.
+      try {
+        const dir = path.dirname(STORE_PATH);
+        const base = path.basename(STORE_PATH, path.extname(STORE_PATH));
+        const backup = path.join(dir, `${base}.corrupt_${Date.now()}.json`);
+        await fs.copyFile(STORE_PATH, backup);
+      } catch {
+        // ignore
+      }
+      users = [];
+      sessions = [];
+    }
   } catch {
     users = [];
     sessions = [];
@@ -41,7 +53,23 @@ async function loadIfNeeded() {
   cleanupExpiredSessionsSync();
 }
 
-async function persist() {
+let persistChain = Promise.resolve();
+
+async function writeFileAtomically(filePath, content) {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+  const tmpPath = path.join(dir, `.${base}.tmp_${process.pid}_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+  await fs.writeFile(tmpPath, content, 'utf-8');
+  try {
+    await fs.rename(tmpPath, filePath);
+  } catch (e) {
+    // Windows can fail rename-over-existing; fall back to copy+unlink.
+    await fs.copyFile(tmpPath, filePath);
+    await fs.unlink(tmpPath).catch(() => null);
+  }
+}
+
+async function persistOnce() {
   await ensureDirExists(STORE_PATH);
   const payload = {
     version: 1,
@@ -49,7 +77,15 @@ async function persist() {
     users,
     sessions,
   };
-  await fs.writeFile(STORE_PATH, JSON.stringify(payload, null, 2), 'utf-8');
+  const content = JSON.stringify(payload, null, 2);
+  await writeFileAtomically(STORE_PATH, content);
+}
+
+async function persist() {
+  // Serialize persist to avoid race conditions/corrupted writes.
+  // Keep the chain alive even if a previous persist failed.
+  persistChain = persistChain.catch(() => null).then(() => persistOnce());
+  return persistChain;
 }
 
 function makeId(prefix) {

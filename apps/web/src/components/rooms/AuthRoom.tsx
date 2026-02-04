@@ -16,6 +16,7 @@ const OAUTH_ENABLED = String(import.meta.env.VITE_ENABLE_OAUTH || '')
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 const APPLE_REDIRECT_URI =
   (import.meta.env.VITE_APPLE_REDIRECT_URI as string | undefined) ||
   `${window.location.origin}${window.location.pathname}`;
@@ -26,6 +27,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [passwordEnabled, setPasswordEnabled] = React.useState<boolean>(true);
+  const [apiReachable, setApiReachable] = React.useState<boolean | null>(null);
 
   const deploymentHint = React.useMemo(() => {
     try {
@@ -60,11 +62,20 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     let alive = true;
     (async () => {
       try {
+        if (!API_BASE) {
+          setApiReachable(false);
+          return;
+        }
+        const health = await fetch(`${API_BASE}/api/health`).catch(() => null);
+        if (!alive) return;
+        setApiReachable(Boolean(health && health.ok));
+
         const cfg = await apiAuthConfig();
         if (!alive) return;
         setPasswordEnabled(Boolean(cfg?.passwordEnabled));
       } catch {
         // If config can't be loaded (e.g. API base misconfigured), keep password UI visible.
+        if (alive) setApiReachable(false);
       }
     })();
     return () => {
@@ -239,6 +250,21 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
         <h1 className="auth-title">AIRIA</h1>
         <p className="auth-subtitle">{mode === 'signup' ? '無料で始める（初回ログイン＝登録）' : 'おかえりなさい。ログインして続ける'}</p>
+
+        {apiReachable === false ? (
+          <div className="auth-loading" role="note">
+            <div className="auth-loading-title">API に接続できません</div>
+            <div className="auth-loading-sub">
+              新規登録/ログインが「Failed to fetch」になる場合、ほとんどが API 設定または CORS が原因です。
+              <br />
+              現在の API: {API_BASE || '(未設定)'}
+              <br />
+              対応: {deploymentHint} に `VITE_API_BASE_URL`（例: https://airia-beyond.onrender.com）を設定して再デプロイ。
+              <br />
+              併せてバックエンド側で `APP_PUBLIC_URL` / `APP_ALLOWED_ORIGINS` にフロントのURLを追加してください。
+            </div>
+          </div>
+        ) : null}
 
         {OAUTH_ENABLED && missingOAuthProviders.length ? (
           <div className="auth-loading" role="note">

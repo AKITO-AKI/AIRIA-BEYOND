@@ -155,6 +155,7 @@
   background: rgba(255, 60, 60, 0.12);
   border: 1px solid rgba(255, 60, 60, 0.22);
   color: rgba(255, 200, 200, 0.95);
+  white-space: pre-wrap;
 }
 
 :root[data-theme='light'] .auth-error {

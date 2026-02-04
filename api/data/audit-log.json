@@ -1,8 +1,92 @@
 {
   "version": 1,
-  "updatedAt": "2026-02-04T02:32:19.793Z",
-  "nextId": 3,
+  "updatedAt": "2026-02-04T09:27:27.510Z",
+  "nextId": 7,
   "events": [
+    {
+      "id": 6,
+      "ts": "2026-02-04T09:27:27.282Z",
+      "type": "auth.login",
+      "severity": "info",
+      "actor": null,
+      "target": {
+        "kind": "user",
+        "id": "u_1770197247241_hgisc7ed"
+      },
+      "summary": "login @test_1770197247163_f",
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "ip": "::1",
+        "ua": "node"
+      },
+      "data": {
+        "provider": "password"
+      }
+    },
+    {
+      "id": 5,
+      "ts": "2026-02-04T09:27:27.246Z",
+      "type": "auth.register",
+      "severity": "info",
+      "actor": null,
+      "target": {
+        "kind": "user",
+        "id": "u_1770197247241_hgisc7ed"
+      },
+      "summary": "registered @test_1770197247163_f",
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/register",
+        "ip": "::1",
+        "ua": "node"
+      },
+      "data": {
+        "provider": "password"
+      }
+    },
+    {
+      "id": 4,
+      "ts": "2026-02-04T09:18:44.906Z",
+      "type": "auth.login",
+      "severity": "info",
+      "actor": null,
+      "target": {
+        "kind": "user",
+        "id": "u_1770196724863_50an1xid"
+      },
+      "summary": "login @test_1770196724767_e",
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "ip": "::1",
+        "ua": "node"
+      },
+      "data": {
+        "provider": "password"
+      }
+    },
+    {
+      "id": 3,
+      "ts": "2026-02-04T09:18:44.871Z",
+      "type": "auth.register",
+      "severity": "info",
+      "actor": null,
+      "target": {
+        "kind": "user",
+        "id": "u_1770196724863_50an1xid"
+      },
+      "summary": "registered @test_1770196724767_e",
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/register",
+        "ip": "::1",
+        "ua": "node"
+      },
+      "data": {
+        "provider": "password"
+      }
+    },
     {
       "id": 2,
       "ts": "2026-02-04T02:32:19.535Z",
