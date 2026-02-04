@@ -4,6 +4,41 @@ An AI-powered session management and mood tracking application.
 
 🚀 **Live Demo**: [https://akito-aki.github.io/AIRIA-BEYOND/](https://akito-aki.github.io/AIRIA-BEYOND/)
 
+## Pre-release: Quick Start (配布用)
+
+プレリリースで「迷わず起動」できる最短手順です。
+
+1) 共有URLを開く
+- https://akito-aki.github.io/AIRIA-BEYOND/
+
+2) 「ログインしてはじめる」
+- Google / Apple ログイン（OAuth-only）
+
+3) はじめに（所要 30秒〜2分）
+- 早く試したい場合は「創作から」を選ぶ（ステップ数が短い）
+- 最後に「完了」→ 次画面で「はじめる」
+
+4) 生成を体験
+- 「1曲作ってはじめる」で、オンボーディング回答から1曲生成してそのまま再生
+- 生成が止まった/通信が切れた場合は「生成を再開」で復帰できます
+
+### 直接リンク（プレログイン）
+
+- ログイン画面: https://akito-aki.github.io/AIRIA-BEYOND/#login
+- プライバシー: https://akito-aki.github.io/AIRIA-BEYOND/#privacy
+- 利用規約: https://akito-aki.github.io/AIRIA-BEYOND/#terms
+
+### つまずきやすいポイント
+
+- ログインボタンが「未設定」と表示される場合: OAuthのClient ID設定が未投入です（`VITE_GOOGLE_CLIENT_ID` / `VITE_APPLE_CLIENT_ID`）。
+- Appleログインは「Apple Developer 側のリダイレクトURI登録」と一致が必要です（`VITE_APPLE_REDIRECT_URI`）。
+- 生成はネットワーク状況で 1〜2分程度かかることがあります（失敗しても進行するフォールバック設計です）。
+
+### 印刷用チラシ（QR/URL）
+
+- 印刷ページ: [docs/flyer.html](docs/flyer.html)
+- URL差し替え: `docs/flyer.html?url=https://example.com/`（上部ツールバーからも変更可能）
+
 ## Architecture
 
 AIRIA BEYOND uses a split architecture for cost-effective deployment:
