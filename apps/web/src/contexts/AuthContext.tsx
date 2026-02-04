@@ -2,7 +2,10 @@ import React from 'react';
 import {
   getAuthToken,
   me as apiMe,
+  login as apiLogin,
   loginWithEmail as apiLoginWithEmail,
+  oauthLogin,
+  register as apiRegister,
   registerWithEmail as apiRegisterWithEmail,
   logout as apiLogout,
   updateProfile as apiUpdateProfile,
@@ -16,6 +19,8 @@ interface AuthContextValue {
   busy: boolean;
   token: string;
   refresh: () => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (idToken: string, appleUser?: any) => Promise<void>;
   loginWithPassword: (input: { identifier: string; password: string }) => Promise<void>;
   registerWithPassword: (input: { email: string; password: string; displayName?: string; handle?: string }) => Promise<void>;
   logout: () => Promise<void>;
@@ -98,16 +103,43 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     void refresh();
   }, [refresh]);
 
+  const loginWithGoogle = React.useCallback(async (idToken: string) => {
+    const opId = beginOp();
+    setBusy(true);
+    try {
+      const resp = await oauthLogin('google', { idToken });
+      if (!isLatest(opId)) return;
+      setAuthToken(resp.token);
+      setToken(resp.token);
+      setUser(resp.user);
+    } finally {
+      if (isLatest(opId)) setBusy(false);
+    }
+  }, [beginOp, isLatest]);
+
+  const loginWithApple = React.useCallback(async (idToken: string, appleUser?: any) => {
+    const opId = beginOp();
+    setBusy(true);
+    try {
+      const resp = await oauthLogin('apple', { idToken, user: appleUser || undefined });
+      if (!isLatest(opId)) return;
+      setAuthToken(resp.token);
+      setToken(resp.token);
+      setUser(resp.user);
+    } finally {
+      if (isLatest(opId)) setBusy(false);
+    }
+  }, [beginOp, isLatest]);
+
   const loginWithPassword = React.useCallback(async (input: { identifier: string; password: string }) => {
     const opId = beginOp();
     setBusy(true);
     try {
       const identifier = String(input?.identifier || '').trim();
       const password = String(input?.password || '');
-      if (!identifier.includes('@')) {
-        throw new Error('メールアドレスを入力してください');
-      }
-      const resp = await apiLoginWithEmail({ email: identifier, password });
+      const resp = identifier.includes('@')
+        ? await apiLoginWithEmail({ email: identifier, password })
+        : await apiLogin({ handle: identifier, password });
       if (!isLatest(opId)) return;
       setAuthToken(resp.token);
       setToken(resp.token);
@@ -174,6 +206,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     busy,
     token,
     refresh,
+    loginWithGoogle,
+    loginWithApple,
     loginWithPassword,
     registerWithPassword,
     logout,

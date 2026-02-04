@@ -12,7 +12,7 @@ An AI-powered session management and mood tracking application.
 - https://akito-aki.github.io/AIRIA-BEYOND/
 
 2) 「ログインしてはじめる」
-- メールアドレスでログイン（Email / Password）
+- メールアドレスで新規登録 → ログイン
 
 3) はじめに（所要 30秒〜2分）
 - 早く試したい場合は「創作から」を選ぶ（ステップ数が短い）
@@ -30,12 +30,11 @@ An AI-powered session management and mood tracking application.
 
 ### つまずきやすいポイント
 
-- APIに繋がらない/エラーになる場合: フロントエンドの `VITE_API_BASE_URL` が未設定か、API 側の CORS 設定に現在のURLが入っていません（`APP_PUBLIC_URL` / `APP_ALLOWED_ORIGINS`）。
-- Vite の環境変数は「実行時」ではなく「ビルド時」に埋め込まれます。Netlify/GitHub Pages いずれでも、環境変数を入れたら **再デプロイ（再ビルド）** が必要です。
+- 「Invalid credentials」はメール/パスワードが違う場合に出ます。
 - 生成はネットワーク状況で 1〜2分程度かかることがあります（失敗しても進行するフォールバック設計です）。
 
 補足:
-- 「Invalid credentials」はメール/パスワードが違う場合に出ます。
+- プレリリースはメール/パスワードのみ（OAuth無効）です。
 
 ### 印刷用チラシ（QR/URL）
 
@@ -142,20 +141,23 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ### Email/Password Login (Pre-release)
 
-Pre-release uses **email/password-only** login.
+Pre-release uses **email/password only**. OAuth (Google/Apple) is disabled by default.
 
-Backend (Render / `server.js`) env vars:
+Backend env vars:
 ```
-# Enable password endpoints (/api/auth/login & /api/auth/register)
+# Default: true
 AUTH_ALLOW_PASSWORD=true
 
-# Hard-disable OAuth endpoints (/api/auth/oauth/*)
-AUTH_DISABLE_OAUTH=true
+# Default: false
+AUTH_ALLOW_OAUTH=false
 ```
 
 Frontend (Vite) env vars:
 ```
-# Backend API base URL
+# Default: false (hide OAuth UI)
+VITE_ENABLE_OAUTH=false
+
+# API endpoint
 VITE_API_BASE_URL=https://airia-beyond.onrender.com
 
 # Base path (GitHub Pages: /AIRIA-BEYOND/, custom domain: /)

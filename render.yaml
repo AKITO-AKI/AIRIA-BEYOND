@@ -8,9 +8,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: AUTH_ALLOW_PASSWORD
-        value: true
-      - key: AUTH_DISABLE_OAUTH
-        value: true
+        value: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: APPLE_CLIENT_ID
@@ -20,7 +18,7 @@ services:
       - key: EMAIL_FROM
         sync: false
       - key: APP_PUBLIC_URL
-        value: https://airia-beyond.netlify.app/
+        value: https://akito-aki.github.io/AIRIA-BEYOND/
       - key: RESEND_API_KEY
         sync: false
       - key: SMTP_HOST

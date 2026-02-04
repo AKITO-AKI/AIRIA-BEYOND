@@ -180,7 +180,7 @@ const LandingRoom: React.FC<Props> = ({ onStart, onOpenTerms, onOpenPrivacy }) =
           </article>
           <article className="landing-card">
             <h3 className="landing-h3">運用前提の設計</h3>
-            <p className="landing-p">メールログイン、レート制限、通知（任意）など、プレリリースでも破綻しにくい土台を用意。</p>
+            <p className="landing-p">OAuth-only、レート制限、通知（任意）など、プレリリースでも破綻しにくい土台を用意。</p>
           </article>
         </div>
       </section>
@@ -225,7 +225,7 @@ const LandingRoom: React.FC<Props> = ({ onStart, onOpenTerms, onOpenPrivacy }) =
         <footer className="landing-footer">
           <div className="landing-footer-row">
             <div className="landing-footer-brand">AIRIA BEYOND</div>
-            <div className="landing-footer-note">Pre-release / Email login</div>
+            <div className="landing-footer-note">Pre-release / OAuth-only</div>
           </div>
           {(onOpenPrivacy || onOpenTerms) && (
             <div className="landing-footer-links" aria-label="Legal">
