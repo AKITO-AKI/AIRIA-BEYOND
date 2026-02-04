@@ -12,7 +12,7 @@ function formatDate(iso: string) {
 }
 
 const SettingsRoom: React.FC = () => {
-  const { user, logout, updateProfile, loading } = useAuth();
+  const { user, logout, updateProfile, busy } = useAuth();
   const { navigateToRoom } = useRoomNavigation();
   const { addToast } = useToast();
 
@@ -70,7 +70,7 @@ const SettingsRoom: React.FC = () => {
           <p className="room-subtitle">プロフィールと設定</p>
         </div>
         <div className="settings-header-actions">
-          <button className="btn" onClick={() => void doLogout()} disabled={!user || loading}>
+          <button className="btn" onClick={() => void doLogout()} disabled={!user || busy}>
             ログアウト
           </button>
         </div>

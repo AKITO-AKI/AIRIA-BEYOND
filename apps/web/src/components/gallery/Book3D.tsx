@@ -8,6 +8,7 @@ interface Book3DProps {
   album: Album;
   basePosition: [number, number, number];
   isFocused?: boolean;
+  dimmed?: boolean;
   focusedPosition?: [number, number, number];
   faceOut: boolean;
   dragging?: boolean;
@@ -22,6 +23,7 @@ const Book3D: React.FC<Book3DProps> = ({
   album,
   basePosition,
   isFocused,
+  dimmed,
   focusedPosition,
   faceOut,
   dragging,
@@ -43,6 +45,16 @@ const Book3D: React.FC<Book3DProps> = ({
   const spineDepth = 0.55;
 
   const spineColor = album.gallery?.spineColor || '#111111';
+
+  const spineDisplayColor = useMemo(() => {
+    const c = new THREE.Color(spineColor);
+    if (dimmed) {
+      c.lerp(new THREE.Color('#bdbdbd'), 0.72);
+    }
+    return `#${c.getHexString()}`;
+  }, [spineColor, dimmed]);
+
+  const coverTint = dimmed ? '#b5b5b5' : '#ffffff';
   const labelPrimary = album.title || album.mood;
   const labelSecondary = useMemo(() => {
     const d = new Date(album.createdAt);
@@ -91,6 +103,14 @@ const Book3D: React.FC<Book3DProps> = ({
       const t = coverProgressRef.current;
       spineMeshRef.current.scale.y = 1 + t * 0.02;
     }
+
+    if (groupRef.current && !dragging) {
+      const targetScale = isFocused ? 1.06 : dimmed ? 0.985 : 1;
+      const a = 1 - Math.exp(-10 * dt);
+      const current = groupRef.current.scale.x;
+      const next = THREE.MathUtils.lerp(current, targetScale, a);
+      groupRef.current.scale.setScalar(next);
+    }
   });
 
   return (
@@ -121,7 +141,13 @@ const Book3D: React.FC<Book3DProps> = ({
         receiveShadow
       >
         <boxGeometry args={[spineWidth, spineHeight, spineDepth]} />
-        <meshStandardMaterial color={spineColor} roughness={0.9} metalness={0.05} />
+        <meshStandardMaterial
+          color={spineDisplayColor}
+          roughness={0.9}
+          metalness={0.05}
+          emissive={isFocused ? '#ffffff' : '#000000'}
+          emissiveIntensity={isFocused ? 0.12 : 0}
+        />
       </mesh>
 
       {/* Status badges (public/favorite) */}
@@ -129,19 +155,31 @@ const Book3D: React.FC<Book3DProps> = ({
         {album.isPublic && (
           <mesh position={[0, 0, 0]}>
             <boxGeometry args={[0.06, 0.06, 0.02]} />
-            <meshStandardMaterial color="#63e6be" roughness={0.4} metalness={0.1} />
+            <meshStandardMaterial
+              color="#63e6be"
+              roughness={0.4}
+              metalness={0.1}
+              transparent={Boolean(dimmed)}
+              opacity={dimmed ? 0.25 : 1}
+            />
           </mesh>
         )}
         {album.isFavorite && (
           <mesh position={[0, -0.08, 0]}>
             <boxGeometry args={[0.06, 0.06, 0.02]} />
-            <meshStandardMaterial color="#d4af37" roughness={0.4} metalness={0.1} />
+            <meshStandardMaterial
+              color="#d4af37"
+              roughness={0.4}
+              metalness={0.1}
+              transparent={Boolean(dimmed)}
+              opacity={dimmed ? 0.25 : 1}
+            />
           </mesh>
         )}
       </group>
 
       {/* Hover tooltip instead of spine text (prevents overflow) */}
-      {hovered && !dragging ? (
+      {hovered && !dragging && !dimmed ? (
         <Html
           position={[0, spineHeight / 2 + 0.22, spineDepth / 2 + 0.06]}
           center
@@ -173,11 +211,17 @@ const Book3D: React.FC<Book3DProps> = ({
           castShadow
         >
           <planeGeometry args={[1.1, 1.55]} />
-          <meshStandardMaterial map={coverTexture} roughness={0.85} metalness={0.0} />
+          <meshStandardMaterial map={coverTexture} roughness={0.85} metalness={0.0} color={coverTint} />
         </mesh>
         <mesh position={[0, 0, -0.01]} receiveShadow>
           <planeGeometry args={[1.14, 1.6]} />
-          <meshStandardMaterial color="#ffffff" roughness={1} metalness={0} opacity={0.6} transparent />
+          <meshStandardMaterial
+            color="#ffffff"
+            roughness={1}
+            metalness={0}
+            opacity={dimmed ? 0.18 : 0.6}
+            transparent
+          />
         </mesh>
       </group>
     </group>

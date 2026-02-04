@@ -60,6 +60,13 @@
   margin: 0 auto;
 }
 
+.album-media {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
 .album-meta-card {
   background: var(--color-surface-strong);
   border: 1px solid var(--color-border);
@@ -93,6 +100,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.album-meta-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: normal;
+  word-break: break-all;
 }
 
 .album-image-container {
@@ -190,6 +205,56 @@
   margin: 0 0 16px 0;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.album-details-toggle > summary.metadata-section-title {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 0;
+  padding-bottom: 12px;
+}
+
+.album-details-toggle > summary.metadata-section-title::-webkit-details-marker {
+  display: none;
+}
+
+.album-details-toggle[open] > summary.metadata-section-title {
+  margin-bottom: 16px;
+}
+
+.album-text-block {
+  margin: 0 0 14px 0;
+}
+
+.album-text-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 8px 0;
+}
+
+.album-text-inline {
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.album-text-pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-strong) 72%, transparent 28%);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .metadata-item {

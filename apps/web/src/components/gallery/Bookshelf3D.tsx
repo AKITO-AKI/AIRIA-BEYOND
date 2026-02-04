@@ -27,6 +27,8 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   const [faceOutIds, setFaceOutIds] = useState<Record<string, boolean>>({});
   const [focusedBookId, setFocusedBookId] = useState<string | null>(null);
 
+  const isFocusMode = focusedBookId !== null;
+
   const panXRef = useRef(0);
   const panVRef = useRef(0);
 
@@ -68,6 +70,15 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
       return next.length ? next : incoming;
     });
   }, [albums]);
+
+  useEffect(() => {
+    // While a book is focused, disable shelf panning to avoid accidental camera motion.
+    if (focusedBookId) {
+      inputRef.current.blockPan = true;
+    } else if (!dragRef.current.activeId) {
+      inputRef.current.blockPan = false;
+    }
+  }, [focusedBookId, inputRef]);
 
   const booksById = useMemo(() => {
     const map = new Map<string, Album>();
@@ -113,6 +124,18 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   };
 
   const focusedPosition: [number, number, number] = [0, 0.55, 1.55];
+
+  const clearFocus = () => {
+    setFocusedBookId((prev) => {
+      if (!prev) return null;
+      const id = prev;
+      setFaceOutIds((m) => ({ ...m, [id]: false }));
+      return null;
+    });
+    if (!dragRef.current.activeId) {
+      inputRef.current.blockPan = false;
+    }
+  };
 
   const pointToSlot = (p: THREE.Vector3) => {
     // p is in shelfGroup local coords.
@@ -323,6 +346,12 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         {/* Invisible interaction plane (keeps drag tracking even off-book) */}
         <mesh
           position={[0, 0.05, 0.26]}
+          onPointerDown={(e) => {
+            if (!focusedBookId) return;
+            if (dragRef.current.activeId) return;
+            e.stopPropagation();
+            clearFocus();
+          }}
           onPointerMove={(e) => updateDrag(e)}
           onPointerUp={(e) => endDragAny(e)}
           onPointerCancel={(e) => endDragAny(e)}
@@ -330,6 +359,14 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           <planeGeometry args={[Math.max(14, shelfOuterWidth + 4), 7]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
+
+        {/* Focus mode: subtle darkening backdrop (non-interactive) */}
+        {isFocusMode ? (
+          <mesh position={[0, 0.05, -0.15]} raycast={null as any}>
+            <planeGeometry args={[Math.max(18, shelfOuterWidth + 10), 9]} />
+            <meshBasicMaterial color="#0b0b0b" opacity={0.12} transparent depthWrite={false} />
+          </mesh>
+        ) : null}
 
         {/* Bookshelf frame (white) */}
         <group position={[0, 0.05, -0.25]}>
@@ -382,10 +419,12 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           const p = slotToPos(slotIndex);
           const isDragging = dragRef.current.activeId === albumId;
           const dragPos = isDragging ? dragRef.current.dragPos : null;
+          const isFocused = focusedBookId === albumId;
+          const shouldDim = isFocusMode && !isFocused;
+
           const basePosition: [number, number, number] = dragPos
             ? [dragPos.x, dragPos.y, dragPos.z]
-            : [p.x, p.y, 0.25];
-          const isFocused = focusedBookId === albumId;
+            : [p.x, p.y, (isFocusMode && !isFocused ? 0.12 : 0.25)];
 
           return (
             <Book3D
@@ -393,6 +432,7 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
               album={album}
               basePosition={basePosition}
               isFocused={isFocused}
+              dimmed={shouldDim}
               focusedPosition={focusedPosition}
               faceOut={Boolean(faceOutIds[album.id])}
               dragging={isDragging}
@@ -411,6 +451,11 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           );
         })}
       </group>
+
+      {/* Focus mode: gentle key light near the focused book */}
+      {isFocusMode ? (
+        <pointLight position={[0, 0.8, 3.6]} intensity={0.45} distance={12} decay={2} />
+      ) : null}
 
       {/* Lighting: quiet and readable */}
       <ambientLight intensity={0.55} />

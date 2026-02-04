@@ -9,6 +9,8 @@ export interface AlbumMetadata {
   focus?: number;
   motif_tags?: string[];
   confidence?: number;
+  // Optional UI hints
+  dominantColors?: string[];
   // Generation parameters
   stylePreset?: string;
   seed?: number;

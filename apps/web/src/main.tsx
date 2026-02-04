@@ -130,7 +130,7 @@ const AppContent = () => {
   });
   const { getSelectedAlbum, albums } = useAlbums();
   const { state: musicState } = useMusicPlayer();
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser, bootLoading: authBootLoading } = useAuth();
   const selectedAlbum = getSelectedAlbum();
 
   useEffect(() => {
@@ -248,8 +248,22 @@ const AppContent = () => {
         <>
           <PlaybackBackdrop />
           <div className="app-ui-layer">
-            {authLoading ? (
-              <div style={{ padding: 24, opacity: 0.8 }}>Loading...</div>
+            {authBootLoading ? (
+              <div className="preauth-shell">
+                <div className="loading-panel" aria-live="polite" aria-busy="true">
+                  <div className="loading-card">
+                    <div className="loading-row">
+                      <div className="loading-spinner" aria-hidden="true" />
+                      <div>
+                        <p className="loading-title">ログイン状態を確認しています…</p>
+                        <p className="loading-sub">
+                          通信環境によっては時間がかかる場合があります。画面はこのままでお待ちください。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : !authUser ? (
               <div className="preauth-shell">
                 {preAuthView === 'auth' ? (

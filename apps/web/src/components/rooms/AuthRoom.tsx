@@ -16,7 +16,7 @@ const APPLE_REDIRECT_URI =
   `${window.location.origin}${window.location.pathname}`;
 
 const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
-  const { loginWithGoogle, loginWithApple, loginWithPassword, registerWithPassword, loading } = useAuth();
+  const { loginWithGoogle, loginWithApple, loginWithPassword, registerWithPassword, busy } = useAuth();
   const googleBtnRef = React.useRef<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -149,7 +149,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       <div className="auth-card" data-no-swipe="true">
         {onBack ? (
           <div style={{ marginBottom: 8 }}>
-            <button className="btn" onClick={onBack} disabled={loading}>
+            <button className="btn" onClick={onBack} disabled={busy}>
               ← 戻る
             </button>
           </div>
@@ -169,7 +169,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 // ignore
               }
             }}
-            disabled={loading}
+            disabled={busy}
           >
             新規登録
           </button>
@@ -186,7 +186,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 // ignore
               }
             }}
-            disabled={loading}
+            disabled={busy}
           >
             ログイン
           </button>
@@ -194,6 +194,20 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
         <h1 className="auth-title">AIRIA</h1>
         <p className="auth-subtitle">{mode === 'signup' ? '無料で始める（初回ログイン＝登録）' : 'おかえりなさい。ログインして続ける'}</p>
+
+        {busy ? (
+          <div className="auth-loading" aria-live="polite" aria-busy="true">
+            <div className="auth-loading-row">
+              <div className="auth-spinner" aria-hidden="true" />
+              <div>
+                <div className="auth-loading-title">処理中…</div>
+                <div className="auth-loading-sub">
+                  通信環境によっては時間がかかる場合があります。安全にログイン処理を行っています。
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="auth-note">
           {mode === 'signup' ? (
@@ -216,7 +230,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       // ignore
                     }
                   }}
-                  disabled={loading}
+                  disabled={busy}
                 >
                   新規登録
                 </button>
@@ -237,7 +251,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 onChange={(e) => setSignupEmail(e.target.value)}
                 placeholder="you@example.com"
                 autoComplete="email"
-                disabled={loading}
+                disabled={busy}
                 required
               />
             </label>
@@ -251,7 +265,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 onChange={(e) => setSignupPassword(e.target.value)}
                 placeholder="••••••"
                 autoComplete="new-password"
-                disabled={loading}
+                disabled={busy}
                 required
                 minLength={6}
               />
@@ -266,12 +280,12 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 onChange={(e) => setSignupDisplayName(e.target.value)}
                 placeholder="AIRIAユーザー"
                 autoComplete="nickname"
-                disabled={loading}
+                disabled={busy}
               />
             </label>
 
-            <button className="btn auth-submit" type="submit" disabled={loading || !canSubmitSignup}>
-              {loading ? '作成中…' : 'メールで新規登録'}
+            <button className="btn auth-submit" type="submit" disabled={busy || !canSubmitSignup}>
+              {busy ? '作成中…' : 'メールで新規登録'}
             </button>
           </form>
         ) : (
@@ -285,7 +299,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 onChange={(e) => setLoginIdentifier(e.target.value)}
                 placeholder="you@example.com または your_handle"
                 autoComplete="username"
-                disabled={loading}
+                disabled={busy}
                 required
               />
             </label>
@@ -299,13 +313,13 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 placeholder="••••••"
                 autoComplete="current-password"
-                disabled={loading}
+                disabled={busy}
                 required
               />
             </label>
 
-            <button className="btn auth-submit" type="submit" disabled={loading || !canSubmitLogin}>
-              {loading ? 'ログイン中…' : 'メールでログイン'}
+            <button className="btn auth-submit" type="submit" disabled={busy || !canSubmitLogin}>
+              {busy ? 'ログイン中…' : 'メールでログイン'}
             </button>
           </form>
         )}
@@ -327,7 +341,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             )}
           </div>
 
-          <button className="btn btn-apple" onClick={() => void handleApple()} disabled={loading || !APPLE_CLIENT_ID}>
+          <button className="btn btn-apple" onClick={() => void handleApple()} disabled={busy || !APPLE_CLIENT_ID}>
             Appleでログイン{APPLE_CLIENT_ID ? '' : '（未設定）'}
           </button>
         </div>

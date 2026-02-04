@@ -34,6 +34,16 @@ const AlbumRoom: React.FC = () => {
   
   // P5: Get causal log for this album
   const causalLog = album?.causalLogId ? getLog(album.causalLogId) : undefined;
+
+  const safeJsonPreview = (value: unknown, maxChars = 2400) => {
+    try {
+      const text = JSON.stringify(value, null, 2) ?? '';
+      if (text.length <= maxChars) return text;
+      return `${text.slice(0, maxChars)}\n…(truncated)`;
+    } catch {
+      return '';
+    }
+  };
   
   // P3: Regenerate state
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -244,44 +254,50 @@ const AlbumRoom: React.FC = () => {
       </div>
 
       <div className="album-details">
-        <div className="album-meta-card" data-no-swipe="true">
-          <div className="album-meta-title">作品情報</div>
-          <div className="album-meta-grid">
-            <div className="album-meta-k">作成</div>
-            <div className="album-meta-v">{album.createdAt ? formatDateTime(album.createdAt) : ''}</div>
-            <div className="album-meta-k">公開</div>
-            <div className="album-meta-v">{album.isPublic ? '公開' : '非公開'}</div>
-            <div className="album-meta-k">お気に入り</div>
-            <div className="album-meta-v">{album.isFavorite ? 'Yes' : 'No'}</div>
-            <div className="album-meta-k">長さ</div>
-            <div className="album-meta-v">{album.duration ? `${album.duration} sec` : ''}</div>
-            <div className="album-meta-k">ムード</div>
-            <div className="album-meta-v">{album.mood}</div>
+        <div className="album-media">
+          <div
+            className={`album-image-container ${isPlaying ? 'is-playing' : ''}`}
+            ref={imageContainerRef}
+            onMouseMove={handleTiltMove}
+            onMouseLeave={handleTiltLeave}
+          >
+            {/* C-4: Aura effect behind album image */}
+            <Aura
+              dominantColors={dominantColors}
+              isPlaying={isPlaying}
+              beatAmplitude={0}
+              mouseProximity={mouseProximity}
+              highlightedLayer={hoveredMetadataLayer}
+            />
+            <img 
+              src={album.imageDataURL} 
+              alt={`${album.mood}のセッション画像`}
+              className="album-image"
+            />
           </div>
         </div>
 
-        <div
-          className={`album-image-container ${isPlaying ? 'is-playing' : ''}`}
-          ref={imageContainerRef}
-          onMouseMove={handleTiltMove}
-          onMouseLeave={handleTiltLeave}
-        >
-          {/* C-4: Aura effect behind album image */}
-          <Aura
-            dominantColors={dominantColors}
-            isPlaying={isPlaying}
-            beatAmplitude={0}
-            mouseProximity={mouseProximity}
-            highlightedLayer={hoveredMetadataLayer}
-          />
-          <img 
-            src={album.imageDataURL} 
-            alt={`${album.mood}のセッション画像`}
-            className="album-image"
-          />
-        </div>
-
         <div className="album-metadata">
+          <div className="album-meta-card" data-no-swipe="true">
+            <div className="album-meta-title">作品情報</div>
+            <div className="album-meta-grid">
+              <div className="album-meta-k">タイトル</div>
+              <div className="album-meta-v">{album.title || album.mood}</div>
+              <div className="album-meta-k">作成</div>
+              <div className="album-meta-v">{album.createdAt ? formatDateTime(album.createdAt) : ''}</div>
+              <div className="album-meta-k">公開</div>
+              <div className="album-meta-v">{album.isPublic ? '公開' : '非公開'}</div>
+              <div className="album-meta-k">お気に入り</div>
+              <div className="album-meta-v">{album.isFavorite ? 'Yes' : 'No'}</div>
+              <div className="album-meta-k">長さ</div>
+              <div className="album-meta-v">{album.duration ? `${album.duration} sec` : ''}</div>
+              <div className="album-meta-k">ムード</div>
+              <div className="album-meta-v">{album.mood}</div>
+              <div className="album-meta-k">ID</div>
+              <div className="album-meta-v album-meta-id">{album.id}</div>
+            </div>
+          </div>
+
           <div className="album-summary-card">
             <AlbumCard
               variant="compact"
@@ -313,38 +329,12 @@ const AlbumRoom: React.FC = () => {
             />
             <div className="album-memo-hint">フォーカスが外れると自動で保存します。</div>
           </section>
-          <div className="metadata-section room-card">
-            <h3 className="metadata-section-title">基本情報</h3>
-            
-            <div className="metadata-item">
-              <span className="metadata-label">ムード</span>
-              <span className="metadata-value">{album.mood}</span>
-            </div>
-
-            <div className="metadata-item">
-              <span className="metadata-label">セッション時間</span>
-              <span className="metadata-value">{album.duration}秒</span>
-            </div>
-
-            <div className="metadata-item">
-              <span className="metadata-label">作成日</span>
-              <span className="metadata-value">
-                {new Date(album.createdAt).toLocaleString('ja-JP', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-          </div>
 
           {/* P3: Enhanced metadata display */}
           {album.metadata && (
             <>
-              <div className="metadata-section room-card">
-                <h3 className="metadata-section-title">感情分析 (IR)</h3>
+              <div className="metadata-section">
+                <h3 className="metadata-section-title">分析結果 (IR)</h3>
                 
                 {album.metadata.valence !== undefined && (
                   <div 
@@ -409,8 +399,8 @@ const AlbumRoom: React.FC = () => {
                 )}
               </div>
 
-              <div className="metadata-section room-card">
-                <h3 className="metadata-section-title">生成パラメータ</h3>
+              <div className="metadata-section">
+                <h3 className="metadata-section-title">生成情報</h3>
                 
                 {album.metadata.stylePreset && (
                   <div className="metadata-item">
@@ -437,6 +427,24 @@ const AlbumRoom: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {(album.metadata.prompt || album.metadata.negativePrompt) && (
+                <details className="metadata-section album-details-toggle">
+                  <summary className="metadata-section-title">プロンプト</summary>
+                  {album.metadata.prompt ? (
+                    <div className="album-text-block">
+                      <div className="album-text-label">Prompt</div>
+                      <pre className="album-text-pre">{album.metadata.prompt}</pre>
+                    </div>
+                  ) : null}
+                  {album.metadata.negativePrompt ? (
+                    <div className="album-text-block">
+                      <div className="album-text-label">Negative</div>
+                      <pre className="album-text-pre">{album.metadata.negativePrompt}</pre>
+                    </div>
+                  ) : null}
+                </details>
+              )}
 
               {/* P4: Music metadata section */}
               {album.musicMetadata && (
@@ -509,10 +517,51 @@ const AlbumRoom: React.FC = () => {
             </>
           )}
 
-          <div className="metadata-item">
-            <span className="metadata-label">アルバムID</span>
-            <span className="metadata-value metadata-id">{album.id}</span>
-          </div>
+          {album.sessionData ? (
+            <details className="metadata-section album-details-toggle">
+              <summary className="metadata-section-title">セッションデータ（概要）</summary>
+              <div className="album-text-block">
+                <div className="album-text-label">Keys</div>
+                <div className="album-text-inline">
+                  {typeof album.sessionData === 'object' && album.sessionData !== null
+                    ? Object.keys(album.sessionData).slice(0, 24).join(', ')
+                    : typeof album.sessionData}
+                </div>
+              </div>
+              <div className="album-text-block">
+                <div className="album-text-label">Preview</div>
+                <pre className="album-text-pre">{safeJsonPreview(album.sessionData)}</pre>
+              </div>
+            </details>
+          ) : null}
+
+          {(album.causalLogId || causalLog) ? (
+            <div className="metadata-section">
+              <h3 className="metadata-section-title">因果ログ</h3>
+              <div className="metadata-item">
+                <span className="metadata-label">Log ID</span>
+                <span className="metadata-value metadata-id">{album.causalLogId || ''}</span>
+              </div>
+              {causalLog ? (
+                <>
+                  <div className="metadata-item">
+                    <span className="metadata-label">成功</span>
+                    <span className="metadata-value">{causalLog.success ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="metadata-item">
+                    <span className="metadata-label">総所要時間</span>
+                    <span className="metadata-value">{Math.round((causalLog.totalDuration || 0) * 10) / 10} sec</span>
+                  </div>
+                  {causalLog.errors && causalLog.errors.length > 0 ? (
+                    <div className="metadata-item">
+                      <span className="metadata-label">エラー</span>
+                      <span className="metadata-value">{causalLog.errors.length} 件</span>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* P5: Explainability Panel */}
