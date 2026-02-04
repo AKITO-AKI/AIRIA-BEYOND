@@ -119,3 +119,10 @@ export async function updateProfile(input: { displayName?: string; bio?: string 
   if (!response.ok) throw new Error(json?.message || `Failed to update profile: ${response.status}`);
   return json as { user: AuthUser };
 }
+
+export async function authConfig() {
+  const response = await fetch(`${API_BASE}/api/auth/config`);
+  const json = await readJsonSafe(response);
+  if (!response.ok) throw new Error(json?.message || `Failed to load auth config: ${response.status}`);
+  return json as { passwordEnabled: boolean; oauth: { google: boolean; apple: boolean } };
+}

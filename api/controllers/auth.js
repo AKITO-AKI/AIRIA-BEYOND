@@ -209,6 +209,22 @@ export async function publicUserHandler(req, res) {
   }
 }
 
+export async function authConfigHandler(req, res) {
+  try {
+    const googleConfigured = Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
+    const appleConfigured = Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
+    return res.json({
+      passwordEnabled: isPasswordAuthEnabled(),
+      oauth: { google: googleConfigured, apple: appleConfigured },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function oauthGoogleHandler(req, res) {
   const clientId = getClientIdentifier(req);
   if (!checkRateLimit(clientId)) {

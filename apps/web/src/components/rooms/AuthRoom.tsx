@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { authConfig as apiAuthConfig } from '../../api/authApi';
 import './AuthRoom.css';
 
 declare global {
@@ -20,6 +21,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const googleBtnRef = React.useRef<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [passwordEnabled, setPasswordEnabled] = React.useState<boolean>(true);
   const [mode, setMode] = React.useState<'signup' | 'login'>(() => {
     try {
       const h = String(window.location.hash || '').toLowerCase();
@@ -37,6 +39,22 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     } catch {
       // ignore
     }
+  }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const cfg = await apiAuthConfig();
+        if (!alive) return;
+        setPasswordEnabled(Boolean(cfg?.passwordEnabled));
+      } catch {
+        // If config can't be loaded (e.g. API base misconfigured), keep password UI visible.
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   React.useEffect(() => {
@@ -108,6 +126,11 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   };
 
   const googleReady = Boolean(GOOGLE_CLIENT_ID);
+  const appleReady = Boolean(APPLE_CLIENT_ID);
+  const missingOAuthProviders = [
+    ...(googleReady ? [] : ['Google']),
+    ...(appleReady ? [] : ['Apple']),
+  ];
 
   const [signupEmail, setSignupEmail] = React.useState('');
   const [signupPassword, setSignupPassword] = React.useState('');
@@ -195,6 +218,24 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <h1 className="auth-title">AIRIA</h1>
         <p className="auth-subtitle">{mode === 'signup' ? '無料で始める（初回ログイン＝登録）' : 'おかえりなさい。ログインして続ける'}</p>
 
+        {missingOAuthProviders.length ? (
+          <div className="auth-loading" role="note">
+            <div className="auth-loading-title">OAuth が未設定です</div>
+            <div className="auth-loading-sub">
+              {missingOAuthProviders.join(' / ')} の Client ID がフロントエンド側で未投入です。
+              GitHub Pages では環境変数はビルド時に埋め込まれるため、管理者が GitHub Secrets に
+              `VITE_GOOGLE_CLIENT_ID` / `VITE_APPLE_CLIENT_ID` を設定して再デプロイする必要があります。
+            </div>
+          </div>
+        ) : null}
+
+        {!passwordEnabled ? (
+          <div className="auth-loading" role="note">
+            <div className="auth-loading-title">メール/パスワードは無効です</div>
+            <div className="auth-loading-sub">この環境では OAuth（Google / Apple）でログインしてください。</div>
+          </div>
+        ) : null}
+
         {busy ? (
           <div className="auth-loading" aria-live="polite" aria-busy="true">
             <div className="auth-loading-row">
@@ -240,7 +281,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           )}
         </div>
 
-        {mode === 'signup' ? (
+        {passwordEnabled && mode === 'signup' ? (
           <form className="auth-form" onSubmit={(e) => void submitSignup(e)}>
             <label className="auth-label">
               メールアドレス
@@ -288,7 +329,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               {busy ? '作成中…' : 'メールで新規登録'}
             </button>
           </form>
-        ) : (
+        ) : passwordEnabled && mode === 'login' ? (
           <form className="auth-form" onSubmit={(e) => void submitLogin(e)}>
             <label className="auth-label">
               メールアドレス / ハンドル
@@ -322,7 +363,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               {busy ? 'ログイン中…' : 'メールでログイン'}
             </button>
           </form>
-        )}
+        ) : null}
 
         <div className="auth-sep" aria-hidden="true">
           <span />

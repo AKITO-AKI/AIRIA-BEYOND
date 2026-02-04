@@ -31,8 +31,16 @@ An AI-powered session management and mood tracking application.
 ### つまずきやすいポイント
 
 - ログインボタンが「未設定」と表示される場合: OAuthのClient ID設定が未投入です（`VITE_GOOGLE_CLIENT_ID` / `VITE_APPLE_CLIENT_ID`）。
+- GitHub Pages では環境変数は「実行時」ではなく「ビルド時」に埋め込まれます。公開版で OAuth を有効にするには、GitHub リポジトリの Secrets に以下を設定してください。
+  - `VITE_API_BASE_URL`（例: `https://airia-beyond.onrender.com`）
+  - `VITE_GOOGLE_CLIENT_ID`
+  - `VITE_APPLE_CLIENT_ID`
+  - `VITE_APPLE_REDIRECT_URI`（例: `https://akito-aki.github.io/AIRIA-BEYOND/`）
 - Appleログインは「Apple Developer 側のリダイレクトURI登録」と一致が必要です（`VITE_APPLE_REDIRECT_URI`）。
 - 生成はネットワーク状況で 1〜2分程度かかることがあります（失敗しても進行するフォールバック設計です）。
+
+補足:
+- 「Invalid credentials」はメール/パスワードが違う場合に出ます。プレリリースは OAuth-only の想定（`AUTH_ALLOW_PASSWORD=false`）なので、基本は Google / Apple でログインしてください。
 
 ### 印刷用チラシ（QR/URL）
 
