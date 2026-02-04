@@ -1,14 +1,20 @@
 import { checkRateLimit } from '../lib/rate-limit.js';
+import { verifyAppleIdToken, verifyGoogleIdToken } from '../lib/oidc.js';
 import {
   authenticateUser,
   createSession,
   deleteSession,
+  findOrCreateUserForIdentity,
   getPublicUserById,
   getUserRecordById,
   getUserBySessionToken,
   registerUser,
   updateMyProfile,
 } from '../authStore.js';
+
+function isPasswordAuthEnabled() {
+  return String(process.env.AUTH_ALLOW_PASSWORD || '').toLowerCase() === 'true';
+}
 
 function getClientIdentifier(req) {
   const forwarded = req.headers['x-forwarded-for'];
@@ -26,6 +32,12 @@ function getBearerToken(req) {
 }
 
 export async function registerHandler(req, res) {
+  if (!isPasswordAuthEnabled()) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Password registration is disabled. Please sign in with Google/Apple.',
+    });
+  }
   const clientId = getClientIdentifier(req);
   if (!checkRateLimit(clientId)) {
     return res.status(429).json({
@@ -53,6 +65,12 @@ export async function registerHandler(req, res) {
 }
 
 export async function loginHandler(req, res) {
+  if (!isPasswordAuthEnabled()) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Password login is disabled. Please sign in with Google/Apple.',
+    });
+  }
   const clientId = getClientIdentifier(req);
   if (!checkRateLimit(clientId)) {
     return res.status(429).json({
@@ -147,6 +165,81 @@ export async function publicUserHandler(req, res) {
     return res.status(500).json({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function oauthGoogleHandler(req, res) {
+  const clientId = getClientIdentifier(req);
+  if (!checkRateLimit(clientId)) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please wait a minute and try again.',
+    });
+  }
+
+  try {
+    const { idToken } = req.body || {};
+    const claims = await verifyGoogleIdToken(idToken);
+    const user = await findOrCreateUserForIdentity({
+      provider: claims.provider,
+      subject: claims.subject,
+      email: claims.email,
+      displayName: claims.displayName,
+    });
+    const session = await createSession(user.id);
+    const rec = await getUserRecordById(user.id);
+    return res.json({
+      token: session.token,
+      expiresAt: session.expiresAt,
+      user: { ...user, followingIds: Array.isArray(rec?.followingIds) ? rec.followingIds : [] },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes('not configured') ? 500 : 401;
+    return res.status(status).json({
+      error: status === 500 ? 'Server misconfigured' : 'Unauthorized',
+      message,
+    });
+  }
+}
+
+export async function oauthAppleHandler(req, res) {
+  const clientId = getClientIdentifier(req);
+  if (!checkRateLimit(clientId)) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Too many requests. Please wait a minute and try again.',
+    });
+  }
+
+  try {
+    const { idToken, user: appleUser } = req.body || {};
+    const claims = await verifyAppleIdToken(idToken);
+    const first = String(appleUser?.name?.firstName || '').trim();
+    const last = String(appleUser?.name?.lastName || '').trim();
+    const appleName = `${first} ${last}`.trim();
+    const displayName = claims.displayName || appleName || '';
+
+    const user = await findOrCreateUserForIdentity({
+      provider: claims.provider,
+      subject: claims.subject,
+      email: claims.email,
+      displayName,
+    });
+    const session = await createSession(user.id);
+    const rec = await getUserRecordById(user.id);
+    return res.json({
+      token: session.token,
+      expiresAt: session.expiresAt,
+      user: { ...user, followingIds: Array.isArray(rec?.followingIds) ? rec.followingIds : [] },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes('not configured') ? 500 : 401;
+    return res.status(status).json({
+      error: status === 500 ? 'Server misconfigured' : 'Unauthorized',
+      message,
     });
   }
 }

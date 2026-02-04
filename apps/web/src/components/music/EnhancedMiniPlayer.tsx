@@ -3,7 +3,7 @@ import * as Tone from 'tone';
 import { getGlobalPlayer } from '../../utils/midiPlayer';
 import type { Album } from '../../contexts/AlbumContext';
 import { useMusicPlayer, PlaybackState } from '../../contexts/MusicPlayerContext';
-import { MiniPlayerBar } from './MiniPlayerBar';
+import { SpotifySquareDock } from './SpotifySquareDock';
 import { ExpandedPlayer } from './ExpandedPlayer';
 import './EnhancedMiniPlayer.css';
 
@@ -290,23 +290,12 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
   return (
     <>
       {!state.isExpanded && (
-        <MiniPlayerBar
+        <SpotifySquareDock
           album={state.currentAlbum}
           isPlaying={isPlaying}
           currentTime={state.currentTime}
           duration={state.duration}
-          volume={state.volume}
-          isMuted={state.isMuted}
-          canPrevious={canPrevious}
-          canNext={canNext}
-          frequencyData={frequencyData}
-          timeDomainData={timeDomainData}
           onPlayPause={handlePlayPause}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onSeek={seekTo}
-          onVolumeChange={handleVolumeChange}
-          onMuteToggle={toggleMute}
           onExpand={toggleExpanded}
         />
       )}

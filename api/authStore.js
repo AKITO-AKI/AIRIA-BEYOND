@@ -9,6 +9,10 @@ let loaded = false;
 let users = [];
 let sessions = [];
 
+function isPasswordAuthEnabled() {
+  return String(process.env.AUTH_ALLOW_PASSWORD || '').toLowerCase() === 'true';
+}
+
 async function ensureDirExists(filePath) {
   const dir = path.dirname(filePath);
   await fs.mkdir(dir, { recursive: true });
@@ -67,6 +71,32 @@ function sanitizeHandle(input) {
   return cleaned;
 }
 
+function makeStableHandleFromIdentity(provider, subject) {
+  const p = String(provider || '').toLowerCase();
+  const s = String(subject || '');
+  const hash = crypto.createHash('sha256').update(`${p}:${s}`).digest('hex').slice(0, 14);
+  const base = `${p[0] || 'u'}_${hash}`;
+  return sanitizeHandle(base) || `u_${hash.slice(0, 10)}`;
+}
+
+function normalizeEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || !e.includes('@')) return '';
+  return e.slice(0, 254);
+}
+
+function normalizeProvider(provider) {
+  const p = String(provider || '').trim().toLowerCase();
+  if (p !== 'google' && p !== 'apple') throw new Error('Unsupported identity provider');
+  return p;
+}
+
+function normalizeSubject(subject) {
+  const s = String(subject || '').trim();
+  if (!s) throw new Error('Identity subject is required');
+  return s.slice(0, 200);
+}
+
 function hashPassword(password, salt) {
   const pwd = String(password ?? '');
   if (!pwd) throw new Error('password is required');
@@ -84,6 +114,10 @@ function cleanupExpiredSessionsSync() {
 
 export async function registerUser({ handle, password, displayName }) {
   await loadIfNeeded();
+
+  if (!isPasswordAuthEnabled()) {
+    throw new Error('Password registration is disabled');
+  }
 
   const safeHandle = sanitizeHandle(handle);
   if (!safeHandle) throw new Error('handle must be 3-20 chars: a-z, 0-9, _');
@@ -117,6 +151,7 @@ export async function registerUser({ handle, password, displayName }) {
 
 export async function authenticateUser({ handle, password }) {
   await loadIfNeeded();
+  if (!isPasswordAuthEnabled()) return null;
   const safeHandle = sanitizeHandle(handle);
   if (!safeHandle) return null;
 
@@ -175,6 +210,69 @@ export async function getUserBySessionToken(token) {
 export async function getUserRecordById(userId) {
   await loadIfNeeded();
   return users.find((u) => u.id === userId) || null;
+}
+
+export async function findOrCreateUserForIdentity({ provider, subject, email, displayName } = {}) {
+  await loadIfNeeded();
+
+  const p = normalizeProvider(provider);
+  const s = normalizeSubject(subject);
+  const e = normalizeEmail(email);
+
+  const match = users.find((u) =>
+    Array.isArray(u.identities)
+      ? u.identities.some((id) => id && id.provider === p && id.subject === s)
+      : false
+  );
+
+  if (match) {
+    // best-effort refresh of profile fields
+    const nowIso = new Date().toISOString();
+    if (e && !match.email) match.email = e;
+    if (displayName && !match.displayName) match.displayName = sanitizeText(displayName, 32);
+    if (Array.isArray(match.identities)) {
+      const ident = match.identities.find((id) => id && id.provider === p && id.subject === s);
+      if (ident && e && !ident.email) ident.email = e;
+    }
+    match.updatedAt = nowIso;
+    await persist();
+    return toPublicUser(match);
+  }
+
+  const now = new Date().toISOString();
+  const handle = makeStableHandleFromIdentity(p, s);
+
+  // Extremely unlikely, but ensure uniqueness.
+  let finalHandle = handle;
+  let counter = 0;
+  while (users.some((u) => String(u.handle).toLowerCase() === finalHandle)) {
+    counter += 1;
+    const suffix = String(counter).slice(0, 3);
+    finalHandle = sanitizeHandle(`${handle.slice(0, 16)}${suffix}`) || handle;
+  }
+
+  const user = {
+    id: makeId('u'),
+    handle: finalHandle,
+    displayName: sanitizeText(displayName, 32) || finalHandle,
+    bio: '',
+    email: e,
+    identities: [
+      {
+        provider: p,
+        subject: s,
+        email: e,
+        createdAt: now,
+      },
+    ],
+    followingIds: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  users.unshift(user);
+  await persist();
+  return toPublicUser(user);
 }
 
 export async function getPublicUserById(userId) {

@@ -1,13 +1,15 @@
 import React from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useRoomNavigation } from '../../contexts/RoomNavigationContext';
-import { getAuthToken, login, logout, me, register, setAuthToken, type AuthUser } from '../../api/authApi';
 import {
   commentSocialPost,
   createSocialPost,
+  deleteSocialPost,
   likeSocialPost,
   listSocialPosts,
   toggleFollowUser,
+  updateSocialPostVisibility,
   type SocialPost,
 } from '../../api/socialApi';
 import SegmentedControl from '../ui/SegmentedControl';
@@ -26,12 +28,7 @@ const SocialRoom: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
-  const [authBusy, setAuthBusy] = React.useState(false);
-  const [authTab, setAuthTab] = React.useState<'login' | 'register'>(getAuthToken() ? 'login' : 'register');
-  const [handle, setHandle] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [displayName, setDisplayName] = React.useState('');
+  const { user: authUser, logout, updateFollowingIds } = useAuth();
 
   const [caption, setCaption] = React.useState('');
   const [albumId, setAlbumId] = React.useState<string>(selectedAlbum?.id || (albums[0]?.id ?? ''));
@@ -41,25 +38,30 @@ const SocialRoom: React.FC = () => {
   const [commentingPostId, setCommentingPostId] = React.useState<string | null>(null);
   const [feedMode, setFeedMode] = React.useState<'all' | 'following' | 'trending'>('all');
   const [expandedPosts, setExpandedPosts] = React.useState<Record<string, boolean>>({});
+  const [focusPostId, setFocusPostId] = React.useState<string | null>(null);
 
-  const loadMe = React.useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
-      setAuthUser(null);
-      return;
+  const consumeFocusPostId = React.useCallback(() => {
+    // 1) explicit hash: #social/<postId>
+    try {
+      const hash = String(window.location.hash || '');
+      const m = hash.match(/^#social\/(.+)$/);
+      if (m && m[1]) return decodeURIComponent(m[1]);
+    } catch {
+      // ignore
     }
 
+    // 2) localStorage handoff from My page
     try {
-      const resp = await me();
-      if (!resp.user) {
-        setAuthToken(null);
-        setAuthUser(null);
-      } else {
-        setAuthUser(resp.user);
+      const key = 'airia_social_focus_post_v1';
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        localStorage.removeItem(key);
+        return String(stored);
       }
     } catch {
-      setAuthUser(null);
+      // ignore
     }
+    return null;
   }, []);
 
   const copyPostLink = async (postId: string) => {
@@ -88,17 +90,29 @@ const SocialRoom: React.FC = () => {
     try {
       const resp = await listSocialPosts(50, feedMode);
       setPosts(resp.posts || []);
+
+      // If we have a focus target, expand it and scroll.
+      const target = focusPostId || consumeFocusPostId();
+      if (target) {
+        setFocusPostId(target);
+        setExpandedPosts((prev) => ({ ...prev, [target]: true }));
+        window.setTimeout(() => {
+          const el = document.querySelector(`[data-post-id="${CSS.escape(target)}"]`);
+          if (el && 'scrollIntoView' in el) {
+            (el as HTMLElement).scrollIntoView({ block: 'start', behavior: 'smooth' });
+          }
+        }, 60);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [feedMode]);
+  }, [consumeFocusPostId, feedMode, focusPostId]);
 
   React.useEffect(() => {
-    void loadMe();
     void load();
-  }, [load, loadMe]);
+  }, [load]);
 
   React.useEffect(() => {
     if (selectedAlbum?.id) setAlbumId(selectedAlbum.id);
@@ -108,42 +122,6 @@ const SocialRoom: React.FC = () => {
   const selectedForPost = React.useMemo(() => albums.find((a) => a.id === albumId) || null, [albums, albumId]);
 
   const canPublish = Boolean(authUser) && Boolean(selectedForPost?.imageDataURL) && !publishing;
-
-  const handleAuthSubmit = async () => {
-    setAuthBusy(true);
-    setError(null);
-    try {
-      if (authTab === 'register') {
-        const resp = await register({ handle, password, displayName: displayName || undefined });
-        setAuthToken(resp.token);
-        setAuthUser(resp.user);
-      } else {
-        const resp = await login({ handle, password });
-        setAuthToken(resp.token);
-        setAuthUser(resp.user);
-      }
-      setPassword('');
-      if (feedMode === 'following') {
-        void load();
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setAuthBusy(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    setAuthBusy(true);
-    setError(null);
-    try {
-      await logout().catch(() => null);
-    } finally {
-      setAuthToken(null);
-      setAuthUser(null);
-      setAuthBusy(false);
-    }
-  };
 
   const handlePublish = async () => {
     if (!authUser) {
@@ -228,7 +206,7 @@ const SocialRoom: React.FC = () => {
     }
     try {
       const resp = await toggleFollowUser(targetUserId);
-      setAuthUser((prev) => (prev ? { ...prev, followingIds: resp.followingIds } : prev));
+      updateFollowingIds(resp.followingIds);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -236,6 +214,38 @@ const SocialRoom: React.FC = () => {
 
   const toggleExpanded = (postId: string) => {
     setExpandedPosts((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const toggleVisibility = async (post: SocialPost) => {
+    if (!authUser) {
+      setError('操作にはログインが必要です');
+      return;
+    }
+    const current = String(post.visibility || 'public').toLowerCase() === 'private' ? 'private' : 'public';
+    const next = current === 'private' ? 'public' : 'private';
+    setError(null);
+    try {
+      const updated = await updateSocialPostVisibility(post.id, next);
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? updated : p)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const deletePost = async (post: SocialPost) => {
+    if (!authUser) {
+      setError('操作にはログインが必要です');
+      return;
+    }
+    const title = post.album?.title || post.album?.mood || '投稿';
+    if (!window.confirm(`削除しますか？\n\n${title}\nこの操作は取り消せません。`)) return;
+    setError(null);
+    try {
+      await deleteSocialPost(post.id);
+      setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   return (
@@ -269,90 +279,21 @@ const SocialRoom: React.FC = () => {
       </div>
 
       <div className="social-auth" data-no-swipe="true" aria-label="ログイン">
-        {authUser ? (
-          <div className="social-auth-row">
-            <div className="social-auth-me">
-              <div className="social-auth-title">ログイン中</div>
-              <div className="social-auth-handle">@{authUser.handle}</div>
-              <div className="social-auth-sub">{authUser.displayName}</div>
-            </div>
-            <div className="social-auth-actions">
-              <button className="btn" onClick={() => void load()} disabled={loading}>
-                再読み込み
-              </button>
-              <button className="btn" onClick={() => void handleLogout()} disabled={authBusy}>
-                ログアウト
-              </button>
-            </div>
+        <div className="social-auth-row">
+          <div className="social-auth-me">
+            <div className="social-auth-title">ログイン中</div>
+            <div className="social-auth-handle">@{authUser?.handle || '...'}</div>
+            <div className="social-auth-sub">{authUser?.displayName || ''}</div>
           </div>
-        ) : (
-          <div className="social-auth-form">
-            <div className="social-auth-tabs">
-              <button
-                className={`btn ${authTab === 'register' ? 'btn-primary' : ''}`}
-                onClick={() => setAuthTab('register')}
-                disabled={authBusy}
-              >
-                新規登録
-              </button>
-              <button
-                className={`btn ${authTab === 'login' ? 'btn-primary' : ''}`}
-                onClick={() => setAuthTab('login')}
-                disabled={authBusy}
-              >
-                ログイン
-              </button>
-            </div>
-
-            <div className="social-auth-grid">
-              <label className="social-field">
-                <span className="social-label">ハンドル（a-z/0-9/_）</span>
-                <input
-                  className="social-input"
-                  value={handle}
-                  onChange={(e) => setHandle(e.target.value)}
-                  placeholder="airia_user"
-                  maxLength={20}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                />
-              </label>
-              <label className="social-field">
-                <span className="social-label">パスワード</span>
-                <input
-                  className="social-input"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="6文字以上"
-                />
-              </label>
-              {authTab === 'register' && (
-                <label className="social-field social-field-wide">
-                  <span className="social-label">表示名（任意）</span>
-                  <input
-                    className="social-input"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Airia"
-                    maxLength={32}
-                  />
-                </label>
-              )}
-            </div>
-
-            <div className="social-auth-actions">
-              <button
-                className="btn btn-primary"
-                onClick={() => void handleAuthSubmit()}
-                disabled={authBusy || !handle.trim() || !password}
-              >
-                {authBusy ? '処理中…' : authTab === 'register' ? '登録する' : 'ログインする'}
-              </button>
-              <div className="social-muted">投稿/いいね/コメント/フォローにはログインが必要です</div>
-            </div>
+          <div className="social-auth-actions">
+            <button className="btn" onClick={() => void load()} disabled={loading}>
+              再読み込み
+            </button>
+            <button className="btn" onClick={() => void logout()} disabled={!authUser}>
+              ログアウト
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="social-compose" data-no-swipe="true" aria-label="投稿フォーム">
@@ -405,14 +346,11 @@ const SocialRoom: React.FC = () => {
       </div>
 
       <div className="social-timeline" aria-label="タイムライン">
-        {feedMode === 'following' && !authUser && (
-          <div className="social-muted">「フォロー中」を見るにはログインしてください</div>
-        )}
         {loading && posts.length === 0 && <div className="social-muted">読み込み中…</div>}
         {!loading && posts.length === 0 && <div className="social-muted">まだ投稿がありません</div>}
 
         {posts.map((post) => (
-          <article key={post.id} className="social-post" data-no-swipe="true">
+          <article key={post.id} className="social-post" data-no-swipe="true" data-post-id={post.id}>
             <header className="social-post-header">
               <div className="social-post-author">
                 {post.author?.handle ? `@${post.author.handle}` : post.authorName || 'anonymous'}
@@ -449,7 +387,12 @@ const SocialRoom: React.FC = () => {
                 mood={post.album?.mood}
                 imageUrl={post.album?.imageUrl}
                 meta={post.album?.createdAt ? `作成日: ${new Date(post.album.createdAt).toLocaleDateString('ja-JP')}` : undefined}
-                badges={[{ label: '公開作品', tone: 'info' }]}
+                badges={[
+                  {
+                    label: String(post.visibility || 'public').toLowerCase() === 'private' ? '非公開' : '公開作品',
+                    tone: String(post.visibility || 'public').toLowerCase() === 'private' ? 'default' : 'info',
+                  },
+                ]}
               />
             </div>
 
@@ -495,10 +438,30 @@ const SocialRoom: React.FC = () => {
               >
                 {({ close }) => (
                   <Menu
-                    items={[
-                      { id: 'copy', label: 'リンクをコピー', onSelect: () => { void copyPostLink(post.id); close(); } },
-                      { id: 'report', label: '通報する', onSelect: () => { setError('通報を受け付けました'); close(); } },
-                    ]}
+                    items={(
+                      () => {
+                        const isMine = Boolean(authUser?.id) && Boolean(post.author?.id) && authUser!.id === post.author!.id;
+                        const items: any[] = [
+                          { id: 'copy', label: 'リンクをコピー', onSelect: () => { void copyPostLink(post.id); close(); } },
+                        ];
+                        if (isMine) {
+                          const isPrivate = String(post.visibility || 'public').toLowerCase() === 'private';
+                          items.push({
+                            id: 'vis',
+                            label: isPrivate ? '公開にする' : '非公開にする',
+                            onSelect: () => { void toggleVisibility(post); close(); },
+                          });
+                          items.push({
+                            id: 'delete',
+                            label: '削除',
+                            onSelect: () => { void deletePost(post); close(); },
+                          });
+                        } else {
+                          items.push({ id: 'report', label: '通報する', onSelect: () => { setError('通報を受け付けました'); close(); } });
+                        }
+                        return items;
+                      }
+                    )()}
                   />
                 )}
               </Popover>

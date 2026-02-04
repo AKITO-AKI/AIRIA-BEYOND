@@ -7,6 +7,30 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: AUTH_ALLOW_PASSWORD
+        value: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: EMAIL_NOTIFICATIONS_ENABLED
+        value: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: APP_PUBLIC_URL
+        value: https://akito-aki.github.io/AIRIA-BEYOND/
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
       - key: REPLICATE_API_TOKEN
         sync: false
       - key: OPENAI_API_KEY

@@ -138,8 +138,8 @@ html[data-theme='high-contrast'] {
     --overlay-chip-fg: #ffffff;
     --overlay-chip-priority-shadow: 0 0 0 2px #ffffff;
 
-    /* Fixed bottom player height (room padding uses this) */
-    --player-safe-area: 84px;
+    /* Floating player dock (room padding uses this) */
+    --player-safe-area: 32px;
 }
 
 * {

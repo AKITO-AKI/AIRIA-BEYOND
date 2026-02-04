@@ -31,6 +31,7 @@ export interface SocialPost {
   author?: SocialUserRef | null;
   caption: string;
   album: SocialAlbumRef;
+  visibility?: 'public' | 'private' | string;
   likes: number;
   viewerHasLiked?: boolean;
   comments: SocialComment[];
@@ -42,6 +43,15 @@ export async function listSocialPosts(limit = 50, mode: 'all' | 'following' | 't
   );
   if (!response.ok) throw new Error(`Failed to load posts: ${response.status}`);
   return response.json();
+}
+
+export async function listMySocialPosts(limit = 50): Promise<{ posts: SocialPost[] }> {
+  const response = await authFetch(`${API_BASE}/api/social/me/posts?limit=${encodeURIComponent(String(limit))}`);
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(json?.message || `Failed to load my posts: ${response.status}`);
+  }
+  return json;
 }
 
 export async function createSocialPost(input: {
@@ -93,6 +103,31 @@ export async function toggleFollowUser(userId: string): Promise<{ isFollowing: b
   const json = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(json?.message || `Failed to follow: ${response.status}`);
+  }
+  return json;
+}
+
+export async function updateSocialPostVisibility(postId: string, visibility: 'public' | 'private'): Promise<SocialPost> {
+  const response = await authFetch(`${API_BASE}/api/social/posts/${encodeURIComponent(postId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visibility }),
+  });
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(json?.message || `Failed to update post: ${response.status}`);
+  }
+  return json;
+}
+
+export async function deleteSocialPost(postId: string): Promise<{ ok: true }> {
+  const response = await authFetch(`${API_BASE}/api/social/posts/${encodeURIComponent(postId)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(json?.message || `Failed to delete post: ${response.status}`);
   }
   return json;
 }

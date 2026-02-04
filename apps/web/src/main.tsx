@@ -2,16 +2,20 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AlbumProvider, useAlbums } from './contexts/AlbumContext';
 import { CausalLogProvider } from './contexts/CausalLogContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { MusicPlayerProvider, useMusicPlayer } from './contexts/MusicPlayerContext';
 import { ToastProvider } from './components/visual/feedback/ToastContainer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
+import AuthRoom from './components/rooms/AuthRoom';
 import MainRoom from './components/rooms/MainRoom';
 import GalleryRoom from './components/rooms/GalleryRoom';
 import AlbumRoom from './components/rooms/AlbumRoom';
 import MusicRoom from './components/rooms/MusicRoom';
 import SocialRoom from './components/rooms/SocialRoom';
+import MyPageRoom from './components/rooms/MyPageRoom';
+import SettingsRoom from './components/rooms/SettingsRoom';
 import InfoRoom from './components/rooms/InfoRoom';
 import FeedbackRoom from './components/rooms/FeedbackRoom';
 import SplashScreen from './components/SplashScreen';
@@ -61,13 +65,25 @@ function isOnboardingCompleted(): boolean {
   }
 }
 
-function consumePostOnboardingRoom(): 'main' | 'gallery' | 'album' | 'music' | 'social' | 'info' | 'feedback' | null {
+function consumePostOnboardingRoom():
+  | 'main'
+  | 'gallery'
+  | 'album'
+  | 'music'
+  | 'social'
+  | 'me'
+  | 'settings'
+  | 'info'
+  | 'feedback'
+  | null {
   try {
     const raw = localStorage.getItem(POST_ONBOARDING_ROOM_KEY);
     if (!raw) return null;
     localStorage.removeItem(POST_ONBOARDING_ROOM_KEY);
     const room = String(raw);
-    return ['main', 'gallery', 'album', 'music', 'social', 'info', 'feedback'].includes(room) ? (room as any) : null;
+    return ['main', 'gallery', 'album', 'music', 'social', 'me', 'settings', 'info', 'feedback'].includes(room)
+      ? (room as any)
+      : null;
   } catch {
     return null;
   }
@@ -84,6 +100,7 @@ const AppContent = () => {
   });
   const { getSelectedAlbum, albums } = useAlbums();
   const { state: musicState } = useMusicPlayer();
+  const { user: authUser, loading: authLoading } = useAuth();
   const selectedAlbum = getSelectedAlbum();
 
   useEffect(() => {
@@ -100,6 +117,8 @@ const AppContent = () => {
         { id: 'album' as const, name: 'Album', component: <AlbumRoom /> },
         { id: 'music' as const, name: 'Music', component: <MusicRoom /> },
         { id: 'social' as const, name: 'Social', component: <SocialRoom /> },
+        { id: 'me' as const, name: 'My', component: <MyPageRoom /> },
+        { id: 'settings' as const, name: 'Settings', component: <SettingsRoom /> },
         { id: 'info' as const, name: 'Info', component: <InfoRoom /> },
         { id: 'feedback' as const, name: 'Feedback', component: <FeedbackRoom /> },
       ]
@@ -129,9 +148,21 @@ const AppContent = () => {
         <>
           <PlaybackBackdrop />
           <div className="app-ui-layer">
-            <RoomNavigator key={hasOnboarded ? 'onboarded' : 'needs-onboarding'} rooms={rooms} initialRoom={initialRoom} />
-            {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
-            <EnhancedMiniPlayer album={selectedAlbum || undefined} queue={musicQueue} />
+            {authLoading ? (
+              <div style={{ padding: 24, opacity: 0.8 }}>Loading...</div>
+            ) : !authUser ? (
+              <AuthRoom />
+            ) : (
+              <>
+                <RoomNavigator
+                  key={hasOnboarded ? 'onboarded' : 'needs-onboarding'}
+                  rooms={rooms}
+                  initialRoom={initialRoom}
+                />
+                {/* C-3: Enhanced MiniPlayer with visualizations and expanded UI */}
+                <EnhancedMiniPlayer album={selectedAlbum || undefined} queue={musicQueue} />
+              </>
+            )}
           </div>
         </>
       )}
@@ -144,13 +175,15 @@ const App = () => {
     <React.StrictMode>
       <ErrorBoundary>
         <CausalLogProvider>
-          <AlbumProvider>
-            <MusicPlayerProvider>
-              <ToastProvider>
-                <AppContent />
-              </ToastProvider>
-            </MusicPlayerProvider>
-          </AlbumProvider>
+          <AuthProvider>
+            <AlbumProvider>
+              <MusicPlayerProvider>
+                <ToastProvider>
+                  <AppContent />
+                </ToastProvider>
+              </MusicPlayerProvider>
+            </AlbumProvider>
+          </AuthProvider>
         </CausalLogProvider>
       </ErrorBoundary>
     </React.StrictMode>

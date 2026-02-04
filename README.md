@@ -99,6 +99,63 @@ OPENAI_API_KEY=your_openai_api_key_here
 - Without `OPENAI_API_KEY`, the app uses rule-based (or Ollama if configured)
 - Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control)
 
+### OAuth-only Login (Google / Apple)
+
+Pre-release uses **OAuth-only** login. Password login/registration is disabled by default.
+
+Backend (Render / `server.js`) env vars:
+```
+GOOGLE_CLIENT_ID=...
+APPLE_CLIENT_ID=...
+
+# Optional (DEV only): enable password endpoints /api/auth/login & /register
+AUTH_ALLOW_PASSWORD=false
+```
+
+Frontend (Vite) env vars:
+```
+VITE_GOOGLE_CLIENT_ID=...
+VITE_APPLE_CLIENT_ID=...
+
+# Optional (recommended for Apple): exact redirect URI registered in Apple Developer
+VITE_APPLE_REDIRECT_URI=https://akito-aki.github.io/AIRIA-BEYOND/
+```
+
+Notes:
+- Google uses Google Identity Services and sends an `id_token` to the backend for verification.
+- Apple requires domain/redirect configuration in Apple Developer; `usePopup: true` is used.
+
+### Email Notifications (Optional)
+
+Email notifications are **disabled by default** and are designed to be **no-op** unless explicitly enabled.
+
+Backend env vars:
+```
+EMAIL_NOTIFICATIONS_ENABLED=false
+EMAIL_FROM=...
+APP_PUBLIC_URL=https://akito-aki.github.io/AIRIA-BEYOND/
+```
+
+Choose one provider:
+
+- **Resend**
+```
+RESEND_API_KEY=...
+```
+
+- **SMTP**
+```
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_SECURE=false
+```
+
+Current triggers (best-effort):
+- Social: like / comment / follow
+- Music: job succeeded (only if the frontend sends the Bearer token)
+
 ### Local-first (Ollama + ComfyUI)
 
 If you want to avoid paid services (OpenAI/Replicate), run everything locally:

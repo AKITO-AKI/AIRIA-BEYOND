@@ -50,6 +50,13 @@ export async function listPosts({ limit = 50 } = {}) {
     .slice(0, safeLimit);
 }
 
+export async function getPostById(postId) {
+  await loadIfNeeded();
+  const id = String(postId || '');
+  if (!id) return null;
+  return posts.find((p) => p && p.id === id) || null;
+}
+
 export async function createPost({ authorName, caption, album }) {
   await loadIfNeeded();
 
@@ -74,6 +81,7 @@ export async function createPost({ authorName, caption, album }) {
     createdAt: new Date().toISOString(),
     authorName: author,
     authorId: null,
+    visibility: 'public',
     caption: cap,
     album: safeAlbum,
     likes: 0,
@@ -110,6 +118,7 @@ export async function createPostV2({ authorId, caption, album }) {
     id: makeId('post'),
     createdAt: new Date().toISOString(),
     authorId: safeAuthorId,
+    visibility: 'public',
     caption: cap,
     album: safeAlbum,
     likes: 0,
@@ -120,6 +129,55 @@ export async function createPostV2({ authorId, caption, album }) {
   posts.unshift(post);
   await persist();
   return post;
+}
+
+function normalizeVisibility(input) {
+  const v = String(input || 'public').toLowerCase();
+  return v === 'private' ? 'private' : 'public';
+}
+
+export async function updatePostVisibilityV2(postId, { authorId, visibility }) {
+  await loadIfNeeded();
+  const id = String(postId || '');
+  const uid = sanitizeText(authorId, 80);
+  if (!id) throw new Error('postId is required');
+  if (!uid) throw new Error('authorId is required');
+
+  const post = posts.find((p) => p && p.id === id);
+  if (!post) return null;
+  if (String(post.authorId || '') !== uid) {
+    const err = new Error('Forbidden');
+    // @ts-ignore
+    err.statusCode = 403;
+    throw err;
+  }
+
+  post.visibility = normalizeVisibility(visibility);
+  post.updatedAt = new Date().toISOString();
+  await persist();
+  return post;
+}
+
+export async function deletePostV2(postId, { authorId }) {
+  await loadIfNeeded();
+  const id = String(postId || '');
+  const uid = sanitizeText(authorId, 80);
+  if (!id) throw new Error('postId is required');
+  if (!uid) throw new Error('authorId is required');
+
+  const idx = posts.findIndex((p) => p && p.id === id);
+  if (idx < 0) return null;
+  const post = posts[idx];
+  if (String(post.authorId || '') !== uid) {
+    const err = new Error('Forbidden');
+    // @ts-ignore
+    err.statusCode = 403;
+    throw err;
+  }
+
+  posts.splice(idx, 1);
+  await persist();
+  return { ok: true };
 }
 
 export async function likePost(postId) {

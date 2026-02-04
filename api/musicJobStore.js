@@ -20,6 +20,8 @@
  * @typedef {Object} MusicJobData
  * @property {string} id
  * @property {'queued' | 'running' | 'succeeded' | 'failed'} status
+ * @property {string | null} [userId]
+ * @property {string} [emailNotifiedAt]
  * @property {string} createdAt
  * @property {string} [startedAt]
  * @property {string} [finishedAt]
@@ -45,6 +47,7 @@ let jobIdCounter = 0;
  * @param {Object} data
  * @param {'openai' | 'ollama' | 'rule-based'} data.provider
  * @param {GenerateMusicRequest} data.input
+ * @param {string} [data.userId]
  * @param {number} [data.maxRetries]
  * @returns {MusicJobData}
  */
@@ -55,6 +58,7 @@ export function createMusicJob(data) {
     id: jobId,
     status: 'queued',
     createdAt: new Date().toISOString(),
+    userId: data.userId ? String(data.userId) : null,
     retryCount: 0,
     maxRetries: data.maxRetries ?? 2,
     provider: data.provider,

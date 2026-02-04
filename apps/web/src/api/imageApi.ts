@@ -2,6 +2,8 @@
  * Client API utilities for communicating with the backend
  */
 
+import { authFetch } from './authApi';
+
 /**
  * Analysis request/response types
  */
@@ -500,7 +502,7 @@ export interface MusicJobStatus {
 export async function generateMusic(
   request: GenerateMusicRequest
 ): Promise<GenerateMusicResponse> {
-  const response = await fetch(`${API_BASE}/api/music/generate`, {
+  const response = await authFetch(`${API_BASE}/api/music/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -520,7 +522,7 @@ export async function generateMusic(
  * Get music generation job status
  */
 export async function getMusicJobStatus(jobId: string, signal?: AbortSignal): Promise<MusicJobStatus> {
-  const response = await fetch(`${API_BASE}/api/music/${jobId}`, { signal });
+  const response = await authFetch(`${API_BASE}/api/music/${jobId}`, { signal });
 
   if (!response.ok) {
     const error: ApiError = await response.json();

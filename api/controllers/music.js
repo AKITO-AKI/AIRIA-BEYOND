@@ -10,6 +10,8 @@ import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.
 import { generateMusicStructureWithFallback } from '../musicLLMService.js';
 import { musicStructureToMIDI } from '../midiConverter.js';
 import MidiWriter from 'midi-writer-js';
+import { getUserBySessionToken, getUserRecordById } from '../authStore.js';
+import { makeGenerationEmail, sendEmail } from '../lib/notifications.js';
 
 // Error codes
 const ERROR_CODES = {
@@ -232,6 +234,10 @@ async function executeMusicGeneration(jobId, request, clientId) {
       effectiveProvider: provider,
     });
 
+    await maybeNotifyMusicJobSucceeded(jobId, structure).catch((e) => {
+      console.warn('[EmailNotifications] music notify failed:', e);
+    });
+
     console.log(`[MusicGeneration] Job ${jobId} completed successfully`);
   } catch (error) {
     console.error(`[MusicGeneration] Job ${jobId} failed:`, error);
@@ -283,6 +289,39 @@ async function executeMusicGeneration(jobId, request, clientId) {
   }
 }
 
+function getBearerToken(req) {
+  const auth = String(req.headers?.authorization || '').trim();
+  if (!auth) return '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? String(m[1]).trim() : '';
+}
+
+async function maybeNotifyMusicJobSucceeded(jobId, structure) {
+  const job = getMusicJob(jobId);
+  if (!job) return;
+  if (job.status !== 'succeeded') return;
+  if (!job.userId) return;
+  if (job.emailNotifiedAt) return;
+
+  const userRec = await getUserRecordById(String(job.userId));
+  const to = userRec?.email;
+  if (!to) return;
+
+  const { subject, text, html } = makeGenerationEmail({ albumTitle: structure?.character || 'あなたの作品' });
+  const result = await sendEmail({
+    to,
+    subject,
+    text,
+    html,
+    dedupeKey: `music:${jobId}`,
+    dedupeTtlMs: 24 * 60 * 60 * 1000,
+  });
+
+  if (!result?.skipped) {
+    updateMusicJob(jobId, { emailNotifiedAt: new Date().toISOString() });
+  }
+}
+
 /**
  * Generate music handler
  * @param {Object} req - Express request object
@@ -297,6 +336,18 @@ export async function generateMusic(req, res) {
 
   // Get client identifier for rate limiting
   const clientId = getClientIdentifier(req);
+
+  // Best-effort: attach job to logged-in user if Bearer session token is present.
+  let userId = null;
+  try {
+    const token = getBearerToken(req);
+    if (token) {
+      const u = await getUserBySessionToken(token);
+      userId = u?.id ? String(u.id) : null;
+    }
+  } catch {
+    userId = null;
+  }
 
   // Parse/sanitize request body early so we can always produce a fallback.
   const body = req.body || {};
@@ -317,6 +368,7 @@ export async function generateMusic(req, res) {
   if (!checkRateLimit(clientId)) {
     const job = createMusicJob({
       provider: 'rule-based',
+      userId,
       input: {
         valence,
         arousal,
@@ -356,6 +408,7 @@ export async function generateMusic(req, res) {
   if (!checkConcurrency(clientId)) {
     const job = createMusicJob({
       provider: 'rule-based',
+      userId,
       input: {
         valence,
         arousal,
@@ -395,6 +448,7 @@ export async function generateMusic(req, res) {
     // Create job
     const job = createMusicJob({
       provider: 'openai',
+      userId,
       input: {
         valence,
         arousal,
