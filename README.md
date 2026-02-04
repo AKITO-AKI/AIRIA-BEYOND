@@ -54,6 +54,9 @@ AIRIA BEYOND uses a split architecture for cost-effective deployment:
 - **Frontend**: GitHub Pages (static hosting) - `https://akito-aki.github.io/AIRIA-BEYOND/`
 - **Backend API**: Render (Node.js/Express) - `https://airia-beyond.onrender.com`
 
+Custom domain migration guide:
+- See [docs/CUSTOM_DOMAIN_MIGRATION.md](./docs/CUSTOM_DOMAIN_MIGRATION.md)
+
 ```
 ┌─────────────────────────────┐
 │  GitHub Pages               │
@@ -159,6 +162,9 @@ Frontend (Vite) env vars:
 ```
 VITE_GOOGLE_CLIENT_ID=...
 VITE_APPLE_CLIENT_ID=...
+
+# Base path (GitHub Pages: /AIRIA-BEYOND/, custom domain: /)
+VITE_PUBLIC_BASE_PATH=/AIRIA-BEYOND/
 
 # Optional (recommended for Apple): exact redirect URI registered in Apple Developer
 VITE_APPLE_REDIRECT_URI=https://akito-aki.github.io/AIRIA-BEYOND/

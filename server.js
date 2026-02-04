@@ -7,15 +7,41 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+function originFromUrl(maybeUrl) {
+  try {
+    const u = new URL(String(maybeUrl || '').trim());
+    return u.origin;
+  } catch {
+    return '';
+  }
+}
+
+function parseOriginList(value) {
+  return String(value || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 // CORS configuration
-const allowedOrigins = [
-  'https://akito-aki.github.io',
-  'http://localhost:5173',
-  'http://localhost:3000'
-];
+// - Keep localhost for dev
+// - Keep GitHub Pages origin for current deployment
+// - Add custom domain via APP_PUBLIC_URL / APP_ALLOWED_ORIGINS
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://akito-aki.github.io',
+      originFromUrl(process.env.APP_PUBLIC_URL),
+      ...parseOriginList(process.env.APP_ALLOWED_ORIGINS),
+    ].filter(Boolean)
+  )
+);
 
 app.use(cors({
   origin: (origin, callback) => {
+    // allow same-origin / server-to-server / curl requests (no Origin header)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

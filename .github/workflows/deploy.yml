@@ -40,6 +40,8 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APPLE_CLIENT_ID: ${{ secrets.VITE_APPLE_CLIENT_ID }}
           VITE_APPLE_REDIRECT_URI: ${{ secrets.VITE_APPLE_REDIRECT_URI }}
+          # GitHub Pages is served under /AIRIA-BEYOND/
+          VITE_PUBLIC_BASE_PATH: /AIRIA-BEYOND/
         run: npm run build
       
       - name: Upload artifact
