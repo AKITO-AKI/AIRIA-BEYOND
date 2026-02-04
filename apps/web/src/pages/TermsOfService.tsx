@@ -1,14 +1,8 @@
+import './LegalPage.css';
+
 export const TermsOfService = () => (
-  <div className="legal-page" style={{
-    maxWidth: '800px',
-    margin: '2rem auto',
-    padding: '2rem',
-    fontFamily: 'sans-serif',
-    lineHeight: '1.6'
-  }}>
-    <h1>利用規約 / Terms of Service</h1>
-    
-    <section style={{ marginTop: '2rem' }}>
+  <div className="legal-page">
+    <section className="legal-section" style={{ borderTop: 'none', paddingTop: 0, marginTop: 0 }}>
       <h2>1. サービスの概要 / Service Overview</h2>
       <p>
         AIRIA BEYONDは、AI搭載の感情分析・クラシック音楽・絵画生成アプリケーションです。
@@ -21,7 +15,7 @@ export const TermsOfService = () => (
       </p>
     </section>
 
-    <section style={{ marginTop: '2rem' }}>
+    <section className="legal-section">
       <h2>2. データの取り扱い / Data Handling</h2>
       <p>
         個人を特定できる情報は送信されません。セッションデータ、生成された画像・音楽は
@@ -33,7 +27,7 @@ export const TermsOfService = () => (
       </p>
     </section>
 
-    <section style={{ marginTop: '2rem' }}>
+    <section className="legal-section">
       <h2>3. 使用制限 / Usage Restrictions</h2>
       <p>
         本サービスは個人的な使用のみを目的としています。商用利用には事前の許可が必要です。
@@ -43,7 +37,7 @@ export const TermsOfService = () => (
       </p>
     </section>
 
-    <section style={{ marginTop: '2rem' }}>
+    <section className="legal-section">
       <h2>4. 免責事項 / Disclaimer</h2>
       <p>
         本サービスは「現状のまま」提供されます。生成されたコンテンツの正確性や適切性について
@@ -54,5 +48,9 @@ export const TermsOfService = () => (
         of generated content.
       </p>
     </section>
+
+    <div className="legal-note">
+      プレリリース期間中は仕様が更新される場合があります。重要な変更はアプリ内のお知らせで通知します。
+    </div>
   </div>
 );

@@ -15,7 +15,7 @@ const APPLE_REDIRECT_URI =
   (import.meta.env.VITE_APPLE_REDIRECT_URI as string | undefined) ||
   `${window.location.origin}${window.location.pathname}`;
 
-const AuthRoom: React.FC = () => {
+const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const { loginWithGoogle, loginWithApple, loading } = useAuth();
   const googleBtnRef = React.useRef<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -91,6 +91,13 @@ const AuthRoom: React.FC = () => {
   return (
     <div className="room-content auth-room">
       <div className="auth-card" data-no-swipe="true">
+        {onBack ? (
+          <div style={{ marginBottom: 8 }}>
+            <button className="btn" onClick={onBack} disabled={loading}>
+              ← 戻る
+            </button>
+          </div>
+        ) : null}
         <h1 className="auth-title">AIRIA</h1>
         <p className="auth-subtitle">はじめるにはログインが必要です</p>
 

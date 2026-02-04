@@ -9,6 +9,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import RoomNavigator from './components/RoomNavigator';
 import OnboardingRoom from './components/rooms/OnboardingRoom';
 import AuthRoom from './components/rooms/AuthRoom';
+import LandingRoom from './components/rooms/LandingRoom';
+import LegalRoom from './components/rooms/LegalRoom';
 import MainRoom from './components/rooms/MainRoom';
 import GalleryRoom from './components/rooms/GalleryRoom';
 import AlbumRoom from './components/rooms/AlbumRoom';
@@ -38,6 +40,21 @@ if (import.meta.env.PROD) {
 const ONBOARDING_STORAGE_KEY = 'airia_onboarding_data';
 const THEME_STORAGE_KEY = 'airia_theme';
 const POST_ONBOARDING_ROOM_KEY = 'airia_post_onboarding_room';
+const PREAUTH_VIEW_KEY = 'airia_preauth_view_v1';
+
+type PreAuthView = 'landing' | 'auth' | 'terms' | 'privacy';
+
+function viewFromHash(): PreAuthView | null {
+  try {
+    const hash = String(window.location.hash || '').trim().toLowerCase();
+    if (hash === '#terms') return 'terms';
+    if (hash === '#privacy') return 'privacy';
+    if (hash === '#login') return 'auth';
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function applyThemePreference() {
   try {
@@ -91,6 +108,16 @@ function consumePostOnboardingRoom():
 
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
+  const [preAuthView, setPreAuthView] = useState<PreAuthView>(() => {
+    try {
+      const byHash = viewFromHash();
+      if (byHash) return byHash;
+      const raw = sessionStorage.getItem(PREAUTH_VIEW_KEY);
+      return raw === 'auth' || raw === 'terms' || raw === 'privacy' ? (raw as PreAuthView) : 'landing';
+    } catch {
+      return 'landing';
+    }
+  });
   const [hasOnboarded, setHasOnboarded] = useState(() => {
     try {
       return isOnboardingCompleted();
@@ -102,6 +129,73 @@ const AppContent = () => {
   const { state: musicState } = useMusicPlayer();
   const { user: authUser, loading: authLoading } = useAuth();
   const selectedAlbum = getSelectedAlbum();
+
+  useEffect(() => {
+    const handler = () => {
+      const next = viewFromHash();
+      if (next) {
+        setPreAuthView(next);
+        try {
+          sessionStorage.setItem(PREAUTH_VIEW_KEY, next);
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
+      // If hash is cleared, fall back to remembered landing/auth (but never stick to legal views).
+      try {
+        const raw = sessionStorage.getItem(PREAUTH_VIEW_KEY);
+        const fallback: PreAuthView = raw === 'auth' ? 'auth' : 'landing';
+        setPreAuthView(fallback);
+        sessionStorage.setItem(PREAUTH_VIEW_KEY, fallback);
+      } catch {
+        setPreAuthView('landing');
+      }
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  const showAuth = React.useCallback(() => {
+    setPreAuthView('auth');
+    try {
+      sessionStorage.setItem(PREAUTH_VIEW_KEY, 'auth');
+      window.location.hash = '#login';
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const showLanding = React.useCallback(() => {
+    setPreAuthView('landing');
+    try {
+      sessionStorage.setItem(PREAUTH_VIEW_KEY, 'landing');
+      window.location.hash = '';
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const showTerms = React.useCallback(() => {
+    setPreAuthView('terms');
+    try {
+      sessionStorage.setItem(PREAUTH_VIEW_KEY, 'terms');
+      window.location.hash = '#terms';
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const showPrivacy = React.useCallback(() => {
+    setPreAuthView('privacy');
+    try {
+      sessionStorage.setItem(PREAUTH_VIEW_KEY, 'privacy');
+      window.location.hash = '#privacy';
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     applyThemePreference();
@@ -151,7 +245,15 @@ const AppContent = () => {
             {authLoading ? (
               <div style={{ padding: 24, opacity: 0.8 }}>Loading...</div>
             ) : !authUser ? (
-              <AuthRoom />
+              preAuthView === 'auth' ? (
+                <AuthRoom onBack={showLanding} />
+              ) : preAuthView === 'terms' ? (
+                <LegalRoom kind="terms" onBack={showLanding} onStart={showAuth} />
+              ) : preAuthView === 'privacy' ? (
+                <LegalRoom kind="privacy" onBack={showLanding} onStart={showAuth} />
+              ) : (
+                <LandingRoom onStart={showAuth} onOpenTerms={showTerms} onOpenPrivacy={showPrivacy} />
+              )
             ) : (
               <>
                 <RoomNavigator
