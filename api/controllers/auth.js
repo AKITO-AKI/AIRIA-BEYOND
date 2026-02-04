@@ -3,6 +3,7 @@ import { verifyAppleIdToken, verifyGoogleIdToken } from '../lib/oidc.js';
 import { appendAuditEventFromReq } from '../lib/auditLog.js';
 import {
   authenticateUser,
+  authenticateUserByEmail,
   createSession,
   deleteSession,
   findOrCreateUserForIdentity,
@@ -14,7 +15,12 @@ import {
 } from '../authStore.js';
 
 function isPasswordAuthEnabled() {
-  return String(process.env.AUTH_ALLOW_PASSWORD || '').toLowerCase() === 'true';
+  const allow = String(process.env.AUTH_ALLOW_PASSWORD || '').trim().toLowerCase();
+  if (allow === 'true') return true;
+  if (allow === 'false') return false;
+  const googleConfigured = Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
+  const appleConfigured = Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
+  return !googleConfigured && !appleConfigured;
 }
 
 function getClientIdentifier(req) {
@@ -48,8 +54,8 @@ export async function registerHandler(req, res) {
   }
 
   try {
-    const { handle, password, displayName } = req.body || {};
-    const user = await registerUser({ handle, password, displayName });
+    const { handle, email, password, displayName } = req.body || {};
+    const user = await registerUser({ handle, email, password, displayName });
     const session = await createSession(user.id);
     const rec = await getUserRecordById(user.id);
     appendAuditEventFromReq(req, {
@@ -87,12 +93,17 @@ export async function loginHandler(req, res) {
   }
 
   try {
-    const { handle, password } = req.body || {};
-    const user = await authenticateUser({ handle, password });
+    const { handle, email, password } = req.body || {};
+    const handleOrEmail = String(handle || '').trim();
+    const explicitEmail = String(email || '').trim();
+    const looksLikeEmail = (explicitEmail || handleOrEmail).includes('@');
+    const user = looksLikeEmail
+      ? await authenticateUserByEmail({ email: explicitEmail || handleOrEmail, password })
+      : await authenticateUser({ handle: handleOrEmail, password });
     if (!user) {
       return res.status(401).json({
         error: 'Unauthorized',
-        message: 'Invalid handle or password',
+        message: 'Invalid credentials',
       });
     }
     const session = await createSession(user.id);

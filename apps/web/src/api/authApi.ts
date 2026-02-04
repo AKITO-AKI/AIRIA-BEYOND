@@ -51,7 +51,29 @@ export async function register(input: { handle: string; password: string; displa
   return json as { token: string; expiresAt: string; user: AuthUser };
 }
 
+export async function registerWithEmail(input: { email: string; password: string; displayName?: string; handle?: string }) {
+  const response = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const json = await readJsonSafe(response);
+  if (!response.ok) throw new Error(json?.message || `Failed to register: ${response.status}`);
+  return json as { token: string; expiresAt: string; user: AuthUser };
+}
+
 export async function login(input: { handle: string; password: string }) {
+  const response = await fetch(`${API_BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const json = await readJsonSafe(response);
+  if (!response.ok) throw new Error(json?.message || `Failed to login: ${response.status}`);
+  return json as { token: string; expiresAt: string; user: AuthUser };
+}
+
+export async function loginWithEmail(input: { email: string; password: string }) {
   const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

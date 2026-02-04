@@ -2,7 +2,11 @@ import React from 'react';
 import {
   getAuthToken,
   me as apiMe,
+  login as apiLogin,
+  loginWithEmail as apiLoginWithEmail,
   oauthLogin,
+  register as apiRegister,
+  registerWithEmail as apiRegisterWithEmail,
   logout as apiLogout,
   updateProfile as apiUpdateProfile,
   setAuthToken,
@@ -16,6 +20,8 @@ interface AuthContextValue {
   refresh: () => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   loginWithApple: (idToken: string, appleUser?: any) => Promise<void>;
+  loginWithPassword: (input: { identifier: string; password: string }) => Promise<void>;
+  registerWithPassword: (input: { email: string; password: string; displayName?: string; handle?: string }) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (patch: { displayName?: string; bio?: string }) => Promise<void>;
   updateFollowingIds: (followingIds: string[]) => void;
@@ -86,6 +92,41 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
   }, []);
 
+  const loginWithPassword = React.useCallback(async (input: { identifier: string; password: string }) => {
+    setLoading(true);
+    try {
+      const identifier = String(input?.identifier || '').trim();
+      const password = String(input?.password || '');
+      const resp = identifier.includes('@')
+        ? await apiLoginWithEmail({ email: identifier, password })
+        : await apiLogin({ handle: identifier, password });
+      setAuthToken(resp.token);
+      setToken(resp.token);
+      setUser(resp.user);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const registerWithPassword = React.useCallback(
+    async (input: { email: string; password: string; displayName?: string; handle?: string }) => {
+      setLoading(true);
+      try {
+        const email = String(input?.email || '').trim();
+        const password = String(input?.password || '');
+        const displayName = input?.displayName;
+        const handle = input?.handle;
+        const resp = await apiRegisterWithEmail({ email, password, displayName, handle });
+        setAuthToken(resp.token);
+        setToken(resp.token);
+        setUser(resp.user);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   const logout = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -119,6 +160,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     refresh,
     loginWithGoogle,
     loginWithApple,
+    loginWithPassword,
+    registerWithPassword,
     logout,
     updateProfile,
     updateFollowingIds,

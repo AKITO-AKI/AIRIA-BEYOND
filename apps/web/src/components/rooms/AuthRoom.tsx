@@ -16,9 +16,10 @@ const APPLE_REDIRECT_URI =
   `${window.location.origin}${window.location.pathname}`;
 
 const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
-  const { loginWithGoogle, loginWithApple, loading } = useAuth();
+  const { loginWithGoogle, loginWithApple, loginWithPassword, registerWithPassword, loading } = useAuth();
   const googleBtnRef = React.useRef<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
   const [mode, setMode] = React.useState<'signup' | 'login'>(() => {
     try {
       const h = String(window.location.hash || '').toLowerCase();
@@ -40,6 +41,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   React.useEffect(() => {
     setError(null);
+    setSuccess(null);
 
     if (!GOOGLE_CLIENT_ID) return;
     const google = window.google;
@@ -77,6 +79,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   const handleApple = async () => {
     setError(null);
+    setSuccess(null);
     if (!APPLE_CLIENT_ID) {
       setError('Apple Client ID が未設定です');
       return;
@@ -105,6 +108,41 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   };
 
   const googleReady = Boolean(GOOGLE_CLIENT_ID);
+
+  const [signupEmail, setSignupEmail] = React.useState('');
+  const [signupPassword, setSignupPassword] = React.useState('');
+  const [signupDisplayName, setSignupDisplayName] = React.useState('');
+  const [loginIdentifier, setLoginIdentifier] = React.useState('');
+  const [loginPassword, setLoginPassword] = React.useState('');
+
+  const canSubmitSignup = Boolean(signupEmail.trim() && signupPassword);
+  const canSubmitLogin = Boolean(loginIdentifier.trim() && loginPassword);
+
+  const submitSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    try {
+      await registerWithPassword({
+        email: signupEmail,
+        password: signupPassword,
+        displayName: signupDisplayName || undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const submitLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    try {
+      await loginWithPassword({ identifier: loginIdentifier, password: loginPassword });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   return (
     <div className="room-content auth-room">
@@ -160,12 +198,11 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <div className="auth-note">
           {mode === 'signup' ? (
             <>
-              <p>Google / Apple を選ぶだけでアカウントが作成されます（新規登録）。</p>
-              <p>プレリリースでは OAuth-only（パスワード登録なし）です。</p>
+              <p>メール/パスワード、または Google / Apple でアカウントを作成できます。</p>
             </>
           ) : (
             <>
-              <p>以前使った Google / Apple でログインしてください。</p>
+              <p>メール/パスワード、または以前使った Google / Apple でログインしてください。</p>
               <p>
                 初めての方は{' '}
                 <button
@@ -189,6 +226,96 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           )}
         </div>
 
+        {mode === 'signup' ? (
+          <form className="auth-form" onSubmit={(e) => void submitSignup(e)}>
+            <label className="auth-label">
+              メールアドレス
+              <input
+                className="auth-input"
+                type="email"
+                value={signupEmail}
+                onChange={(e) => setSignupEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+                disabled={loading}
+                required
+              />
+            </label>
+
+            <label className="auth-label">
+              パスワード（6文字以上）
+              <input
+                className="auth-input"
+                type="password"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                placeholder="••••••"
+                autoComplete="new-password"
+                disabled={loading}
+                required
+                minLength={6}
+              />
+            </label>
+
+            <label className="auth-label">
+              表示名（任意）
+              <input
+                className="auth-input"
+                type="text"
+                value={signupDisplayName}
+                onChange={(e) => setSignupDisplayName(e.target.value)}
+                placeholder="AIRIAユーザー"
+                autoComplete="nickname"
+                disabled={loading}
+              />
+            </label>
+
+            <button className="btn auth-submit" type="submit" disabled={loading || !canSubmitSignup}>
+              {loading ? '作成中…' : 'メールで新規登録'}
+            </button>
+          </form>
+        ) : (
+          <form className="auth-form" onSubmit={(e) => void submitLogin(e)}>
+            <label className="auth-label">
+              メールアドレス / ハンドル
+              <input
+                className="auth-input"
+                type="text"
+                value={loginIdentifier}
+                onChange={(e) => setLoginIdentifier(e.target.value)}
+                placeholder="you@example.com または your_handle"
+                autoComplete="username"
+                disabled={loading}
+                required
+              />
+            </label>
+
+            <label className="auth-label">
+              パスワード
+              <input
+                className="auth-input"
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••"
+                autoComplete="current-password"
+                disabled={loading}
+                required
+              />
+            </label>
+
+            <button className="btn auth-submit" type="submit" disabled={loading || !canSubmitLogin}>
+              {loading ? 'ログイン中…' : 'メールでログイン'}
+            </button>
+          </form>
+        )}
+
+        <div className="auth-sep" aria-hidden="true">
+          <span />
+          <div>または</div>
+          <span />
+        </div>
+
         <div className="auth-actions">
           <div className={`auth-google ${googleReady ? '' : 'disabled'}`}>
             {googleReady ? (
@@ -207,7 +334,8 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
         {error && <div className="auth-error">{error}</div>}
 
-        
+        {success && <div className="auth-success">{success}</div>}
+
       </div>
     </div>
   );

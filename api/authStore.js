@@ -10,7 +10,13 @@ let users = [];
 let sessions = [];
 
 function isPasswordAuthEnabled() {
-  return String(process.env.AUTH_ALLOW_PASSWORD || '').toLowerCase() === 'true';
+  const allow = String(process.env.AUTH_ALLOW_PASSWORD || '').trim().toLowerCase();
+  if (allow === 'true') return true;
+  if (allow === 'false') return false;
+  // Fallback: if OAuth is not configured at all, allow password auth so the app is usable.
+  const googleConfigured = Boolean(String(process.env.GOOGLE_CLIENT_ID || '').trim());
+  const appleConfigured = Boolean(String(process.env.APPLE_CLIENT_ID || '').trim());
+  return !googleConfigured && !appleConfigured;
 }
 
 async function ensureDirExists(filePath) {
@@ -79,6 +85,16 @@ function makeStableHandleFromIdentity(provider, subject) {
   return sanitizeHandle(base) || `u_${hash.slice(0, 10)}`;
 }
 
+function makeStableHandleFromEmail(email) {
+  const e = normalizeEmail(email);
+  if (!e) return '';
+  const local = e.split('@')[0] || '';
+  const candidate = sanitizeHandle(local.replace(/[.-]/g, '_'));
+  if (candidate) return candidate;
+  const hash = crypto.createHash('sha256').update(`email:${e}`).digest('hex').slice(0, 14);
+  return sanitizeHandle(`e_${hash}`) || `e_${hash.slice(0, 10)}`;
+}
+
 function normalizeEmail(email) {
   const e = String(email || '').trim().toLowerCase();
   if (!e || !e.includes('@')) return '';
@@ -112,18 +128,32 @@ function cleanupExpiredSessionsSync() {
   });
 }
 
-export async function registerUser({ handle, password, displayName }) {
+export async function registerUser({ handle, email, password, displayName }) {
   await loadIfNeeded();
 
   if (!isPasswordAuthEnabled()) {
     throw new Error('Password registration is disabled');
   }
 
-  const safeHandle = sanitizeHandle(handle);
-  if (!safeHandle) throw new Error('handle must be 3-20 chars: a-z, 0-9, _');
+  const normalizedEmail = normalizeEmail(email);
+  if (normalizedEmail) {
+    const emailTaken = users.some((u) => normalizeEmail(u?.email) === normalizedEmail);
+    if (emailTaken) throw new Error('email is already registered');
+  }
 
-  const existing = users.find((u) => String(u.handle).toLowerCase() === safeHandle);
-  if (existing) throw new Error('handle is already taken');
+  const requestedHandle = sanitizeHandle(handle);
+  const derivedHandle = !requestedHandle && normalizedEmail ? makeStableHandleFromEmail(normalizedEmail) : '';
+  const baseHandle = requestedHandle || derivedHandle;
+  if (!baseHandle) throw new Error('handle or email is required');
+
+  let finalHandle = baseHandle;
+  let counter = 0;
+  while (users.some((u) => String(u.handle).toLowerCase() === finalHandle)) {
+    counter += 1;
+    const suffix = String(counter).slice(0, 3);
+    finalHandle = sanitizeHandle(`${baseHandle.slice(0, 16)}${suffix}`) || baseHandle;
+    if (counter > 999) throw new Error('unable to allocate handle');
+  }
 
   const pwd = String(password ?? '');
   if (pwd.length < 6) throw new Error('password must be at least 6 characters');
@@ -134,9 +164,10 @@ export async function registerUser({ handle, password, displayName }) {
   const now = new Date().toISOString();
   const user = {
     id: makeId('u'),
-    handle: safeHandle,
-    displayName: sanitizeText(displayName, 32) || safeHandle,
+    handle: finalHandle,
+    displayName: sanitizeText(displayName, 32) || finalHandle,
     bio: '',
+    email: normalizedEmail,
     passwordSalt: salt,
     passwordHash,
     followingIds: [],
@@ -157,6 +188,25 @@ export async function authenticateUser({ handle, password }) {
 
   const user = users.find((u) => String(u.handle).toLowerCase() === safeHandle);
   if (!user) return null;
+
+  try {
+    const computed = hashPassword(password, String(user.passwordSalt || ''));
+    const ok = crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(String(user.passwordHash || '')));
+    return ok ? toPublicUser(user) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function authenticateUserByEmail({ email, password }) {
+  await loadIfNeeded();
+  if (!isPasswordAuthEnabled()) return null;
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  const user = users.find((u) => normalizeEmail(u?.email) === normalizedEmail);
+  if (!user) return null;
+  if (!user.passwordSalt || !user.passwordHash) return null;
 
   try {
     const computed = hashPassword(password, String(user.passwordSalt || ''));
