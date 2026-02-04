@@ -639,7 +639,11 @@ export async function generateImage(req, res) {
               clientId
             );
           } else if (provider === 'comfyui') {
-            const out = await executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed);
+            const out = await runWithTimeout(
+              executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed),
+              GENERATION_TIMEOUT_MS,
+              job.id
+            );
             resultUrl = out.resultUrl;
             extraMeta = { comfyuiPromptId: out.promptId };
           } else {

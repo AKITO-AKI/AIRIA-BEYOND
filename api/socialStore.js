@@ -27,7 +27,7 @@ async function loadIfNeeded() {
 
 async function persist() {
   await ensureDirExists(STORE_PATH);
-  const payload = { version: 1, updatedAt: new Date().toISOString(), posts };
+  const payload = { version: 2, updatedAt: new Date().toISOString(), posts };
   await fs.writeFile(STORE_PATH, JSON.stringify(payload, null, 2), 'utf-8');
 }
 
@@ -73,9 +73,47 @@ export async function createPost({ authorName, caption, album }) {
     id: makeId('post'),
     createdAt: new Date().toISOString(),
     authorName: author,
+    authorId: null,
     caption: cap,
     album: safeAlbum,
     likes: 0,
+    likedBy: [],
+    comments: [],
+  };
+
+  posts.unshift(post);
+  await persist();
+  return post;
+}
+
+export async function createPostV2({ authorId, caption, album }) {
+  await loadIfNeeded();
+
+  const cap = sanitizeText(caption, 240);
+  const safeAuthorId = sanitizeText(authorId, 80);
+  if (!safeAuthorId) throw new Error('authorId is required');
+
+  const safeAlbum = album && typeof album === 'object'
+    ? {
+        title: sanitizeText(album.title, 80) || 'untitled',
+        mood: sanitizeText(album.mood, 24) || '',
+        imageUrl: String(album.imageUrl ?? '').slice(0, 2048),
+        createdAt: album.createdAt ? String(album.createdAt) : null,
+      }
+    : null;
+
+  if (!safeAlbum?.imageUrl) {
+    throw new Error('album.imageUrl is required');
+  }
+
+  const post = {
+    id: makeId('post'),
+    createdAt: new Date().toISOString(),
+    authorId: safeAuthorId,
+    caption: cap,
+    album: safeAlbum,
+    likes: 0,
+    likedBy: [],
     comments: [],
   };
 
@@ -94,6 +132,30 @@ export async function likePost(postId) {
   return post;
 }
 
+export async function toggleLike(postId, userId) {
+  await loadIfNeeded();
+  const id = String(postId);
+  const uid = sanitizeText(userId, 80);
+  if (!uid) throw new Error('userId is required');
+
+  const post = posts.find((p) => p.id === id);
+  if (!post) return null;
+
+  post.likedBy = Array.isArray(post.likedBy) ? post.likedBy.map(String) : [];
+  const idx = post.likedBy.indexOf(uid);
+  if (idx >= 0) {
+    post.likedBy.splice(idx, 1);
+    post.likes = Math.max(0, Number(post.likes || 0) - 1);
+  } else {
+    post.likedBy.unshift(uid);
+    post.likedBy = Array.from(new Set(post.likedBy)).slice(0, 20000);
+    post.likes = Number(post.likes || 0) + 1;
+  }
+
+  await persist();
+  return post;
+}
+
 export async function addComment(postId, { authorName, text }) {
   await loadIfNeeded();
   const id = String(postId);
@@ -104,6 +166,33 @@ export async function addComment(postId, { authorName, text }) {
     id: makeId('c'),
     createdAt: new Date().toISOString(),
     authorName: sanitizeText(authorName, 24) || 'anonymous',
+    authorId: null,
+    text: sanitizeText(text, 240),
+  };
+
+  if (!comment.text) {
+    throw new Error('comment text is required');
+  }
+
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+  post.comments.push(comment);
+  await persist();
+  return comment;
+}
+
+export async function addCommentV2(postId, { authorId, text }) {
+  await loadIfNeeded();
+  const id = String(postId);
+  const post = posts.find((p) => p.id === id);
+  if (!post) return null;
+
+  const uid = sanitizeText(authorId, 80);
+  if (!uid) throw new Error('authorId is required');
+
+  const comment = {
+    id: makeId('c'),
+    createdAt: new Date().toISOString(),
+    authorId: uid,
     text: sanitizeText(text, 240),
   };
 

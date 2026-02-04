@@ -1,11 +1,13 @@
 import React from 'react';
 import { useAlbums } from '../../contexts/AlbumContext';
 import { useRoomNavigation } from '../../contexts/RoomNavigationContext';
+import { getAuthToken, login, logout, me, register, setAuthToken, type AuthUser } from '../../api/authApi';
 import {
   commentSocialPost,
   createSocialPost,
   likeSocialPost,
   listSocialPosts,
+  toggleFollowUser,
   type SocialPost,
 } from '../../api/socialApi';
 import SegmentedControl from '../ui/SegmentedControl';
@@ -24,7 +26,13 @@ const SocialRoom: React.FC = () => {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [authorName, setAuthorName] = React.useState('');
+  const [authUser, setAuthUser] = React.useState<AuthUser | null>(null);
+  const [authBusy, setAuthBusy] = React.useState(false);
+  const [authTab, setAuthTab] = React.useState<'login' | 'register'>(getAuthToken() ? 'login' : 'register');
+  const [handle, setHandle] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [displayName, setDisplayName] = React.useState('');
+
   const [caption, setCaption] = React.useState('');
   const [albumId, setAlbumId] = React.useState<string>(selectedAlbum?.id || (albums[0]?.id ?? ''));
   const [publishing, setPublishing] = React.useState(false);
@@ -33,6 +41,26 @@ const SocialRoom: React.FC = () => {
   const [commentingPostId, setCommentingPostId] = React.useState<string | null>(null);
   const [feedMode, setFeedMode] = React.useState<'all' | 'following' | 'trending'>('all');
   const [expandedPosts, setExpandedPosts] = React.useState<Record<string, boolean>>({});
+
+  const loadMe = React.useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setAuthUser(null);
+      return;
+    }
+
+    try {
+      const resp = await me();
+      if (!resp.user) {
+        setAuthToken(null);
+        setAuthUser(null);
+      } else {
+        setAuthUser(resp.user);
+      }
+    } catch {
+      setAuthUser(null);
+    }
+  }, []);
 
   const copyPostLink = async (postId: string) => {
     const link = `${window.location.origin}/#social/${postId}`;
@@ -58,18 +86,19 @@ const SocialRoom: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const resp = await listSocialPosts(50);
+      const resp = await listSocialPosts(50, feedMode);
       setPosts(resp.posts || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [feedMode]);
 
   React.useEffect(() => {
+    void loadMe();
     void load();
-  }, [load]);
+  }, [load, loadMe]);
 
   React.useEffect(() => {
     if (selectedAlbum?.id) setAlbumId(selectedAlbum.id);
@@ -78,16 +107,55 @@ const SocialRoom: React.FC = () => {
 
   const selectedForPost = React.useMemo(() => albums.find((a) => a.id === albumId) || null, [albums, albumId]);
 
-  const canPublish = Boolean(selectedForPost?.imageDataURL) && !publishing;
+  const canPublish = Boolean(authUser) && Boolean(selectedForPost?.imageDataURL) && !publishing;
+
+  const handleAuthSubmit = async () => {
+    setAuthBusy(true);
+    setError(null);
+    try {
+      if (authTab === 'register') {
+        const resp = await register({ handle, password, displayName: displayName || undefined });
+        setAuthToken(resp.token);
+        setAuthUser(resp.user);
+      } else {
+        const resp = await login({ handle, password });
+        setAuthToken(resp.token);
+        setAuthUser(resp.user);
+      }
+      setPassword('');
+      if (feedMode === 'following') {
+        void load();
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setAuthBusy(true);
+    setError(null);
+    try {
+      await logout().catch(() => null);
+    } finally {
+      setAuthToken(null);
+      setAuthUser(null);
+      setAuthBusy(false);
+    }
+  };
 
   const handlePublish = async () => {
+    if (!authUser) {
+      setError('投稿にはログインが必要です');
+      return;
+    }
     if (!selectedForPost) return;
     setPublishing(true);
     setError(null);
 
     try {
       const created = await createSocialPost({
-        authorName,
         caption,
         album: {
           title: selectedForPost.title || selectedForPost.mood,
@@ -110,6 +178,10 @@ const SocialRoom: React.FC = () => {
   };
 
   const handleLike = async (postId: string) => {
+    if (!authUser) {
+      setError('いいねにはログインが必要です');
+      return;
+    }
     try {
       const updated = await likeSocialPost(postId);
       setPosts((prev) => prev.map((p) => (p.id === postId ? updated : p)));
@@ -119,6 +191,10 @@ const SocialRoom: React.FC = () => {
   };
 
   const handleComment = async (postId: string) => {
+    if (!authUser) {
+      setError('コメントにはログインが必要です');
+      return;
+    }
     const text = (commentDraftByPostId[postId] || '').trim();
     if (!text) return;
 
@@ -126,7 +202,7 @@ const SocialRoom: React.FC = () => {
     setError(null);
 
     try {
-      const created = await commentSocialPost(postId, { authorName, text });
+      const created = await commentSocialPost(postId, { text });
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
@@ -142,6 +218,19 @@ const SocialRoom: React.FC = () => {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setCommentingPostId(null);
+    }
+  };
+
+  const handleToggleFollow = async (targetUserId: string) => {
+    if (!authUser) {
+      setError('フォローにはログインが必要です');
+      return;
+    }
+    try {
+      const resp = await toggleFollowUser(targetUserId);
+      setAuthUser((prev) => (prev ? { ...prev, followingIds: resp.followingIds } : prev));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -179,19 +268,95 @@ const SocialRoom: React.FC = () => {
         />
       </div>
 
+      <div className="social-auth" data-no-swipe="true" aria-label="ログイン">
+        {authUser ? (
+          <div className="social-auth-row">
+            <div className="social-auth-me">
+              <div className="social-auth-title">ログイン中</div>
+              <div className="social-auth-handle">@{authUser.handle}</div>
+              <div className="social-auth-sub">{authUser.displayName}</div>
+            </div>
+            <div className="social-auth-actions">
+              <button className="btn" onClick={() => void load()} disabled={loading}>
+                再読み込み
+              </button>
+              <button className="btn" onClick={() => void handleLogout()} disabled={authBusy}>
+                ログアウト
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="social-auth-form">
+            <div className="social-auth-tabs">
+              <button
+                className={`btn ${authTab === 'register' ? 'btn-primary' : ''}`}
+                onClick={() => setAuthTab('register')}
+                disabled={authBusy}
+              >
+                新規登録
+              </button>
+              <button
+                className={`btn ${authTab === 'login' ? 'btn-primary' : ''}`}
+                onClick={() => setAuthTab('login')}
+                disabled={authBusy}
+              >
+                ログイン
+              </button>
+            </div>
+
+            <div className="social-auth-grid">
+              <label className="social-field">
+                <span className="social-label">ハンドル（a-z/0-9/_）</span>
+                <input
+                  className="social-input"
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value)}
+                  placeholder="airia_user"
+                  maxLength={20}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+              </label>
+              <label className="social-field">
+                <span className="social-label">パスワード</span>
+                <input
+                  className="social-input"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="6文字以上"
+                />
+              </label>
+              {authTab === 'register' && (
+                <label className="social-field social-field-wide">
+                  <span className="social-label">表示名（任意）</span>
+                  <input
+                    className="social-input"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Airia"
+                    maxLength={32}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="social-auth-actions">
+              <button
+                className="btn btn-primary"
+                onClick={() => void handleAuthSubmit()}
+                disabled={authBusy || !handle.trim() || !password}
+              >
+                {authBusy ? '処理中…' : authTab === 'register' ? '登録する' : 'ログインする'}
+              </button>
+              <div className="social-muted">投稿/いいね/コメント/フォローにはログインが必要です</div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="social-compose" data-no-swipe="true" aria-label="投稿フォーム">
         <div className="social-compose-grid">
-          <label className="social-field">
-            <span className="social-label">名前（任意）</span>
-            <input
-              className="social-input"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              placeholder="anonymous"
-              maxLength={24}
-            />
-          </label>
-
           <label className="social-field">
             <span className="social-label">公開するアルバム</span>
             <select className="social-select" value={albumId} onChange={(e) => setAlbumId(e.target.value)}>
@@ -240,13 +405,21 @@ const SocialRoom: React.FC = () => {
       </div>
 
       <div className="social-timeline" aria-label="タイムライン">
+        {feedMode === 'following' && !authUser && (
+          <div className="social-muted">「フォロー中」を見るにはログインしてください</div>
+        )}
         {loading && posts.length === 0 && <div className="social-muted">読み込み中…</div>}
         {!loading && posts.length === 0 && <div className="social-muted">まだ投稿がありません</div>}
 
         {posts.map((post) => (
           <article key={post.id} className="social-post" data-no-swipe="true">
             <header className="social-post-header">
-              <div className="social-post-author">{post.authorName || 'anonymous'}</div>
+              <div className="social-post-author">
+                {post.author?.handle ? `@${post.author.handle}` : post.authorName || 'anonymous'}
+                {post.author?.displayName && (
+                  <span className="social-post-author-sub">{post.author.displayName}</span>
+                )}
+              </div>
               <div className="social-post-date">
                 {new Date(post.createdAt).toLocaleString('ja-JP', {
                   year: 'numeric',
@@ -257,6 +430,18 @@ const SocialRoom: React.FC = () => {
                 })}
               </div>
             </header>
+
+            {post.author?.id && authUser?.id !== post.author.id && (
+              <div className="social-post-follow" data-no-swipe="true">
+                <button
+                  className={`btn ${authUser?.followingIds?.includes(post.author.id) ? 'btn-primary' : ''}`}
+                  onClick={() => void handleToggleFollow(post.author!.id)}
+                  disabled={!authUser}
+                >
+                  {authUser?.followingIds?.includes(post.author.id) ? 'フォロー中' : 'フォロー'}
+                </button>
+              </div>
+            )}
 
             <div className="social-post-album">
               <AlbumCard
@@ -284,7 +469,11 @@ const SocialRoom: React.FC = () => {
                 </span>
                 <span className="social-count-chip">{Array.isArray(post.comments) ? post.comments.length : 0}</span>
               </button>
-              <button className="btn social-action" onClick={() => void handleLike(post.id)}>
+              <button
+                className={`btn social-action ${post.viewerHasLiked ? 'is-active' : ''}`}
+                onClick={() => void handleLike(post.id)}
+                disabled={!authUser}
+              >
                 <span className="social-action-main">
                   <Icon name="heart" className="social-action-icon" />
                   <span className="social-action-label">いいね</span>
@@ -334,12 +523,13 @@ const SocialRoom: React.FC = () => {
                         [post.id]: e.target.value,
                       }))
                     }
-                    placeholder="コメントを書く"
+                    placeholder={authUser ? 'コメントを書く' : 'ログインしてコメント'}
                     maxLength={240}
+                    disabled={!authUser}
                   />
                   <button
                     className="btn btn-primary"
-                    disabled={commentingPostId === post.id}
+                    disabled={!authUser || commentingPostId === post.id}
                     onClick={() => void handleComment(post.id)}
                   >
                     {commentingPostId === post.id ? '送信中…' : '送信'}

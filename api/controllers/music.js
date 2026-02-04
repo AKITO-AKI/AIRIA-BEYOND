@@ -22,6 +22,24 @@ const ERROR_CODES = {
   EMERGENCY_FALLBACK: 'EMERGENCY_FALLBACK',
 };
 
+const MUSIC_STRUCTURE_TIMEOUT_MS = 60 * 1000;
+
+async function runWithTimeout(promise, timeoutMs) {
+  let timeoutHandle;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutHandle = setTimeout(() => reject(new Error(`Music generation timeout after ${timeoutMs / 1000}s`)), timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    return result;
+  } catch (error) {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    throw error;
+  }
+}
+
 function clampNumber(value, { min, max, fallback }) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -178,8 +196,11 @@ async function executeMusicGeneration(jobId, request, clientId) {
 
     const warnings = [];
 
-    // Generate music structure using LLM (with fallback)
-    const { structure: rawStructure, provider } = await generateMusicStructureWithFallback(request);
+    // Generate music structure using LLM (with fallback), but enforce a hard timeout.
+    const { structure: rawStructure, provider } = await runWithTimeout(
+      generateMusicStructureWithFallback(request),
+      MUSIC_STRUCTURE_TIMEOUT_MS
+    );
 
     const structure = {
       ...rawStructure,

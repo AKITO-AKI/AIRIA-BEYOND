@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RoomNavigationProvider, type RoomType } from '../contexts/RoomNavigationContext';
+import FeedbackNudgePopup from './visual/feedback/FeedbackNudgePopup';
 import './RoomNavigator.css';
 
 interface Room {
@@ -168,6 +169,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
 
   return (
     <RoomNavigationProvider value={{ currentRoomId, navigateToRoom: navigateToRoomId }}>
+      <FeedbackNudgePopup />
       <div className={`room-navigator ${showIndicators ? '' : 'indicators-hidden'}`}>
         {/* Room indicator (navigation tool) */}
         {showIndicators && (

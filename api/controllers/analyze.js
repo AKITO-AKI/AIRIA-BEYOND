@@ -37,6 +37,25 @@ const ERROR_CODES = {
   MAX_RETRIES_EXCEEDED: 'MAX_RETRIES_EXCEEDED',
 };
 
+// Timeout for analysis generation (LLM can be slow; we always have a rules fallback)
+const ANALYSIS_TIMEOUT_MS = 60 * 1000;
+
+async function runWithTimeout(promise, timeoutMs) {
+  let timeoutHandle;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutHandle = setTimeout(() => reject(new Error(`Analysis timeout after ${timeoutMs / 1000}s`)), timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    return result;
+  } catch (error) {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    throw error;
+  }
+}
+
 /**
  * Get client identifier (IP address) from request
  * @param {Object} req - Express request object
@@ -66,8 +85,27 @@ async function executeAnalysis(jobId, input, clientId) {
       startedAt: new Date().toISOString(),
     });
 
-    // Generate IR using LLM with fallback
-    const { ir, provider } = await generateIR(input);
+    // Generate IR using LLM with fallback; enforce a hard timeout.
+    let ir;
+    let provider;
+    try {
+      const out = await runWithTimeout(generateIR(input), ANALYSIS_TIMEOUT_MS);
+      ir = out.ir;
+      provider = out.provider;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[Analysis] Timed out or errored; using rule-based IR:', msg);
+      const out = await generateIR(input, true);
+      ir = out.ir;
+      provider = 'rule-based';
+      updateAnalysisJob(jobId, {
+        errorCode: ERROR_CODES.TIMEOUT,
+        errorMessage: msg,
+        error: msg,
+        fallbackUsed: true,
+        fallbackReason: ERROR_CODES.TIMEOUT,
+      });
+    }
 
     // Update provider if it changed (e.g., fell back to rules)
     updateAnalysisJob(jobId, { provider });
@@ -93,13 +131,29 @@ async function executeAnalysis(jobId, input, clientId) {
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    updateAnalysisJob(jobId, {
-      status: 'failed',
-      finishedAt: new Date().toISOString(),
-      errorCode,
-      errorMessage,
-      error: errorMessage,
-    });
+    // Defense-in-depth: never brick the UX; fall back to rules and succeed.
+    try {
+      const fallback = await generateIR(input, true);
+      updateAnalysisJob(jobId, {
+        status: 'succeeded',
+        finishedAt: new Date().toISOString(),
+        provider: 'rule-based',
+        result: fallback.ir,
+        errorCode,
+        errorMessage,
+        error: errorMessage,
+        fallbackUsed: true,
+        fallbackReason: errorCode,
+      });
+    } catch {
+      updateAnalysisJob(jobId, {
+        status: 'failed',
+        finishedAt: new Date().toISOString(),
+        errorCode,
+        errorMessage,
+        error: errorMessage,
+      });
+    }
   } finally {
     // Release concurrency slot
     releaseJob(clientId);

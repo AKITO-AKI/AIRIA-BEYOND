@@ -46,7 +46,7 @@ export interface AnalysisJobStatus {
   errorMessage?: string;
   retryCount: number;
   maxRetries: number;
-  provider: 'openai' | 'rule-based';
+  provider: 'openai' | 'ollama' | 'rule-based' | string;
   input: AnalyzeRequest;
   result?: IntermediateRepresentation;
 }
@@ -420,7 +420,7 @@ export async function getAnalysisJobStatus(jobId: string): Promise<AnalysisJobSt
 export async function pollAnalysisJobStatus(
   jobId: string,
   onUpdate?: (status: AnalysisJobStatus) => void,
-  maxAttempts: number = 30,
+  maxAttempts: number = 90,
   intervalMs: number = 1000
 ): Promise<AnalysisJobStatus> {
   for (let i = 0; i < maxAttempts; i++) {
