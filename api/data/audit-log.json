@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "updatedAt": "2026-02-04T02:32:19.793Z",
+  "nextId": 3,
+  "events": [
+    {
+      "id": 2,
+      "ts": "2026-02-04T02:32:19.535Z",
+      "type": "test.persist",
+      "severity": "info",
+      "actor": null,
+      "target": null,
+      "summary": "hello",
+      "request": null,
+      "data": null
+    },
+    {
+      "id": 1,
+      "ts": "2026-02-04T02:30:34.241Z",
+      "type": "test.persist",
+      "severity": "info",
+      "actor": null,
+      "target": null,
+      "summary": "hello",
+      "request": null,
+      "data": null
+    }
+  ]
+}

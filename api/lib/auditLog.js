@@ -1,3 +1,7 @@
+import fs from 'fs';
+import fsp from 'fs/promises';
+import path from 'path';
+
 let nextId = 1;
 
 /** @type {Array<any>} */
@@ -7,6 +11,71 @@ let events = [];
 const subscribers = new Set();
 
 const MAX_EVENTS = Math.max(100, Math.min(20000, Number(process.env.AUDIT_LOG_MAX || 2000)));
+const PERSIST_ENABLED = String(process.env.AUDIT_LOG_PERSIST ?? 'true').toLowerCase() !== 'false';
+const DEFAULT_PATH = path.join(process.cwd(), 'api', 'data', 'audit-log.json');
+const STORE_PATH = process.env.AUDIT_LOG_PATH ? path.resolve(process.env.AUDIT_LOG_PATH) : DEFAULT_PATH;
+
+let persistTimer = null;
+let persistInFlight = false;
+let dirty = false;
+
+function ensureDirExistsSync(filePath) {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  } catch {
+    // ignore
+  }
+}
+
+function loadFromDiskSync() {
+  if (!PERSIST_ENABLED) return;
+  try {
+    if (!fs.existsSync(STORE_PATH)) return;
+    const raw = fs.readFileSync(STORE_PATH, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const loadedEvents = Array.isArray(parsed?.events) ? parsed.events : [];
+    const loadedNextId = Number(parsed?.nextId || 1);
+    events = loadedEvents.slice(0, MAX_EVENTS);
+    nextId = Number.isFinite(loadedNextId) && loadedNextId > 0 ? loadedNextId : Math.max(1, (events[0]?.id || 0) + 1);
+  } catch {
+    // ignore (start fresh)
+  }
+}
+
+async function persistToDisk() {
+  if (!PERSIST_ENABLED) return;
+  if (!dirty) return;
+  if (persistInFlight) return;
+  persistInFlight = true;
+  dirty = false;
+
+  try {
+    await fsp.mkdir(path.dirname(STORE_PATH), { recursive: true });
+    const payload = {
+      version: 1,
+      updatedAt: nowIso(),
+      nextId,
+      events: events.slice(0, MAX_EVENTS),
+    };
+    const tmp = `${STORE_PATH}.tmp`;
+    await fsp.writeFile(tmp, JSON.stringify(payload, null, 2), 'utf-8');
+    await fsp.rename(tmp, STORE_PATH);
+  } catch {
+    // ignore
+  } finally {
+    persistInFlight = false;
+  }
+}
+
+function schedulePersist() {
+  if (!PERSIST_ENABLED) return;
+  dirty = true;
+  if (persistTimer) return;
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void persistToDisk();
+  }, 250);
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -29,6 +98,9 @@ export function buildActorFromReq(req) {
 }
 
 export function appendAuditEvent(input = {}) {
+  // Ensure dir exists early to reduce chances of first write failing.
+  if (PERSIST_ENABLED) ensureDirExistsSync(STORE_PATH);
+
   const evt = {
     id: nextId++,
     ts: nowIso(),
@@ -43,6 +115,8 @@ export function appendAuditEvent(input = {}) {
 
   events.unshift(evt);
   if (events.length > MAX_EVENTS) events = events.slice(0, MAX_EVENTS);
+
+  schedulePersist();
 
   // Fan-out to SSE subscribers (best-effort)
   const payload = `event: audit\ndata: ${JSON.stringify(evt)}\n\n`;
@@ -137,3 +211,6 @@ export function subscribeAuditSse(req, res) {
 
   return cleanup;
 }
+
+// Load persisted history at module init.
+loadFromDiskSync();
