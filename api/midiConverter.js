@@ -28,22 +28,12 @@ const KEY_SIGNATURES = {
   'b minor': { tonic: 71, scale: [0, 2, 3, 5, 7, 8, 10] },
 };
 
-// Roman numeral to chord intervals (simplified)
-const CHORD_MAP = {
-  'i': [0, 3, 7],  // minor triad
-  'I': [0, 4, 7],  // major triad
-  'ii': [2, 5, 9],
-  'II': [2, 6, 9],
-  'iii': [4, 7, 11],
-  'III': [4, 8, 11],
-  'iv': [5, 8, 12],
-  'IV': [5, 9, 12],
-  'v': [7, 10, 14],
-  'V': [7, 11, 14],
-  'vi': [9, 12, 16],
-  'VI': [9, 13, 16],
-  'vii': [11, 14, 17],
-  'VII': [11, 15, 17],
+// Chord quality templates (semitones from chord root)
+const TRIADS = {
+  major: [0, 4, 7],
+  minor: [0, 3, 7],
+  diminished: [0, 3, 6],
+  augmented: [0, 4, 8],
 };
 
 // Dynamics to MIDI velocity mapping
@@ -122,37 +112,36 @@ function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
 
   const quarterBeats = Math.max(1, Math.min(16, Math.round(measureBeats)));
 
+  const midTonic = clampMidi(keyInfo.tonic - 12);
+  const bassTonic = clampMidi(keyInfo.tonic - 24);
+  let prevMidVoicing = null;
+
   for (let measure = 0; measure < Number(section.measures || 0); measure++) {
     const chord = safeChordProgression[measure % safeChordProgression.length];
-    const chordNotesMid = getChordNotes(chord, keyInfo, 60); // mid register
-    const chordNotesBass = getChordNotes(chord, keyInfo, 36);
-    const bassRoot = chordNotesBass[0] ?? (keyInfo.tonic - 12);
+    const midVoicingRaw = getChordNotes(chord, keyInfo, midTonic);
+    const chordNotesMid = prevMidVoicing ? voiceLeadChord(midVoicingRaw, prevMidVoicing) : midVoicingRaw;
+    prevMidVoicing = chordNotesMid.length ? chordNotesMid.slice() : prevMidVoicing;
 
-    // Harmony: repeat a soft chord each beat (simple but stable).
+    const bassRoot = getChordRoot(chord, keyInfo, bassTonic) ?? bassTonic;
+
+    // Harmony: broken-chord arpeggio (less blocky than repeated triads)
     if (chordNotesMid.length) {
-      for (let b = 0; b < quarterBeats; b += 1) {
-        tracks.harmonyTrack.addEvent(
-          new MidiWriter.NoteEvent({
-            pitch: chordNotesMid,
-            duration: '4',
-            velocity: harmonyVel,
-          })
-        );
-      }
+      addArpeggioPattern(tracks.harmonyTrack, chordNotesMid, quarterBeats, harmonyVel);
     } else {
-      // Keep time moving even if chord parsing fails.
       for (let b = 0; b < quarterBeats; b += 1) {
-        tracks.harmonyTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [keyInfo.tonic], duration: '4', velocity: harmonyVel }));
+        tracks.harmonyTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [midTonic], duration: '4', velocity: harmonyVel }));
       }
     }
 
-    // Bass: simple root pulse.
+    // Bass: root on downbeat, (optional) fifth on mid-measure for motion.
+    const fifth = chordNotesMid?.[2] ? clampMidi(chordNotesMid[2] - 24) : clampMidi(bassRoot + 7);
     if (quarterBeats >= 4) {
       tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [bassRoot], duration: '2', velocity: bassVel }));
-      tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [bassRoot], duration: '2', velocity: bassVel }));
+      tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [fifth], duration: '2', velocity: Math.floor(bassVel * 0.95) }));
     } else {
       for (let b = 0; b < quarterBeats; b += 1) {
-        tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [bassRoot], duration: '4', velocity: bassVel }));
+        const p = b === 0 ? bassRoot : fifth;
+        tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [p], duration: '4', velocity: bassVel }));
       }
     }
 
@@ -176,16 +165,95 @@ function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
  * @param {number} [baseOctave=60] - Base octave for chord
  * @returns {number[]} Array of MIDI note numbers
  */
-function getChordNotes(romanNumeral, keyInfo, baseOctave = 60) {
-  const chordIntervals = CHORD_MAP[romanNumeral] || CHORD_MAP['I'];
-  
-  return chordIntervals.map((interval) => {
-    // Map interval to scale degree
-    const scaleDegree = Math.floor(interval / 2);
-    const scaleNote = keyInfo.scale[scaleDegree % keyInfo.scale.length];
-    const octaveOffset = Math.floor(interval / 12) * 12;
-    return baseOctave + scaleNote + octaveOffset;
-  });
+function clampMidi(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 60;
+  return Math.max(0, Math.min(127, Math.round(x)));
+}
+
+function normalizeRoman(romanNumeral) {
+  const s = String(romanNumeral ?? '').trim();
+  // Keep roman letters only; preserve case for quality heuristics.
+  const cleaned = s.replace(/[^ivIV]/g, '');
+  return cleaned || 'I';
+}
+
+function romanToDegree(romanNumeral) {
+  const r = normalizeRoman(romanNumeral).toUpperCase();
+  // Order matters (VI vs V etc.)
+  const map = {
+    VII: 7,
+    VI: 6,
+    IV: 4,
+    V: 5,
+    III: 3,
+    II: 2,
+    I: 1,
+  };
+  return map[r] || null;
+}
+
+function getTriadQuality(romanNumeral) {
+  const r = normalizeRoman(romanNumeral);
+  const upper = r.toUpperCase();
+  const isLower = r === r.toLowerCase();
+  if (upper === 'VII') return 'diminished';
+  return isLower ? 'minor' : 'major';
+}
+
+function getChordRoot(romanNumeral, keyInfo, baseTonic) {
+  const degree = romanToDegree(romanNumeral);
+  if (!degree) return null;
+  const scaleSemitone = keyInfo.scale[(degree - 1) % keyInfo.scale.length] ?? 0;
+  return clampMidi(baseTonic + scaleSemitone);
+}
+
+function getChordNotes(romanNumeral, keyInfo, baseTonic) {
+  const root = getChordRoot(romanNumeral, keyInfo, baseTonic);
+  if (root === null) return [];
+  const quality = getTriadQuality(romanNumeral);
+  const intervals = TRIADS[quality] || TRIADS.major;
+  const notes = intervals.map((d) => clampMidi(root + d));
+  notes.sort((a, b) => a - b);
+  return notes;
+}
+
+function voiceLeadChord(chordNotes, prevNotes) {
+  if (!Array.isArray(chordNotes) || chordNotes.length < 3) return chordNotes;
+  if (!Array.isArray(prevNotes) || prevNotes.length < 3) return chordNotes;
+
+  const base = chordNotes.slice(0, 3).sort((a, b) => a - b);
+  const prev = prevNotes.slice(0, 3).sort((a, b) => a - b);
+
+  const inv0 = [base[0], base[1], base[2]];
+  const inv1 = [base[1], base[2], clampMidi(base[0] + 12)];
+  const inv2 = [base[2], clampMidi(base[0] + 12), clampMidi(base[1] + 12)];
+  const candidates = [inv0, inv1, inv2]
+    .flatMap((v) => [v, v.map((n) => clampMidi(n + 12)), v.map((n) => clampMidi(n - 12))])
+    .map((v) => v.slice().sort((a, b) => a - b));
+
+  let best = candidates[0];
+  let bestScore = Infinity;
+  for (const c of candidates) {
+    const score = Math.abs(c[0] - prev[0]) + Math.abs(c[1] - prev[1]) + Math.abs(c[2] - prev[2]);
+    if (score < bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return best;
+}
+
+function addArpeggioPattern(track, chordNotes, quarterBeats, velocity) {
+  const notes = chordNotes.slice().sort((a, b) => a - b);
+  const steps = Math.max(2, Math.round(quarterBeats * 2)); // eighth notes
+  const pattern = [0, 1, 2, 1];
+  for (let i = 0; i < steps; i += 1) {
+    const idx = pattern[i % pattern.length];
+    const isDownbeat = i % 2 === 0;
+    const vel = isDownbeat ? velocity : Math.floor(velocity * 0.92);
+    track.addEvent(new MidiWriter.NoteEvent({ pitch: [notes[idx] ?? notes[0]], duration: '8', velocity: vel }));
+  }
 }
 
 /**

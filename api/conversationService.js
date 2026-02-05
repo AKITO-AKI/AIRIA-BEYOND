@@ -140,26 +140,50 @@ function extractOnboardingHints(onboardingData) {
   return parts.length ? parts.join(' / ') : null;
 }
 
+function buildRuleBasedFollowup({ preferredQuestionFacet, facetSignals, lastAssistant }) {
+  const avoidSceneQuestion = /どの場面.*聴きたい/.test(String(lastAssistant ?? ''));
+
+  if (!preferredQuestionFacet) {
+    // If we already have enough facets (or user explicitly asked for recs), keep it light.
+    return avoidSceneQuestion
+      ? 'じゃあ今の気分に合う曲、2〜3曲だけ出すね。どれが近い？（静かに包む/少し背中を押す/胸を締める/透明に整える）'
+      : '今の気分、どの場面で整えたい？（朝の準備/移動中/仕事前後/夜の一人時間）';
+  }
+
+  switch (preferredQuestionFacet) {
+    case 'situation':
+      return avoidSceneQuestion
+        ? 'その出来事、いちばん近いのはどれ？（仕事/人間関係/体調/将来の不安/その他）'
+        : 'その話、どの場面のこと？（仕事/人間関係/体調/将来の不安/その他）';
+    case 'emotion':
+      return '今いちばん強い感情はどれに近い？（落ち着き/不安/疲れ/寂しさ/高揚）';
+    case 'body':
+      return '体の感覚だとどこに出てる？（胸/喉/胃/頭/肩/全身）';
+    case 'desired':
+      return facetSignals?.hasRequest
+        ? 'OK。雰囲気はどれがいい？（やさしく包む/少し背中を押す/透明に整える/深く沈む）'
+        : '今はどうなれたら少しラク？（落ち着きたい/眠りたい/切り替えたい/背中を押してほしい）';
+    default:
+      return '今いちばん強い感情はどれに近い？（落ち着き/不安/疲れ/高揚）';
+  }
+}
+
 function fallbackRespond(messages, onboardingData) {
   const normalized = normalizeMessages(messages);
   const lastUser = [...normalized].reverse().find((m) => m.role === 'user')?.content ?? '';
   const lastAssistant = [...normalized].reverse().find((m) => m.role === 'assistant')?.content ?? '';
   const hints = extractOnboardingHints(onboardingData);
 
+  const facetSignals = detectFacetSignals(lastUser);
+  const preferredQuestionFacet = pickNextQuestionFacet(facetSignals);
+
   const recs = CURATED_RECS.slice(0, 3);
 
-  const followups = [
-    'その話、もう少しだけ続きが聞きたい。今いちばん強い感情はどれに近い？（落ち着き/不安/疲れ/高揚）',
-    'その出来事って、体の感覚だとどんな感じ？（胸が重い/頭が冴える/眠い/そわそわ）',
-    'もし音にすると、どっちが近い？（静かに包む/少し背中を押す/胸を締める/透明に整える）',
-    '今の気分、どの場面で整えたい？（朝の準備/移動中/仕事前後/夜の一人時間）',
-  ];
-
-  // Avoid repeating the old fixed phrase if it appeared recently.
-  const avoidSceneQuestion = /どの場面.*聴きたい/.test(lastAssistant);
-  const candidates = avoidSceneQuestion ? followups.filter((q) => !q.includes('どの場面')) : followups;
-  const idx = hashString(`${lastUser}|${lastAssistant.slice(0, 60)}|${hints ?? ''}`) % candidates.length;
-  const picked = candidates[idx] ?? candidates[0];
+  const picked = buildRuleBasedFollowup({
+    preferredQuestionFacet,
+    facetSignals,
+    lastAssistant,
+  });
 
   const opener = lastUser.trim()
     ? `うん、受け取った。${lastUser.slice(0, 60)}${lastUser.length > 60 ? '…' : ''}`

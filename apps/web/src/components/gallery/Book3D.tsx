@@ -3,6 +3,12 @@ import { useFrame, useLoader } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { Album } from '../../contexts/AlbumContext';
+import {
+  createNoiseTexture,
+  createToonGradientTexture,
+  patchMaterialWithGrain,
+  updateMaterialGrainTime,
+} from './toonTextures';
 
 interface Book3DProps {
   album: Album;
@@ -39,6 +45,23 @@ const Book3D: React.FC<Book3DProps> = ({
   const coverProgressRef = useRef(0);
   const [hovered, setHovered] = React.useState(false);
 
+  const toonGradient = useMemo(() => createToonGradientTexture(4), []);
+  const noiseTex = useMemo(() => createNoiseTexture(64), []);
+  const spineMatRef = useRef<THREE.MeshToonMaterial>(null);
+  const accentMatRef = useRef<THREE.MeshToonMaterial>(null);
+  const coverMatRef = useRef<THREE.MeshToonMaterial>(null);
+
+  useEffect(() => {
+    patchMaterialWithGrain(spineMatRef.current, noiseTex, { strength: 0.10, scale: 18, speed: 0.28 });
+    patchMaterialWithGrain(accentMatRef.current, noiseTex, { strength: 0.06, scale: 14, speed: 0.22 });
+    patchMaterialWithGrain(coverMatRef.current, noiseTex, { strength: 0.06, scale: 12, speed: 0.20 });
+
+    return () => {
+      toonGradient.dispose();
+      noiseTex.dispose();
+    };
+  }, [noiseTex, toonGradient]);
+
   // Dimensions (kept consistent for snapping/readability)
   const spineWidth = 0.22;
   const spineHeight = 1.45;
@@ -46,12 +69,20 @@ const Book3D: React.FC<Book3DProps> = ({
 
   const spineColor = album.gallery?.spineColor || '#111111';
 
-  const spineDisplayColor = useMemo(() => {
-    const c = new THREE.Color(spineColor);
+  const { spineBaseColor, accentColor } = useMemo(() => {
+    // Cohesive style: spines are mostly white, with a colored "stamp" taken from the album.
+    const base = new THREE.Color('#f7f5f0');
+    const acc = new THREE.Color(spineColor);
+    // Keep accent slightly muted toward paper.
+    acc.lerp(new THREE.Color('#ffffff'), 0.55);
     if (dimmed) {
-      c.lerp(new THREE.Color('#bdbdbd'), 0.72);
+      base.lerp(new THREE.Color('#d7d7d7'), 0.35);
+      acc.lerp(new THREE.Color('#d7d7d7'), 0.55);
     }
-    return `#${c.getHexString()}`;
+    return {
+      spineBaseColor: `#${base.getHexString()}`,
+      accentColor: `#${acc.getHexString()}`,
+    };
   }, [spineColor, dimmed]);
 
   const coverTint = dimmed ? '#b5b5b5' : '#ffffff';
@@ -111,6 +142,11 @@ const Book3D: React.FC<Book3DProps> = ({
       const next = THREE.MathUtils.lerp(current, targetScale, a);
       groupRef.current.scale.setScalar(next);
     }
+
+    const time = _.clock.elapsedTime;
+    updateMaterialGrainTime(spineMatRef.current, time);
+    updateMaterialGrainTime(accentMatRef.current, time);
+    updateMaterialGrainTime(coverMatRef.current, time);
   });
 
   return (
@@ -141,12 +177,22 @@ const Book3D: React.FC<Book3DProps> = ({
         receiveShadow
       >
         <boxGeometry args={[spineWidth, spineHeight, spineDepth]} />
-        <meshStandardMaterial
-          color={spineDisplayColor}
-          roughness={0.9}
-          metalness={0.05}
-          emissive={isFocused ? '#ffffff' : '#000000'}
-          emissiveIntensity={isFocused ? 0.12 : 0}
+        <meshToonMaterial
+          ref={spineMatRef}
+          color={spineBaseColor}
+          gradientMap={toonGradient}
+        />
+      </mesh>
+
+      {/* Graphic accent band (2D-like) */}
+      <mesh position={[0, 0.18, spineDepth / 2 + 0.002]} castShadow={false}>
+        <planeGeometry args={[spineWidth * 0.92, spineHeight * 0.22]} />
+        <meshToonMaterial
+          ref={accentMatRef}
+          color={accentColor}
+          gradientMap={toonGradient}
+          transparent={Boolean(dimmed)}
+          opacity={dimmed ? 0.35 : 0.95}
         />
       </mesh>
 
@@ -211,17 +257,11 @@ const Book3D: React.FC<Book3DProps> = ({
           castShadow
         >
           <planeGeometry args={[1.1, 1.55]} />
-          <meshStandardMaterial map={coverTexture} roughness={0.85} metalness={0.0} color={coverTint} />
+          <meshToonMaterial ref={coverMatRef} map={coverTexture} color={coverTint} gradientMap={toonGradient} />
         </mesh>
         <mesh position={[0, 0, -0.01]} receiveShadow>
           <planeGeometry args={[1.14, 1.6]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            roughness={1}
-            metalness={0}
-            opacity={dimmed ? 0.18 : 0.6}
-            transparent
-          />
+          <meshToonMaterial color="#ffffff" opacity={dimmed ? 0.14 : 0.45} transparent gradientMap={toonGradient} />
         </mesh>
       </group>
     </group>

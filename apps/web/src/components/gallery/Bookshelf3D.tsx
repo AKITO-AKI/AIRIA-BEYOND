@@ -4,6 +4,12 @@ import * as THREE from 'three';
 import { Album } from '../../contexts/AlbumContext';
 import Book3D from './Book3D';
 import type { BookshelfInputState } from './BookshelfCanvas';
+import {
+  createNoiseTexture,
+  createToonGradientTexture,
+  patchMaterialWithGrain,
+  updateMaterialGrainTime,
+} from './toonTextures';
 
 interface Bookshelf3DProps {
   albums: Album[];
@@ -22,6 +28,27 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
 }) => {
   const { viewport } = useThree();
   const shelfGroupRef = useRef<THREE.Group>(null);
+
+  const keyLightRef = useRef<THREE.DirectionalLight>(null);
+  const fillLightRef = useRef<THREE.DirectionalLight>(null);
+
+  const toonGradient = useMemo(() => createToonGradientTexture(4), []);
+  const noiseTex = useMemo(() => createNoiseTexture(64), []);
+
+  const floorMatRef = useRef<THREE.MeshToonMaterial>(null);
+  const wallMatRef = useRef<THREE.MeshToonMaterial>(null);
+  const shelfMatRef = useRef<THREE.MeshToonMaterial>(null);
+
+  useEffect(() => {
+    patchMaterialWithGrain(floorMatRef.current, noiseTex, { strength: 0.07, scale: 14, speed: 0.25 });
+    patchMaterialWithGrain(wallMatRef.current, noiseTex, { strength: 0.05, scale: 10, speed: 0.18 });
+    patchMaterialWithGrain(shelfMatRef.current, noiseTex, { strength: 0.08, scale: 16, speed: 0.22 });
+
+    return () => {
+      toonGradient.dispose();
+      noiseTex.dispose();
+    };
+  }, [noiseTex, toonGradient]);
 
   const [orderIds, setOrderIds] = useState<string[]>(() => albums.map((a) => a.id));
   const [faceOutIds, setFaceOutIds] = useState<Record<string, boolean>>({});
@@ -216,6 +243,20 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     if (shelfGroupRef.current) {
       shelfGroupRef.current.position.x = clamp(panXRef.current, -maxPan, maxPan);
     }
+
+    // Limited-animation feel: quantized light flicker (subtle)
+    const time = _.clock.elapsedTime;
+    const stepped = Math.floor(time * 12) / 12;
+    if (keyLightRef.current) {
+      keyLightRef.current.intensity = 0.78 + (Math.sin(stepped * 1.2) * 0.04);
+    }
+    if (fillLightRef.current) {
+      fillLightRef.current.intensity = 0.24 + (Math.cos(stepped * 1.05) * 0.02);
+    }
+
+    updateMaterialGrainTime(floorMatRef.current, time);
+    updateMaterialGrainTime(wallMatRef.current, time);
+    updateMaterialGrainTime(shelfMatRef.current, time);
   });
 
   const [hoverSlot, setHoverSlot] = useState<number>(-1);
@@ -330,16 +371,19 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
 
   return (
     <group>
+      {/* Soft fog to flatten depth a bit (illustration-like atmosphere) */}
+      <fog attach="fog" args={['#f5f1ea', 6.5, 15.5]} />
+
       {/* Floor */}
       <mesh position={[0, -2.15, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[40, 20]} />
-        <meshStandardMaterial color="#fbfbfb" roughness={1} metalness={0} />
+        <meshToonMaterial ref={floorMatRef} color="#f6f0e8" gradientMap={toonGradient} />
       </mesh>
 
       {/* Back wall */}
       <mesh position={[0, 0.1, -1.05]} receiveShadow>
         <planeGeometry args={[40, 10]} />
-        <meshStandardMaterial color="#ffffff" roughness={1} metalness={0} />
+        <meshToonMaterial ref={wallMatRef} color="#fff9f0" gradientMap={toonGradient} />
       </mesh>
 
       <group ref={shelfGroupRef}>
@@ -373,28 +417,28 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           {/* Side panels */}
           <mesh position={[-shelfOuterWidth / 2 + 0.08, 0.0, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.16, 3.8, 0.9]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.0} />
+            <meshToonMaterial ref={shelfMatRef} color="#ffffff" gradientMap={toonGradient} />
           </mesh>
           <mesh position={[shelfOuterWidth / 2 - 0.08, 0.0, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.16, 3.8, 0.9]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.0} />
+            <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
           </mesh>
 
           {/* Top / bottom */}
           <mesh position={[0, 1.95, 0]} castShadow receiveShadow>
             <boxGeometry args={[shelfOuterWidth, 0.18, 0.9]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.0} />
+            <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
           </mesh>
           <mesh position={[0, -1.95, 0]} castShadow receiveShadow>
             <boxGeometry args={[shelfOuterWidth, 0.18, 0.9]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.95} metalness={0.0} />
+            <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
           </mesh>
 
           {/* Shelf planks */}
           {shelfYs.map((y, idx) => (
             <mesh key={idx} position={[0, y - 0.78, 0]} castShadow receiveShadow>
               <boxGeometry args={[shelfOuterWidth - 0.22, 0.14, 0.88]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.96} metalness={0.0} />
+              <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
             </mesh>
           ))}
         </group>
@@ -458,11 +502,12 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
       ) : null}
 
       {/* Lighting: quiet and readable */}
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={['#ffffff', '#e9e9e9', 0.35]} />
+      <ambientLight intensity={0.42} />
+      <hemisphereLight args={['#fff6e6', '#e9e2d6', 0.22]} />
       <directionalLight
+        ref={keyLightRef}
         position={[4, 6, 6]}
-        intensity={0.7}
+        intensity={0.78}
         castShadow
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
@@ -471,7 +516,7 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         shadow-camera-top={6}
         shadow-camera-bottom={-6}
       />
-      <directionalLight position={[-3, 3, 4]} intensity={0.22} />
+      <directionalLight ref={fillLightRef} position={[-3, 3, 4]} intensity={0.24} color="#ffe9d6" />
     </group>
   );
 };
