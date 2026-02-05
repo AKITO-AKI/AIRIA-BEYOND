@@ -456,6 +456,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
     }
     setOverlay('onboarding', {
       active: true,
+      scopeLabel: 'はじめに',
       statusText: generateStatusText,
       elapsedSec: generateElapsedSec,
       onCancel: handleCancelGeneration,

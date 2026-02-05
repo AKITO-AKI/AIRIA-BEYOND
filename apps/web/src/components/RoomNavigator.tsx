@@ -14,6 +14,97 @@ interface RoomNavigatorProps {
   initialRoom?: RoomType;
 }
 
+function RoomIcon({ roomId }: { roomId: RoomType }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    xmlns: 'http://www.w3.org/2000/svg',
+    'aria-hidden': true,
+  } as const;
+
+  switch (roomId) {
+    case 'main':
+      return (
+        <svg {...common}>
+          <path d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5z" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+    case 'gallery':
+      return (
+        <svg {...common}>
+          <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v11A2.5 2.5 0 0 1 16.5 20h-9A2.5 2.5 0 0 1 5 17.5v-11z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 14l2.2-2.2a1 1 0 0 1 1.4 0L15 15l1.2-1.2a1 1 0 0 1 1.4 0L19 15.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M9 9.5h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      );
+    case 'album':
+      return (
+        <svg {...common}>
+          <path d="M7 4h10a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M9 8h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M9 12h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'music':
+      return (
+        <svg {...common}>
+          <path d="M10 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M18 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 16V6l8-2v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'social':
+      return (
+        <svg {...common}>
+          <path d="M8.5 13.5a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M16.5 12.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M4.5 20c.6-2.9 2.7-4.8 6-4.8s5.4 1.9 6 4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M14 20c.3-1.8 1.4-3.1 3.4-3.1 1.8 0 2.7.6 3.1 1.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'me':
+    case 'settings':
+      return (
+        <svg {...common}>
+          <path d="M12 12.4a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M5 20c.9-3.6 3.6-5.6 7-5.6s6.1 2 7 5.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'admin':
+      return (
+        <svg {...common}>
+          <path d="M12 2l8 4v6c0 5-3.4 9.6-8 10-4.6-.4-8-5-8-10V6l8-4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M9.2 12.3l1.8 1.9 3.9-4.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'info':
+      return (
+        <svg {...common}>
+          <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 10.6V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M12 8.2h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      );
+    case 'feedback':
+      return (
+        <svg {...common}>
+          <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7A2.5 2.5 0 0 1 16.5 16H11l-4.2 3.2c-.6.5-1.8.1-1.8-.8V6.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M8.2 8.8h7.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8.2 12h5.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common}>
+          <path d="M6 12h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M12 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+  }
+}
+
 const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'main' }) => {
   const initialIndex = rooms.findIndex(r => r.id === initialRoom);
   const [currentIndex, setCurrentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
@@ -247,7 +338,12 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
                     className={`room-sidebar-item ${index === currentIndex ? 'active' : ''}`}
                     onClick={() => handleNavClick(index)}
                     aria-current={index === currentIndex ? 'page' : undefined}
+                    aria-label={`${room.name}へ移動`}
+                    title={room.name}
                   >
+                    <span className="room-sidebar-icon" aria-hidden="true">
+                      <RoomIcon roomId={room.id} />
+                    </span>
                     <span className="room-sidebar-item-label">{room.name}</span>
                   </button>
                 ))}

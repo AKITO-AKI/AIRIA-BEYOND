@@ -12,6 +12,7 @@
   },
   "homepage": "https://akito-aki.github.io/AIRIA-BEYOND/",
   "dependencies": {
+    "@tonejs/midi": "^2.0.28",
     "@react-three/drei": "^9.92.0",
     "@react-three/fiber": "^8.15.0",
     "framer-motion": "^10.16.0",

@@ -3,12 +3,13 @@ import './GenerationFrostOverlay.css';
 
 type Props = {
   active: boolean;
+  scopeLabel?: string | null;
   statusText?: string | null;
   elapsedSec?: number;
   onCancel?: (() => void) | null;
 };
 
-export default function GenerationFrostOverlay({ active, statusText, elapsedSec = 0, onCancel }: Props) {
+export default function GenerationFrostOverlay({ active, scopeLabel, statusText, elapsedSec = 0, onCancel }: Props) {
   if (!active) return null;
 
   // Frost intensity eases down a bit over time ("gradually generating" feel)
@@ -19,7 +20,10 @@ export default function GenerationFrostOverlay({ active, statusText, elapsedSec 
     <div className="gen-frost" style={{ ['--frost' as any]: frost }} aria-live="polite" aria-busy="true">
       <div className="gen-frost-surface" />
       <div className="gen-frost-card" role="status">
-        <div className="gen-frost-title">生成中</div>
+        <div className="gen-frost-title">
+          <span className="gen-frost-title-main">生成中</span>
+          {scopeLabel ? <span className="gen-frost-scope">{scopeLabel}</span> : null}
+        </div>
         <div className="gen-frost-status">
           {statusText || '進行中…'}
           <span className="gen-frost-elapsed">（{elapsedSec}s）</span>

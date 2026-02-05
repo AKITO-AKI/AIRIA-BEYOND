@@ -97,6 +97,9 @@ export default function ChatSessionUI() {
   const [previewLoading, setPreviewLoading] = useState<Record<string, boolean>>({});
   const [previewError, setPreviewError] = useState<Record<string, string | null>>({});
 
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [sideOpen, setSideOpen] = useState(true);
+
   const userOnlyMessages = useMemo(() => messages.filter((m) => m.role === 'user'), [messages]);
 
   const onboardingPayload = useMemo(() => {
@@ -105,6 +108,24 @@ export default function ChatSessionUI() {
   }, []);
 
   const albumsWithMusic = useMemo(() => albums.filter((a) => a.musicData), [albums]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const update = () => setIsNarrow(mq.matches);
+    update();
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
+    }
+    mq.addListener(update);
+    return () => mq.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    // Default: collapse recs on narrow screens.
+    if (isNarrow) setSideOpen(false);
+    else setSideOpen(true);
+  }, [isNarrow]);
 
   useEffect(() => {
     const pending = loadPendingChatGeneration();
@@ -144,6 +165,7 @@ export default function ChatSessionUI() {
     }
     setOverlay('chat', {
       active: true,
+      scopeLabel: '対話',
       statusText: generationStatusText,
       elapsedSec: generationElapsedSec,
       onCancel: handleCancelEvent,
@@ -847,6 +869,14 @@ export default function ChatSessionUI() {
 
               <div className="chatDockActions" data-no-swipe>
                 <button
+                  className="chatCancel"
+                  onClick={() => setSideOpen((v) => !v)}
+                  type="button"
+                  title="レコメンドパネルを表示/非表示"
+                >
+                  {sideOpen ? 'レコメンド非表示' : 'レコメンド表示'}
+                </button>
+                <button
                   className="chatPrimary"
                   onClick={handleStartEvent}
                   disabled={isGeneratingEvent}
@@ -915,7 +945,7 @@ export default function ChatSessionUI() {
           </div>
         </div>
 
-        <aside className="chatSide" aria-label="レコメンド">
+        <aside className={`chatSide ${sideOpen ? 'open' : 'closed'}`} aria-label="レコメンド" aria-hidden={!sideOpen}>
           <div className="chatSideHeader">
             <div className="chatSideTitle">いまのレコメンド</div>
             <div className="chatSideHint">30秒プレビュー（可能な場合）</div>

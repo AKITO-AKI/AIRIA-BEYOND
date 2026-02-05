@@ -67,23 +67,25 @@ export function musicStructureToMIDI(structure) {
   // Get key information
   const keyInfo = KEY_SIGNATURES[key] || KEY_SIGNATURES['C major'];
 
-  // Create MIDI track
-  const track = new MidiWriter.Track();
+  const { numerator, denominator, measureBeats } = parseTimeSignature(timeSignature);
 
-  // Set tempo
-  track.setTempo(tempo);
+  // Multi-track: harmony + bass + melody (still simple, but far more musical).
+  const harmonyTrack = new MidiWriter.Track();
+  const bassTrack = new MidiWriter.Track();
+  const melodyTrack = new MidiWriter.Track();
 
-  // Set time signature (parse "3/4" -> [3, 4])
-  const [numerator, denominator] = timeSignature.split('/').map(Number);
-  track.setTimeSignature(numerator, denominator, 24, 8);
+  for (const t of [harmonyTrack, bassTrack, melodyTrack]) {
+    t.setTempo(tempo);
+    t.setTimeSignature(numerator, denominator, 24, 8);
+  }
 
   // Convert each section
   for (const section of sections) {
-    convertSectionToMIDI(track, section, keyInfo, tempo);
+    convertSectionToMIDI({ harmonyTrack, bassTrack, melodyTrack }, section, keyInfo, measureBeats);
   }
 
   // Create MIDI file
-  const writer = new MidiWriter.Writer([track]);
+  const writer = new MidiWriter.Writer([melodyTrack, harmonyTrack, bassTrack]);
 
   // Get data URI and extract base64 part
   const dataUri = writer.dataUri();
@@ -99,38 +101,70 @@ export function musicStructureToMIDI(structure) {
  * @param {Object} keyInfo - Key signature information
  * @param {number} tempo - Tempo in BPM
  */
-function convertSectionToMIDI(track, section, keyInfo, tempo) {
+function parseTimeSignature(timeSignature) {
+  const [nRaw, dRaw] = String(timeSignature || '4/4').split('/');
+  const n = Math.max(1, Math.min(12, Number(nRaw) || 4));
+  const d = [2, 4, 8, 16].includes(Number(dRaw)) ? Number(dRaw) : 4;
+  const measureBeats = n * (4 / d); // beats in quarter-note units
+  return { numerator: n, denominator: d, measureBeats };
+}
+
+function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
   const { chordProgression, melody, dynamics } = section;
   const velocity = DYNAMICS_MAP[dynamics] || 90;
 
-  // Parse time signature to get beats per measure (simplified - assumes denominator is quarter note)
-  // For prototype, we'll use 4 as default but this should be enhanced
-  const beatsPerMeasure = 4; // TODO: Parse from section or structure time signature
-  
-  let currentBeat = 0;
+  const safeChordProgression = Array.isArray(chordProgression) && chordProgression.length ? chordProgression : ['I', 'V', 'vi', 'IV'];
+  const motifs = Array.isArray(melody?.motifs) ? melody.motifs : [];
 
-  // Process each measure
-  for (let measure = 0; measure < section.measures; measure++) {
-    const chordIndex = measure % chordProgression.length;
-    const chord = chordProgression[chordIndex];
+  const harmonyVel = Math.floor(velocity * 0.62);
+  const bassVel = Math.floor(velocity * 0.72);
+  const melodyVel = velocity;
 
-    // Add chord (harmony)
-    const chordNotes = getChordNotes(chord, keyInfo, 48); // Bass octave
-    if (chordNotes.length > 0) {
-      track.addEvent(
-        new MidiWriter.NoteEvent({
-          pitch: chordNotes,
-          duration: '2', // Half note for each chord
-          velocity: Math.floor(velocity * 0.7), // Softer for accompaniment
-        })
-      );
+  const quarterBeats = Math.max(1, Math.min(16, Math.round(measureBeats)));
+
+  for (let measure = 0; measure < Number(section.measures || 0); measure++) {
+    const chord = safeChordProgression[measure % safeChordProgression.length];
+    const chordNotesMid = getChordNotes(chord, keyInfo, 60); // mid register
+    const chordNotesBass = getChordNotes(chord, keyInfo, 36);
+    const bassRoot = chordNotesBass[0] ?? (keyInfo.tonic - 12);
+
+    // Harmony: repeat a soft chord each beat (simple but stable).
+    if (chordNotesMid.length) {
+      for (let b = 0; b < quarterBeats; b += 1) {
+        tracks.harmonyTrack.addEvent(
+          new MidiWriter.NoteEvent({
+            pitch: chordNotesMid,
+            duration: '4',
+            velocity: harmonyVel,
+          })
+        );
+      }
+    } else {
+      // Keep time moving even if chord parsing fails.
+      for (let b = 0; b < quarterBeats; b += 1) {
+        tracks.harmonyTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [keyInfo.tonic], duration: '4', velocity: harmonyVel }));
+      }
     }
 
-    // Add melody motif
-    if (melody.motifs.length > 0) {
-      const motifIndex = measure % melody.motifs.length;
-      const motif = melody.motifs[motifIndex];
-      addMotifToTrack(track, motif, keyInfo, velocity);
+    // Bass: simple root pulse.
+    if (quarterBeats >= 4) {
+      tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [bassRoot], duration: '2', velocity: bassVel }));
+      tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [bassRoot], duration: '2', velocity: bassVel }));
+    } else {
+      for (let b = 0; b < quarterBeats; b += 1) {
+        tracks.bassTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [bassRoot], duration: '4', velocity: bassVel }));
+      }
+    }
+
+    // Melody: fit a motif into the measure.
+    if (motifs.length) {
+      const motif = motifs[measure % motifs.length];
+      addMotifToTrack(tracks.melodyTrack, motif, keyInfo, melodyVel, quarterBeats);
+    } else {
+      // Minimal melodic time-keeper
+      for (let b = 0; b < quarterBeats; b += 1) {
+        tracks.melodyTrack.addEvent(new MidiWriter.NoteEvent({ pitch: [keyInfo.tonic + 12], duration: '4', velocity: Math.floor(melodyVel * 0.55) }));
+      }
     }
   }
 }
@@ -161,49 +195,71 @@ function getChordNotes(romanNumeral, keyInfo, baseOctave = 60) {
  * @param {Object} keyInfo - Key signature information
  * @param {number} velocity - MIDI velocity
  */
-function addMotifToTrack(track, motif, keyInfo, velocity) {
-  const { degrees, rhythm } = motif;
+function addMotifToTrack(track, motif, keyInfo, velocity, quarterBeats) {
+  const degrees = Array.isArray(motif?.degrees) ? motif.degrees : [];
+  const rhythm = Array.isArray(motif?.rhythm) ? motif.rhythm : [];
+  if (!degrees.length) {
+    for (let b = 0; b < quarterBeats; b += 1) {
+      track.addEvent(new MidiWriter.NoteEvent({ pitch: [keyInfo.tonic + 12], duration: '4', velocity: Math.floor(velocity * 0.55) }));
+    }
+    return;
+  }
 
-  for (let i = 0; i < degrees.length; i++) {
-    const degree = degrees[i];
-    const duration = rhythm[i] || 1;
+  const rawDurations = degrees.map((_, i) => Number(rhythm[i] ?? 1)).map((d) => (Number.isFinite(d) && d > 0 ? d : 1));
+  const sum = rawDurations.reduce((a, b) => a + b, 0) || 1;
+  const scale = quarterBeats / sum;
 
-    // Convert scale degree to MIDI note (melody octave)
-    const scaleIndex = (degree - 1) % keyInfo.scale.length;
+  let remaining = quarterBeats;
+  for (let i = 0; i < degrees.length && remaining > 0.01; i++) {
+    const degree = Number(degrees[i] ?? 1);
+    const scaled = rawDurations[i] * scale;
+    const q = quantizeBeats(Math.min(remaining, scaled));
+    remaining -= q;
+
+    const scaleIndex = ((degree - 1) % keyInfo.scale.length + keyInfo.scale.length) % keyInfo.scale.length;
     const octaveOffset = Math.floor((degree - 1) / keyInfo.scale.length) * 12;
-    const note = keyInfo.tonic + 12 + keyInfo.scale[scaleIndex] + octaveOffset; // +12 for melody octave
-
-    // Convert duration to MIDI duration string
-    const midiDuration = getDurationString(duration);
+    const note = keyInfo.tonic + 12 + keyInfo.scale[scaleIndex] + octaveOffset;
 
     track.addEvent(
       new MidiWriter.NoteEvent({
         pitch: [note],
-        duration: midiDuration,
+        duration: beatsToMidiDuration(q),
         velocity,
       })
     );
   }
+
+  // Fill any remaining time with a gentle sustain.
+  while (remaining > 0.01) {
+    const q = quantizeBeats(remaining);
+    remaining -= q;
+    track.addEvent(new MidiWriter.NoteEvent({ pitch: [keyInfo.tonic + 12], duration: beatsToMidiDuration(q), velocity: Math.floor(velocity * 0.45) }));
+  }
 }
 
-/**
- * Convert numeric duration (in beats) to MIDI duration string
- * Handles common musical durations with reasonable precision
- * @param {number} beats - Duration in beats
- * @returns {string} MIDI duration string
- */
-function getDurationString(beats) {
-  // Map common beat durations to MIDI notation
-  // Using threshold-based mapping for flexibility
-  if (beats >= 3.5) return '1';      // Whole note (4 beats)
-  if (beats >= 1.75) return '2';     // Half note (2 beats)
-  if (beats >= 1.25) return '2n.';   // Dotted half (3 beats)
-  if (beats >= 0.875) return '4';    // Quarter note (1 beat)
-  if (beats >= 0.625) return '4n.';  // Dotted quarter (1.5 beats)
-  if (beats >= 0.4375) return '8';   // Eighth note (0.5 beats)
-  if (beats >= 0.3125) return '8n.'; // Dotted eighth (0.75 beats)
-  if (beats >= 0.21875) return '16'; // Sixteenth note (0.25 beats)
-  return '16';                        // Default to sixteenth
+function quantizeBeats(beats) {
+  const b = Number(beats);
+  if (!Number.isFinite(b) || b <= 0) return 0.25;
+  const choices = [4, 2, 1, 0.5, 0.25];
+  let best = choices[choices.length - 1];
+  let bestErr = Infinity;
+  for (const c of choices) {
+    const err = Math.abs(b - c);
+    if (err < bestErr) {
+      bestErr = err;
+      best = c;
+    }
+  }
+  return best;
+}
+
+function beatsToMidiDuration(beats) {
+  const b = quantizeBeats(beats);
+  if (b >= 3) return '1';
+  if (b >= 1.5) return '2';
+  if (b >= 0.75) return '4';
+  if (b >= 0.375) return '8';
+  return '16';
 }
 
 /**

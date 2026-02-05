@@ -2,6 +2,7 @@ import React from 'react';
 
 export type GenerationOverlayEntry = {
   active: boolean;
+  scopeLabel?: string | null;
   statusText?: string | null;
   elapsedSec?: number;
   onCancel?: (() => void) | null;
@@ -20,6 +21,7 @@ type GenerationOverlayContextValue = {
 
 const DEFAULT_ENTRY: Required<GenerationOverlayEntry> = {
   active: false,
+  scopeLabel: null,
   statusText: null,
   elapsedSec: 0,
   onCancel: null,
@@ -44,6 +46,7 @@ export function GenerationOverlayProvider({ children }: { children: React.ReactN
       const prevEntry = prev.entries[normalizedKey] ?? DEFAULT_ENTRY;
       const updated: Required<GenerationOverlayEntry> = {
         active: Boolean(entry.active),
+        scopeLabel: entry.scopeLabel ?? prevEntry.scopeLabel ?? null,
         statusText: entry.statusText ?? prevEntry.statusText ?? null,
         elapsedSec: Number.isFinite(entry.elapsedSec as any) ? (entry.elapsedSec as number) : prevEntry.elapsedSec ?? 0,
         onCancel: entry.onCancel ?? null,

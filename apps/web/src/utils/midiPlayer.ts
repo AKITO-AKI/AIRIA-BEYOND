@@ -4,6 +4,7 @@
  */
 
 import * as Tone from 'tone';
+import { Midi } from '@tonejs/midi';
 
 export interface MIDIPlayerOptions {
   onProgress?: (currentTime: number, duration: number) => void;
@@ -36,8 +37,7 @@ export class MIDIPlayer {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      // Parse MIDI file (simplified - we'll use our known structure)
-      // For prototype, we'll convert our known MIDI structure to Tone.js events
+      // Parse real MIDI file (preferred). Fall back to placeholder notes if parsing fails.
       const notes = this.parseMIDIToNotes(bytes);
 
       // Create synth if needed
@@ -90,60 +90,66 @@ export class MIDIPlayer {
    * be parseable, but for the prototype we use this fallback.
    */
   private parseMIDIToNotes(bytes: Uint8Array): Array<{
-    time: string;
+    time: number;
     name: string;
-    duration: string;
+    duration: number;
     velocity: number;
   }> {
-    // Simplified placeholder for prototype
-    // TODO: Implement proper MIDI parsing for production
-    
-    const notes: Array<{
-      time: string;
-      name: string;
-      duration: string;
-      velocity: number;
-    }> = [];
+    try {
+      const midi = new Midi(bytes);
+      const out: Array<{ time: number; name: string; duration: number; velocity: number }> = [];
 
-    // Generate simple C major scale as fallback
-    // In production, this should parse the MIDI file structure
-    const scale = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
-    let currentTime = 0;
+      // Collect notes across tracks. Midi gives time/duration in seconds.
+      for (const track of midi.tracks) {
+        for (const note of track.notes) {
+          const timeSec = Number(note.time);
+          const durSec = Number(note.duration);
+          if (!Number.isFinite(timeSec) || !Number.isFinite(durSec)) continue;
 
-    for (let i = 0; i < 16; i++) {
-      notes.push({
-        time: `${currentTime}`,
-        name: scale[i % scale.length],
-        duration: '4n',
-        velocity: 0.7,
-      });
-      currentTime += 0.5;
+          out.push({
+            time: timeSec,
+            name: note.name,
+            duration: durSec,
+            velocity: typeof note.velocity === 'number' ? note.velocity : 0.8,
+          });
+        }
+      }
+
+      // Ensure deterministic order for playback
+      out.sort((a, b) => Number(a.time) - Number(b.time));
+
+      if (out.length) return out;
+      throw new Error('No notes found in MIDI');
+    } catch {
+      // Placeholder fallback (keeps app usable even if parsing fails)
+      const notes: Array<{ time: number; name: string; duration: number; velocity: number }> = [];
+      const scale = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+      let currentTime = 0;
+      for (let i = 0; i < 16; i++) {
+        notes.push({
+          time: currentTime,
+          name: scale[i % scale.length],
+          duration: 0.4,
+          velocity: 0.7,
+        });
+        currentTime += 0.5;
+      }
+      return notes;
     }
-
-    return notes;
   }
 
   /**
    * Calculate total duration from notes
    */
-  private calculateDuration(notes: Array<{ time: string; duration: string }>): number {
+  private calculateDuration(notes: Array<{ time: number; duration: number }>): number {
     if (notes.length === 0) return 0;
     
-    // Find the last note and add its duration
-    const lastNote = notes[notes.length - 1];
-    const lastTime = parseFloat(lastNote.time);
-    
-    // Convert duration to seconds (simplified)
-    const durationMap: { [key: string]: number } = {
-      '1n': 2,
-      '2n': 1,
-      '4n': 0.5,
-      '8n': 0.25,
-      '16n': 0.125,
-    };
-    const lastDuration = durationMap[lastNote.duration] || 0.5;
-    
-    return lastTime + lastDuration;
+    let maxEnd = 0;
+    for (const n of notes) {
+      if (!Number.isFinite(n.time) || !Number.isFinite(n.duration)) continue;
+      maxEnd = Math.max(maxEnd, n.time + n.duration);
+    }
+    return maxEnd;
   }
 
   /**

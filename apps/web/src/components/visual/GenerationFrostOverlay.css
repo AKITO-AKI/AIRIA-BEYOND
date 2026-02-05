@@ -41,11 +41,31 @@
 }
 
 .gen-frost-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.55);
+}
+
+.gen-frost-title-main {
+  display: inline-block;
+}
+
+.gen-frost-scope {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  color: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 4px 8px;
+  border-radius: 999px;
 }
 
 .gen-frost-status {

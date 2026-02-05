@@ -2,7 +2,7 @@
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
-  padding: 0;
+  padding: 18px clamp(14px, 3vw, 24px);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -44,8 +44,7 @@
 }
 
 .chatLayout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  display: flex;
   gap: 14px;
   flex: 1;
   min-height: 0;
@@ -56,6 +55,8 @@
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .chatBody {
@@ -79,6 +80,24 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  width: 340px;
+  flex: 0 0 auto;
+  transition: width 220ms ease, opacity 220ms ease, transform 220ms ease, padding 220ms ease, border-color 220ms ease;
+}
+
+.chatSide.closed {
+  width: 0;
+  opacity: 0;
+  transform: translateX(10px);
+  padding: 0;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+@media (min-width: 901px) {
+  .chatSide.closed {
+    margin-left: -14px;
+  }
 }
 
 .chatSideHeader {
@@ -322,12 +341,21 @@
 
 @media (max-width: 900px) {
   .chatLayout {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .chatSide {
     order: 2;
     max-height: 260px;
+    width: 100%;
+  }
+
+  .chatSide.closed {
+    width: 100%;
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    border-color: transparent;
   }
 
   .chatDockTop {

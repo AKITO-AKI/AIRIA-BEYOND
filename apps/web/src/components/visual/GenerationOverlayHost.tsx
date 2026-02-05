@@ -7,6 +7,7 @@ export default function GenerationOverlayHost() {
   return (
     <GenerationFrostOverlay
       active={current.active}
+      scopeLabel={current.scopeLabel}
       statusText={current.statusText}
       elapsedSec={current.elapsedSec}
       onCancel={current.onCancel}

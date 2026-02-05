@@ -182,16 +182,59 @@ function hasOllamaConfigured() {
   return !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL);
 }
 
+function getRecentAssistantUtterances(normalizedMessages, limit = 6) {
+  const xs = [];
+  for (let i = normalizedMessages.length - 1; i >= 0 && xs.length < limit; i -= 1) {
+    const m = normalizedMessages[i];
+    if (m?.role === 'assistant' && typeof m.content === 'string' && m.content.trim()) {
+      xs.push(m.content.trim().slice(0, 400));
+    }
+  }
+  return xs;
+}
+
+function detectFacetSignals(text) {
+  const t = String(text ?? '');
+  const hasEmotion = /嬉しい|楽しい|安心|落ち着|穏やか|寂しい|孤独|不安|怖|緊張|イライラ|怒|悲し|しんど|疲れ|つら|虚無|焦|やる気|元気|憂鬱/.test(t);
+  const hasBody = /胸|喉|胃|腹|頭|肩|首|背中|心臓|息|呼吸|眠|睡眠|だる|重い|痛|手足|冷え|熱い|震え|こわば/.test(t);
+  const hasSituation = /仕事|学校|家族|友達|恋人|部活|SNS|面接|会議|締切|通勤|移動|朝|昼|夜|昨日|今日|今週|最近/.test(t);
+  const hasDesired = /どうしたい|なりたい|したい|したくない|避けたい|整えたい|落ち着きたい|元気になりたい|眠りたい|集中したい|切り替えたい/.test(t);
+  const hasRequest = /おすすめ|曲|聴きたい|提案|紹介|今すぐ|作って|つくって|生成/.test(t);
+  return { hasEmotion, hasBody, hasSituation, hasDesired, hasRequest };
+}
+
+function pickNextQuestionFacet({ hasEmotion, hasBody, hasSituation, hasDesired, hasRequest }) {
+  // If the user explicitly requests recommendations/generation, don't force a question.
+  if (hasRequest) return null;
+  // Ask the most helpful single question first.
+  if (!hasSituation) return 'situation';
+  if (!hasEmotion) return 'emotion';
+  if (!hasBody) return 'body';
+  if (!hasDesired) return 'desired';
+  return null;
+}
+
 export async function respondAndRecommend({ messages, onboardingData }) {
   const normalized = normalizeMessages(messages);
+  const lastUser = [...normalized].reverse().find((m) => m.role === 'user')?.content ?? '';
+  const facetSignals = detectFacetSignals(lastUser);
+  const preferredQuestionFacet = pickNextQuestionFacet(facetSignals);
+  const recentAssistant = getRecentAssistantUtterances(normalized, 4);
 
   const providerPref = getProviderPreference();
   if (providerPref !== 'openai' && (providerPref === 'ollama' || (!openai && hasOllamaConfigured()))) {
     const system = `あなたは「レコメンド＋日常会話特化LLM」です。
 
 目的:
-- 普段はユーザーの話し相手になり、会話の流れに自然に溶け込む形で“いま聴きたそうな曲”を提案する。
+- 普段はユーザーの話し相手になり、会話のキャッチボールを滑らかにしながら、自然に“いまの状態”を引き出す。
+- その上で、会話の流れに自然に溶け込む形で“いま聴きたそうな曲”を提案する。
 - 基本はクラシック中心。ただしユーザーの話題が夜・静けさ・余韻・都市的な孤独などの場合、ジャズを1曲混ぜても良い。
+
+会話の型（重要）:
+- assistant_message は基本的に「共感/要約（1〜2文）」→「次の一問（1つだけ）」→「必要なら短い提案」の順。
+- 次の一問は“質問を1つだけ”。選択肢（例: A/B/C）を添えて答えやすくする。
+- 同じ質問を繰り返さない（直近のアシスタント発話と被る質問は避ける）。
+- ユーザーが『おすすめして』『曲を出して』等を明示した場合は、質問を無理に挟まず提案してよい。
 
 制約:
 - 出力は必ずJSONのみ。
@@ -209,6 +252,11 @@ export async function respondAndRecommend({ messages, onboardingData }) {
     const userPayload = {
       onboardingData: onboardingData ?? null,
       messages: normalized.slice(-24),
+      dialogueGuidance: {
+        preferredQuestionFacet,
+        facetSignals,
+        avoidRepeating: recentAssistant,
+      },
     };
 
     try {
@@ -242,8 +290,15 @@ export async function respondAndRecommend({ messages, onboardingData }) {
   const system = `あなたは「レコメンド＋日常会話特化LLM」です。
 
 目的:
-- 普段はユーザーの話し相手になり、会話の流れに自然に溶け込む形で“いま聴きたそうな曲”を提案する。
+- 普段はユーザーの話し相手になり、会話のキャッチボールを滑らかにしながら、自然に“いまの状態”を引き出す。
+- その上で、会話の流れに自然に溶け込む形で“いま聴きたそうな曲”を提案する。
 - 基本はクラシック中心。ただしユーザーの話題が夜・静けさ・余韻・都市的な孤独などの場合、ジャズを1曲混ぜても良い。
+
+会話の型（重要）:
+- assistant_message は基本的に「共感/要約（1〜2文）」→「次の一問（1つだけ）」→「必要なら短い提案」の順。
+- 次の一問は“質問を1つだけ”。選択肢（例: A/B/C）を添えて答えやすくする。
+- 同じ質問を繰り返さない（直近のアシスタント発話と被る質問は避ける）。
+- ユーザーが『おすすめして』『曲を出して』等を明示した場合は、質問を無理に挟まず提案してよい。
 
 制約:
 - 出力は必ずJSONのみ。
@@ -261,6 +316,11 @@ export async function respondAndRecommend({ messages, onboardingData }) {
   const userPayload = {
     onboardingData: onboardingData ?? null,
     messages: normalized.slice(-24),
+    dialogueGuidance: {
+      preferredQuestionFacet,
+      facetSignals,
+      avoidRepeating: recentAssistant,
+    },
   };
 
   let completion;
