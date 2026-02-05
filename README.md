@@ -31,6 +31,7 @@ An AI-powered session management and mood tracking application.
 ### つまずきやすいポイント
 
 - 「Invalid credentials」はメール/パスワードが違う場合に出ます。
+- 直前に新規登録したのにログインできない場合、バックエンドの再起動/再デプロイで認証ストアが初期化されている可能性があります（プレリリースは `api/data/auth-store.json` のローカルストア方式です）。
 - 生成はネットワーク状況で 1〜2分程度かかることがあります（失敗しても進行するフォールバック設計です）。
 
 補足:

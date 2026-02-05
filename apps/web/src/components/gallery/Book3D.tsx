@@ -17,11 +17,15 @@ interface Book3DProps {
   dimmed?: boolean;
   focusedPosition?: [number, number, number];
   faceOut: boolean;
+  yaw?: number;
   dragging?: boolean;
   onPointerDown?: (e: any) => void;
   onPointerMove?: (e: any) => void;
   onPointerUp?: (e: any) => void;
   onContextMenu?: () => void;
+  onToggleFaceOut?: () => void;
+  onRotateLeft?: () => void;
+  onRotateRight?: () => void;
   onClick?: () => void;
   onDoubleClick?: () => void;
 }
@@ -33,11 +37,15 @@ const Book3D: React.FC<Book3DProps> = ({
   dimmed,
   focusedPosition,
   faceOut,
+  yaw,
   dragging,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onContextMenu,
+  onToggleFaceOut,
+  onRotateLeft,
+  onRotateRight,
   onClick,
   onDoubleClick,
 }) => {
@@ -111,6 +119,16 @@ const Book3D: React.FC<Book3DProps> = ({
         const speed = isFocused ? 10 : 12;
         const a = 1 - Math.exp(-speed * dt);
         groupRef.current.position.lerp(new THREE.Vector3(target[0], target[1], target[2]), a);
+      }
+    }
+
+    if (groupRef.current) {
+      const targetYaw = typeof yaw === 'number' ? yaw : 0;
+      if (dragging) {
+        groupRef.current.rotation.y = targetYaw;
+      } else {
+        const a = 1 - Math.exp(-12 * dt);
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetYaw, a);
       }
     }
 
@@ -251,6 +269,61 @@ const Book3D: React.FC<Book3DProps> = ({
           <div className="book-tooltip">
             <div className="book-tooltip-title">{labelPrimary}</div>
             <div className="book-tooltip-sub">{labelSecondary}</div>
+          </div>
+        </Html>
+      ) : null}
+
+      {/* Focus controls (touch friendly) */}
+      {isFocused && !dragging ? (
+        <Html
+          position={[0, -spineHeight / 2 - 0.22, spineDepth / 2 + 0.08]}
+          center
+          transform
+          distanceFactor={10}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <div className="book-focus-controls">
+            <button
+              type="button"
+              className="book-focus-btn"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFaceOut?.();
+              }}
+            >
+              {faceOut ? '背表紙に戻す' : '表紙を向ける'}
+            </button>
+            <button
+              type="button"
+              className="book-focus-btn book-focus-icon"
+              aria-label="左に回転"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRotateLeft?.();
+              }}
+            >
+              ↺
+            </button>
+            <button
+              type="button"
+              className="book-focus-btn book-focus-icon"
+              aria-label="右に回転"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRotateRight?.();
+              }}
+            >
+              ↻
+            </button>
           </div>
         </Html>
       ) : null}

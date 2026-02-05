@@ -22,6 +22,10 @@ const GalleryRoom: React.FC = () => {
   const [filterMode, setFilterMode] = React.useState<'all' | 'public' | 'private' | 'favorite'>('all');
   const [sortMode, setSortMode] = React.useState<'new' | 'popular' | 'duration'>('new');
   const [badgePriority, setBadgePriority] = React.useState<'public' | 'favorite'>('public');
+
+  const [layoutEditEnabled, setLayoutEditEnabled] = React.useState(false);
+  const [layoutSnapEnabled, setLayoutSnapEnabled] = React.useState(true);
+  const [layoutResetToken, setLayoutResetToken] = React.useState(0);
   
   const handleAlbumClick = (albumId: string) => {
     selectAlbum(albumId);
@@ -71,6 +75,9 @@ const GalleryRoom: React.FC = () => {
           onBookClick={handleAlbumClick}
           onBookOpen={handleAlbumOpen}
           constellationEnabled={false}
+          layoutEditEnabled={layoutEditEnabled}
+          layoutSnapEnabled={layoutSnapEnabled}
+          layoutResetToken={layoutResetToken}
         />
         {filteredAlbums.length === 0 && (
           <div className="empty-shelf-overlay">
@@ -234,8 +241,7 @@ const GalleryRoom: React.FC = () => {
         sizePx={360}
         opacity={0.08}
       />
-      <h1 className="room-title">GALLERY</h1>
-      <p className="room-subtitle">スクロールで時間を辿り、クリックで選ぶ</p>
+      <h1 className="sr-only">GALLERY</h1>
 
       <div className="gallery-toolbar room-card" data-no-swipe="true">
         <div className="gallery-toolbar-left">
@@ -257,6 +263,35 @@ const GalleryRoom: React.FC = () => {
           </div>
         </div>
         <div className="gallery-toolbar-right">
+          <button
+            type="button"
+            className={`btn ${layoutEditEnabled ? 'btn-primary' : ''}`}
+            onClick={() => setLayoutEditEnabled((v) => !v)}
+            aria-pressed={layoutEditEnabled}
+          >
+            {layoutEditEnabled ? 'レイアウト編集: ON' : 'レイアウト編集: OFF'}
+          </button>
+
+          {layoutEditEnabled ? (
+            <>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setLayoutSnapEnabled((v) => !v)}
+                aria-pressed={layoutSnapEnabled}
+              >
+                {layoutSnapEnabled ? 'スナップ: ON' : 'スナップ: OFF'}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setLayoutResetToken((n) => n + 1)}
+              >
+                配置リセット
+              </button>
+            </>
+          ) : null}
+
           <SegmentedControl
             value={badgePriority}
             onChange={(value) => setBadgePriority(value)}

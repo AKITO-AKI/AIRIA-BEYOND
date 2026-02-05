@@ -8,6 +8,8 @@ services:
       - key: NODE_ENV
         value: production
       - key: AUTH_ALLOW_PASSWORD
+        value: true
+      - key: AUTH_ALLOW_OAUTH
         value: false
       - key: GOOGLE_CLIENT_ID
         sync: false

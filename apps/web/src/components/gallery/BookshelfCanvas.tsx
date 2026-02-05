@@ -8,6 +8,9 @@ interface BookshelfCanvasProps {
   onBookClick: (albumId: string) => void;
   onBookOpen?: (albumId: string) => void;
   constellationEnabled: boolean;
+  layoutEditEnabled?: boolean;
+  layoutSnapEnabled?: boolean;
+  layoutResetToken?: number;
 }
 
 export interface BookshelfInputState {
@@ -23,6 +26,9 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
   onBookClick,
   onBookOpen,
   constellationEnabled,
+  layoutEditEnabled,
+  layoutSnapEnabled,
+  layoutResetToken,
 }) => {
   const inputRef = useRef<BookshelfInputState>({
     wheelPx: 0,
@@ -50,6 +56,9 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
       }}
       onPointerDown={(e) => {
         if (inputRef.current.blockPan) return;
+        // In edit mode, avoid accidental shelf panning while manipulating books.
+        // Explicit gesture to pan: hold Alt (or Space via browser mapping as key modifier).
+        if (layoutEditEnabled && !e.altKey) return;
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
         inputRef.current.isDragging = true;
         inputRef.current.lastPointerX = e.clientX;
@@ -57,6 +66,7 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
       onPointerMove={(e) => {
         if (inputRef.current.blockPan) return;
         if (!inputRef.current.isDragging) return;
+        if (layoutEditEnabled && !e.altKey) return;
         const dx = e.clientX - inputRef.current.lastPointerX;
         inputRef.current.lastPointerX = e.clientX;
         inputRef.current.dragPx += dx;
@@ -94,6 +104,9 @@ const BookshelfCanvas: React.FC<BookshelfCanvasProps> = ({
             onBookOpen={onBookOpen}
             constellationEnabled={constellationEnabled}
             inputRef={inputRef}
+            layoutEditEnabled={Boolean(layoutEditEnabled)}
+            layoutSnapEnabled={layoutSnapEnabled ?? true}
+            layoutResetToken={layoutResetToken ?? 0}
           />
         </Suspense>
       </Canvas>

@@ -11,31 +11,165 @@ import {
   updateMaterialGrainTime,
 } from './toonTextures';
 
-const LAYOUT_STORAGE_KEY = 'airia-bookshelf-layout-v1';
+const LAYOUT_STORAGE_KEY_V1 = 'airia-bookshelf-layout-v1';
+const LAYOUT_STORAGE_KEY_V2 = 'airia-bookshelf-layout-v2';
+const LAYOUT_STORAGE_KEY_V3 = 'airia-bookshelf-layout-v3';
 
-type BookshelfLayoutStore = {
+type BookshelfLayoutStoreV1 = {
   orderIds?: string[];
   faceOutIds?: Record<string, boolean>;
 };
 
-function safeReadLayoutStore(): BookshelfLayoutStore | null {
+type BookshelfLayoutStoreV2 = {
+  slotById?: Record<string, number>;
+  faceOutIds?: Record<string, boolean>;
+};
+
+type BookPose = { x: number; y: number; yaw?: number };
+
+type BookshelfLayoutStoreV3 = {
+  slotById?: Record<string, number>;
+  faceOutIds?: Record<string, boolean>;
+  poseById?: Record<string, BookPose>;
+  yawById?: Record<string, number>;
+};
+
+function safeReadJson(key: string): any {
   try {
-    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    return parsed as BookshelfLayoutStore;
+    return JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-function safeWriteLayoutStore(next: BookshelfLayoutStore): void {
+function safeWriteLayoutStoreV2(next: BookshelfLayoutStoreV2): void {
   try {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(next));
+    localStorage.setItem(LAYOUT_STORAGE_KEY_V2, JSON.stringify(next));
   } catch {
     // ignore
   }
+}
+
+function safeWriteLayoutStoreV3(next: BookshelfLayoutStoreV3): void {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY_V3, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
+function clampInt(v: unknown, min: number, max: number): number | null {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.trunc(n);
+  if (i < min) return min;
+  if (i > max) return max;
+  return i;
+}
+
+function normalizeSlotById(
+  input: Record<string, number> | null | undefined,
+  albumIds: string[]
+): { slotById: Record<string, number>; changed: boolean } {
+  const wanted = new Set(albumIds);
+  const next: Record<string, number> = {};
+  let changed = false;
+
+  const occupied = new Set<number>();
+  const duplicates: string[] = [];
+
+  if (input && typeof input === 'object') {
+    for (const [id, rawSlot] of Object.entries(input)) {
+      if (!wanted.has(id)) {
+        changed = true;
+        continue;
+      }
+      const slot = clampInt(rawSlot, 0, 10_000);
+      if (slot === null) {
+        changed = true;
+        continue;
+      }
+      if (occupied.has(slot)) {
+        duplicates.push(id);
+        changed = true;
+        continue;
+      }
+      occupied.add(slot);
+      next[id] = slot;
+    }
+  }
+
+  for (const id of albumIds) {
+    if (next[id] !== undefined) continue;
+    // Find first free slot.
+    let slot = 0;
+    while (occupied.has(slot)) slot += 1;
+    occupied.add(slot);
+    next[id] = slot;
+    changed = true;
+  }
+
+  // If we had duplicates, assign them after all known ids have slots.
+  for (const id of duplicates) {
+    if (!wanted.has(id)) continue;
+    let slot = 0;
+    while (occupied.has(slot)) slot += 1;
+    occupied.add(slot);
+    next[id] = slot;
+  }
+
+  return { slotById: next, changed };
+}
+
+function migrateV1ToV2(albumIds: string[]): BookshelfLayoutStoreV2 | null {
+  const rawV2 = safeReadJson(LAYOUT_STORAGE_KEY_V2);
+  if (rawV2 && typeof rawV2 === 'object') {
+    const slotById = rawV2.slotById && typeof rawV2.slotById === 'object' ? (rawV2.slotById as Record<string, number>) : null;
+    const faceOutIds = rawV2.faceOutIds && typeof rawV2.faceOutIds === 'object' ? (rawV2.faceOutIds as Record<string, boolean>) : undefined;
+    const normalized = normalizeSlotById(slotById, albumIds);
+    return { slotById: normalized.slotById, faceOutIds };
+  }
+
+  const rawV1 = safeReadJson(LAYOUT_STORAGE_KEY_V1) as BookshelfLayoutStoreV1 | null;
+  if (!rawV1 || typeof rawV1 !== 'object') return null;
+
+  const slotById: Record<string, number> = {};
+  const order = Array.isArray(rawV1.orderIds) ? rawV1.orderIds : [];
+  const wanted = new Set(albumIds);
+  let slot = 0;
+  for (const id of order) {
+    if (!wanted.has(id)) continue;
+    slotById[id] = slot;
+    slot += 1;
+  }
+  // Any albums not present in the old order get appended.
+  for (const id of albumIds) {
+    if (slotById[id] !== undefined) continue;
+    slotById[id] = slot;
+    slot += 1;
+  }
+
+  const faceOutIds = rawV1.faceOutIds && typeof rawV1.faceOutIds === 'object' ? rawV1.faceOutIds : undefined;
+  const normalized = normalizeSlotById(slotById, albumIds);
+  return { slotById: normalized.slotById, faceOutIds };
+}
+
+function migrateToV3(albumIds: string[]): BookshelfLayoutStoreV3 | null {
+  const rawV3 = safeReadJson(LAYOUT_STORAGE_KEY_V3);
+  if (rawV3 && typeof rawV3 === 'object') {
+    const slotById = rawV3.slotById && typeof rawV3.slotById === 'object' ? (rawV3.slotById as Record<string, number>) : null;
+    const faceOutIds = rawV3.faceOutIds && typeof rawV3.faceOutIds === 'object' ? (rawV3.faceOutIds as Record<string, boolean>) : undefined;
+    const poseById = rawV3.poseById && typeof rawV3.poseById === 'object' ? (rawV3.poseById as Record<string, BookPose>) : undefined;
+    const yawById = rawV3.yawById && typeof rawV3.yawById === 'object' ? (rawV3.yawById as Record<string, number>) : undefined;
+    const normalized = normalizeSlotById(slotById, albumIds);
+    return { slotById: normalized.slotById, faceOutIds, poseById, yawById };
+  }
+
+  const v2 = migrateV1ToV2(albumIds);
+  if (!v2) return null;
+  return { slotById: v2.slotById, faceOutIds: v2.faceOutIds };
 }
 
 interface Bookshelf3DProps {
@@ -44,6 +178,9 @@ interface Bookshelf3DProps {
   onBookOpen?: (albumId: string) => void;
   constellationEnabled: boolean;
   inputRef: React.MutableRefObject<BookshelfInputState>;
+  layoutEditEnabled: boolean;
+  layoutSnapEnabled: boolean;
+  layoutResetToken: number;
 }
 
 const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
@@ -52,6 +189,9 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   onBookOpen,
   constellationEnabled: _constellationEnabled,
   inputRef,
+  layoutEditEnabled,
+  layoutSnapEnabled,
+  layoutResetToken,
 }) => {
   const { viewport } = useThree();
   const shelfGroupRef = useRef<THREE.Group>(null);
@@ -77,24 +217,41 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     };
   }, [noiseTex, toonGradient]);
 
-  const [orderIds, setOrderIds] = useState<string[]>(() => {
-    const incoming = albums.map((a) => a.id);
-    const stored = safeReadLayoutStore();
-    const storedOrder = Array.isArray(stored?.orderIds) ? stored.orderIds : null;
-    if (!storedOrder?.length) return incoming;
+  const albumIds = useMemo(() => albums.map((a) => a.id), [albums]);
 
-    const set = new Set(incoming);
-    const next = storedOrder.filter((id) => set.has(id));
-    for (const id of incoming) {
-      if (!next.includes(id)) next.push(id);
-    }
-    return next;
+  const [slotById, setSlotById] = useState<Record<string, number>>(() => {
+    const migrated = migrateToV3(albumIds);
+    const normalized = normalizeSlotById(migrated?.slotById ?? null, albumIds);
+    return normalized.slotById;
   });
 
   const [faceOutIds, setFaceOutIds] = useState<Record<string, boolean>>(() => {
-    const stored = safeReadLayoutStore();
-    const raw = stored?.faceOutIds;
+    const migrated = migrateToV3(albumIds);
+    const raw = migrated?.faceOutIds;
     return raw && typeof raw === 'object' ? raw : {};
+  });
+
+  const [poseById, setPoseById] = useState<Record<string, BookPose>>(() => {
+    const migrated = migrateToV3(albumIds);
+    const raw = migrated?.poseById;
+    return raw && typeof raw === 'object' ? raw : {};
+  });
+
+  const [yawById, setYawById] = useState<Record<string, number>>(() => {
+    const migrated = migrateToV3(albumIds);
+    const raw = migrated?.yawById;
+    if (raw && typeof raw === 'object') return raw;
+
+    // Legacy: yaw was stored inside poseById.
+    const pose = migrated?.poseById;
+    const next: Record<string, number> = {};
+    if (pose && typeof pose === 'object') {
+      for (const [id, p] of Object.entries(pose)) {
+        const y = (p as any)?.yaw;
+        if (typeof y === 'number' && Number.isFinite(y)) next[id] = y;
+      }
+    }
+    return next;
   });
   const [focusedBookId, setFocusedBookId] = useState<string | null>(null);
 
@@ -112,6 +269,9 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     startClientX: number;
     startClientY: number;
     dragPos: { x: number; y: number; z: number } | null;
+    mode: 'move' | 'rotate';
+    startYaw: number;
+    tempYaw: number | null;
   }>(
     {
       activeId: null,
@@ -122,29 +282,20 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
       startClientX: 0,
       startClientY: 0,
       dragPos: null,
+      mode: 'move',
+      startYaw: 0,
+      tempYaw: null,
     }
   );
 
   useEffect(() => {
-    // Keep existing order where possible; prepend any new albums (newest-first input).
-    setOrderIds((prev) => {
-      const incoming = albums.map((a) => a.id);
-      const prevSet = new Set(prev);
-      const next: string[] = [];
-      for (const id of incoming) {
-        if (!prevSet.has(id)) next.push(id);
-      }
-      // Preserve previous order for existing ids.
-      for (const id of prev) {
-        if (incoming.includes(id)) next.push(id);
-      }
-      return next.length ? next : incoming;
-    });
-  }, [albums]);
+    const normalized = normalizeSlotById(slotById, albumIds);
+    if (normalized.changed) setSlotById(normalized.slotById);
+  }, [albumIds, slotById]);
 
   useEffect(() => {
     // Prune stored faceOut ids for removed albums.
-    const incoming = new Set(albums.map((a) => a.id));
+    const incoming = new Set(albumIds);
     setFaceOutIds((prev) => {
       let changed = false;
       const next: Record<string, boolean> = {};
@@ -157,11 +308,83 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
       }
       return changed ? next : prev;
     });
-  }, [albums]);
+  }, [albumIds]);
 
   useEffect(() => {
-    safeWriteLayoutStore({ orderIds, faceOutIds });
-  }, [orderIds, faceOutIds]);
+    // Prune yaw ids for removed albums.
+    const incoming = new Set(albumIds);
+    setYawById((prev) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [id, yaw] of Object.entries(prev)) {
+        if (!incoming.has(id)) {
+          changed = true;
+          continue;
+        }
+        const y = typeof yaw === 'number' ? yaw : Number(yaw);
+        if (!Number.isFinite(y)) {
+          changed = true;
+          continue;
+        }
+        next[id] = y;
+      }
+      return changed ? next : prev;
+    });
+  }, [albumIds]);
+
+  useEffect(() => {
+    // Prune pose ids for removed albums.
+    const incoming = new Set(albumIds);
+    setPoseById((prev) => {
+      let changed = false;
+      const next: Record<string, BookPose> = {};
+      for (const [id, pose] of Object.entries(prev)) {
+        if (!incoming.has(id)) {
+          changed = true;
+          continue;
+        }
+        if (!pose || typeof pose !== 'object') {
+          changed = true;
+          continue;
+        }
+        const x = typeof (pose as any).x === 'number' ? (pose as any).x : Number((pose as any).x);
+        const y = typeof (pose as any).y === 'number' ? (pose as any).y : Number((pose as any).y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          changed = true;
+          continue;
+        }
+        const yawRaw = (pose as any).yaw;
+        const yaw = typeof yawRaw === 'number' && Number.isFinite(yawRaw) ? yawRaw : undefined;
+        next[id] = { x, y, yaw };
+      }
+      return changed ? next : prev;
+    });
+  }, [albumIds]);
+
+  useEffect(() => {
+    safeWriteLayoutStoreV3({ slotById, faceOutIds, poseById, yawById });
+  }, [slotById, faceOutIds, poseById, yawById]);
+
+  useEffect(() => {
+    if (!layoutResetToken) return;
+    try {
+      localStorage.removeItem(LAYOUT_STORAGE_KEY_V3);
+      localStorage.removeItem(LAYOUT_STORAGE_KEY_V2);
+      localStorage.removeItem(LAYOUT_STORAGE_KEY_V1);
+    } catch {
+      // ignore
+    }
+
+    const nextSlotById: Record<string, number> = {};
+    for (let i = 0; i < albumIds.length; i += 1) {
+      nextSlotById[albumIds[i]] = i;
+    }
+    setSlotById(nextSlotById);
+    setFaceOutIds({});
+    setPoseById({});
+    setYawById({});
+    setFocusedBookId(null);
+  }, [layoutResetToken, albumIds]);
 
   useEffect(() => {
     // While a book is focused, disable shelf panning to avoid accidental camera motion.
@@ -179,7 +402,19 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   }, [albums]);
 
   const minSlotsPerShelf = 14;
-  const shelves = Math.max(3, Math.ceil(Math.max(1, orderIds.length) / minSlotsPerShelf));
+  const maxUsedSlot = useMemo(() => {
+    let m = -1;
+    for (const id of albumIds) {
+      const v = slotById[id];
+      if (typeof v === 'number' && Number.isFinite(v)) m = Math.max(m, Math.trunc(v));
+    }
+    return m;
+  }, [albumIds, slotById]);
+
+  const shelves = Math.max(
+    3,
+    Math.ceil(Math.max(1, albumIds.length, maxUsedSlot + 1) / minSlotsPerShelf)
+  );
   const bookSlotSpacing = 0.30;
   const bookWidth = 0.22;
   const sidePadding = 0.60;
@@ -208,12 +443,6 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   }, [shelfOuterWidth, viewport.width]);
 
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-  const moveItem = (arr: string[], from: number, to: number) => {
-    const next = arr.slice();
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
-    return next;
-  };
 
   const slotToPos = (slotIndex: number) => {
     const safe = Math.max(0, slotIndex);
@@ -240,6 +469,11 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
       if (!next[albumId]) delete next[albumId];
       return next;
     });
+  };
+
+  const rotateBook = (albumId: string, dir: -1 | 1) => {
+    const step = (Math.PI / 12) * dir; // 15deg
+    setYawById((prev) => ({ ...prev, [albumId]: (prev[albumId] ?? 0) + step }));
   };
 
   const pointToSlot = (p: THREE.Vector3) => {
@@ -346,10 +580,18 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     dragRef.current.startSlot = slotIndex;
     dragRef.current.hoverSlot = slotIndex;
     dragRef.current.moved = false;
+    dragRef.current.mode = e?.shiftKey ? 'rotate' : 'move';
+    dragRef.current.startYaw = yawById[albumId] ?? 0;
+    dragRef.current.tempYaw = null;
     dragRef.current.startClientX = Number(e?.clientX ?? e?.nativeEvent?.clientX ?? 0);
     dragRef.current.startClientY = Number(e?.clientY ?? e?.nativeEvent?.clientY ?? 0);
+    const pose = poseById[albumId];
     const p = slotToPos(slotIndex);
-    dragRef.current.dragPos = { x: p.x, y: p.y, z: 0.85 };
+    dragRef.current.dragPos = {
+      x: pose?.x ?? p.x,
+      y: pose?.y ?? p.y,
+      z: 0.85,
+    };
     setHoverSlot(slotIndex);
     try {
       e.stopPropagation?.();
@@ -372,6 +614,18 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     const dy = cy - dragRef.current.startClientY;
     if (!dragRef.current.moved && dx * dx + dy * dy > 36) {
       dragRef.current.moved = true;
+    }
+
+    if (dragRef.current.mode === 'rotate') {
+      // Pixel -> yaw. Keep it gentle.
+      const yaw = dragRef.current.startYaw + dx * 0.012;
+      dragRef.current.tempYaw = yaw;
+      // Keep book near its current pos while rotating.
+      const current = dragRef.current.dragPos;
+      if (current) {
+        dragRef.current.dragPos = { ...current };
+      }
+      return;
     }
 
     // Intersect ray with a plane in front of the shelves.
@@ -399,12 +653,18 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     const to = dragRef.current.hoverSlot;
     const moved = dragRef.current.moved;
 
+    const mode = dragRef.current.mode;
+    const tempYaw = dragRef.current.tempYaw;
+
     dragRef.current.activeId = null;
     dragRef.current.pointerId = null;
     dragRef.current.startSlot = -1;
     dragRef.current.hoverSlot = -1;
     dragRef.current.moved = false;
     dragRef.current.dragPos = null;
+    dragRef.current.mode = 'move';
+    dragRef.current.startYaw = 0;
+    dragRef.current.tempYaw = null;
     setHoverSlot(-1);
 
     inputRef.current.blockPan = false;
@@ -425,11 +685,77 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
       return;
     }
 
+    if (mode === 'rotate') {
+      if (typeof tempYaw === 'number' && Number.isFinite(tempYaw)) {
+        setYawById((prev) => ({ ...prev, [albumId]: tempYaw }));
+      }
+      return;
+    }
+
+    if (layoutEditEnabled) {
+      const dp = dragRef.current.dragPos;
+      const localX = dp?.x ?? 0;
+      const localY = dp?.y ?? 0;
+      const x = clamp(localX, -shelfInnerWidth / 2, shelfInnerWidth / 2);
+      const y = clamp(localY, shelfYs[shelfYs.length - 1], shelfYs[0]);
+
+      if (layoutSnapEnabled) {
+        const snappedSlot = pointToSlot(new THREE.Vector3(x, y, 0));
+        if (from >= 0 && snappedSlot >= 0 && from !== snappedSlot) {
+          setSlotById((prev) => {
+            const safeFrom = Math.max(0, from);
+            const safeTo = Math.max(0, snappedSlot);
+
+            let occupantId: string | null = null;
+            for (const [id, slot] of Object.entries(prev)) {
+              if (id === albumId) continue;
+              if (Math.trunc(slot) === safeTo) {
+                occupantId = id;
+                break;
+              }
+            }
+
+            const next = { ...prev, [albumId]: safeTo };
+            if (occupantId) next[occupantId] = safeFrom;
+            return next;
+          });
+        }
+
+        setPoseById((prev) => {
+          if (!prev[albumId]) return prev;
+          const next = { ...prev };
+          delete next[albumId];
+          return next;
+        });
+      } else {
+        setPoseById((prev) => {
+          const yaw = prev[albumId]?.yaw;
+          return { ...prev, [albumId]: { x, y, yaw } };
+        });
+      }
+      return;
+    }
+
     if (from >= 0 && to >= 0 && from !== to) {
-      setOrderIds((prev) => {
-        const safeFrom = Math.max(0, Math.min(prev.length - 1, from));
-        const safeTo = Math.max(0, Math.min(prev.length - 1, to));
-        return moveItem(prev, safeFrom, safeTo);
+      setSlotById((prev) => {
+        const safeFrom = Math.max(0, from);
+        const safeTo = Math.max(0, to);
+
+        // Find the occupant in the target slot, if any.
+        let occupantId: string | null = null;
+        for (const [id, slot] of Object.entries(prev)) {
+          if (id === albumId) continue;
+          if (Math.trunc(slot) === safeTo) {
+            occupantId = id;
+            break;
+          }
+        }
+
+        const next = { ...prev, [albumId]: safeTo };
+        if (occupantId) {
+          next[occupantId] = safeFrom;
+        }
+        return next;
       });
     }
   };
@@ -525,8 +851,8 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           ))}
         </group>
 
-        {/* Hover slot highlight while dragging */}
-        {hoverSlot >= 0 ? (
+        {/* Hover slot highlight while dragging (slot mode or snap mode) */}
+        {hoverSlot >= 0 && (!layoutEditEnabled || layoutSnapEnabled) ? (
           <mesh
             position={[slotToPos(hoverSlot).x, slotToPos(hoverSlot).y - 0.78 + 0.09, 0.32]}
             rotation={[-Math.PI / 2, 0, 0]}
@@ -538,19 +864,45 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         ) : null}
 
         {/* Books */}
-        {orderIds.map((albumId, slotIndex) => {
+          {albumIds
+            .slice()
+            .sort((a, b) => {
+              const sa = slotById[a] ?? 999999;
+              const sb = slotById[b] ?? 999999;
+              if (sa !== sb) return sa - sb;
+              // Stable fallback: createdAt desc.
+              const aa = booksById.get(a);
+              const bb = booksById.get(b);
+              return String(bb?.createdAt ?? '').localeCompare(String(aa?.createdAt ?? ''));
+            })
+            .map((albumId) => {
           const album = booksById.get(albumId);
           if (!album) return null;
 
-          const p = slotToPos(slotIndex);
+            const slotIndex = slotById[albumId] ?? 0;
+            const p = slotToPos(slotIndex);
           const isDragging = dragRef.current.activeId === albumId;
           const dragPos = isDragging ? dragRef.current.dragPos : null;
           const isFocused = focusedBookId === albumId;
           const shouldDim = isFocusMode && !isFocused;
 
+            const pose = poseById[albumId];
+            const posed = pose && typeof pose.x === 'number' && typeof pose.y === 'number';
+
           const basePosition: [number, number, number] = dragPos
             ? [dragPos.x, dragPos.y, dragPos.z]
-            : [p.x, p.y, (isFocusMode && !isFocused ? 0.12 : 0.25)];
+            : [
+                posed ? pose.x : p.x,
+                posed ? pose.y : p.y,
+                (isFocusMode && !isFocused ? 0.12 : 0.25),
+              ];
+
+            const isDraggingThis = isDragging;
+            const liveYaw =
+              isDraggingThis && dragRef.current.activeId === albumId && dragRef.current.mode === 'rotate'
+                ? dragRef.current.tempYaw
+                : null;
+            const yaw = typeof liveYaw === 'number' && Number.isFinite(liveYaw) ? liveYaw : (yawById[albumId] ?? 0);
 
           return (
             <Book3D
@@ -561,11 +913,15 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
               dimmed={shouldDim}
               focusedPosition={focusedPosition}
               faceOut={Boolean(faceOutIds[album.id])}
+              yaw={yaw}
               dragging={isDragging}
               onPointerDown={(e) => beginDrag(album.id, e, slotIndex)}
               onPointerMove={(e) => updateDrag(e)}
               onPointerUp={(e) => endDrag(album.id, e)}
               onContextMenu={() => toggleFaceOut(album.id)}
+              onToggleFaceOut={() => toggleFaceOut(album.id)}
+              onRotateLeft={() => rotateBook(album.id, -1)}
+              onRotateRight={() => rotateBook(album.id, 1)}
               onClick={() => {
                 if (focusedBookId === albumId) {
                   (onBookOpen || onBookClick)(albumId);
