@@ -184,6 +184,18 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         password: signupPassword,
         displayName: signupDisplayName || undefined,
       });
+
+      const nextEmail = signupEmail.trim();
+      setSuccess('新規登録が完了しました。メールとパスワードでログインしてください。');
+      setMode('login');
+      setLoginIdentifier(nextEmail);
+      setLoginPassword('');
+      setSignupPassword('');
+      try {
+        window.location.hash = '#login';
+      } catch {
+        // ignore
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -249,7 +261,7 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         </div>
 
         <h1 className="auth-title">AIRIA</h1>
-        <p className="auth-subtitle">{mode === 'signup' ? '無料で始める（初回ログイン＝登録）' : 'おかえりなさい。ログインして続ける'}</p>
+        <p className="auth-subtitle">{mode === 'signup' ? 'メールで新規登録（登録後にログイン）' : 'おかえりなさい。ログインして続ける'}</p>
 
         {apiReachable === false ? (
           <div className="auth-loading" role="note">

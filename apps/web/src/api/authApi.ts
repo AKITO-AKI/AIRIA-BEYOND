@@ -12,6 +12,9 @@ export interface AuthUser {
   followingIds: string[];
 }
 
+export type AuthSessionResponse = { token: string; expiresAt: string; user: AuthUser };
+export type AuthRegisterResponse = { user: AuthUser } | AuthSessionResponse;
+
 export function getAuthToken(): string {
   try {
     return String(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '');
@@ -110,8 +113,8 @@ export async function register(input: { handle: string; password: string; displa
     const json = await readJsonSafe(response);
     await assertJsonResponse(response, json, '新規登録');
     if (!response.ok) throw new Error(json?.message || `Failed to register: ${response.status}`);
-    if (!json?.token || !json?.user) throw new Error('新規登録に失敗しました（API応答が不正です）');
-    return json as { token: string; expiresAt: string; user: AuthUser };
+    if (!json?.user) throw new Error('新規登録に失敗しました（API応答が不正です）');
+    return json as AuthRegisterResponse;
   } catch (e) {
     if (looksLikeNetworkError(e)) throw new Error(makeNetworkHelpMessage('新規登録'));
     throw e;
@@ -129,8 +132,8 @@ export async function registerWithEmail(input: { email: string; password: string
     const json = await readJsonSafe(response);
     await assertJsonResponse(response, json, '新規登録');
     if (!response.ok) throw new Error(json?.message || `Failed to register: ${response.status}`);
-    if (!json?.token || !json?.user) throw new Error('新規登録に失敗しました（API応答が不正です）');
-    return json as { token: string; expiresAt: string; user: AuthUser };
+    if (!json?.user) throw new Error('新規登録に失敗しました（API応答が不正です）');
+    return json as AuthRegisterResponse;
   } catch (e) {
     if (looksLikeNetworkError(e)) throw new Error(makeNetworkHelpMessage('新規登録'));
     throw e;
@@ -149,7 +152,7 @@ export async function login(input: { handle: string; password: string }) {
     await assertJsonResponse(response, json, 'ログイン');
     if (!response.ok) throw new Error(json?.message || `Failed to login: ${response.status}`);
     if (!json?.token || !json?.user) throw new Error('ログインに失敗しました（API応答が不正です）');
-    return json as { token: string; expiresAt: string; user: AuthUser };
+    return json as AuthSessionResponse;
   } catch (e) {
     if (looksLikeNetworkError(e)) throw new Error(makeNetworkHelpMessage('ログイン'));
     throw e;
@@ -168,7 +171,7 @@ export async function loginWithEmail(input: { email: string; password: string })
     await assertJsonResponse(response, json, 'ログイン');
     if (!response.ok) throw new Error(json?.message || `Failed to login: ${response.status}`);
     if (!json?.token || !json?.user) throw new Error('ログインに失敗しました（API応答が不正です）');
-    return json as { token: string; expiresAt: string; user: AuthUser };
+    return json as AuthSessionResponse;
   } catch (e) {
     if (looksLikeNetworkError(e)) throw new Error(makeNetworkHelpMessage('ログイン'));
     throw e;
@@ -187,7 +190,7 @@ export async function oauthLogin(provider: 'google' | 'apple', input: { idToken:
     await assertJsonResponse(response, json, 'OAuthログイン');
     if (!response.ok) throw new Error(json?.message || `Failed to login: ${response.status}`);
     if (!json?.token || !json?.user) throw new Error('ログインに失敗しました（API応答が不正です）');
-    return json as { token: string; expiresAt: string; user: AuthUser };
+    return json as AuthSessionResponse;
   } catch (e) {
     if (looksLikeNetworkError(e)) throw new Error(makeNetworkHelpMessage('ログイン'));
     throw e;

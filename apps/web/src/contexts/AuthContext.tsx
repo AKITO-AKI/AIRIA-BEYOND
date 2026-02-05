@@ -158,11 +158,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const password = String(input?.password || '');
         const displayName = input?.displayName;
         const handle = input?.handle;
-        const resp = await apiRegisterWithEmail({ email, password, displayName, handle });
+        await apiRegisterWithEmail({ email, password, displayName, handle });
         if (!isLatest(opId)) return;
-        setAuthToken(resp.token);
-        setToken(resp.token);
-        setUser(resp.user);
+
+        // Signup and login are intentionally separated.
+        // Keep the user logged out after successful registration.
+        setAuthToken(null);
+        setToken('');
+        setUser(null);
       } finally {
         if (isLatest(opId)) setBusy(false);
       }

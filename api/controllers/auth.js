@@ -63,7 +63,6 @@ export async function registerHandler(req, res) {
   try {
     const { handle, email, password, displayName } = req.body || {};
     const user = await registerUser({ handle, email, password, displayName });
-    const session = await createSession(user.id);
     const rec = await getUserRecordById(user.id);
     appendAuditEventFromReq(req, {
       type: 'auth.register',
@@ -72,8 +71,6 @@ export async function registerHandler(req, res) {
       data: { provider: 'password' },
     });
     return res.status(201).json({
-      token: session.token,
-      expiresAt: session.expiresAt,
       user: { ...user, followingIds: Array.isArray(rec?.followingIds) ? rec.followingIds : [] },
     });
   } catch (error) {
