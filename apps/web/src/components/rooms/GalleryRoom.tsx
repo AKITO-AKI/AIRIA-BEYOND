@@ -62,6 +62,10 @@ const GalleryRoom: React.FC = () => {
   const shelfContent = (
     <div className="bookshelf-container">
       <div className={`gallery-shelf-stage ${filteredAlbums.length === 0 ? 'empty' : ''}`}>
+        <div className="gallery-shelf-hint" aria-hidden="true">
+          <span className="gallery-shelf-hint-pill">HINT</span>
+          <span className="gallery-shelf-hint-text">右クリックで表紙 / 背表紙を切り替え（保存されます）</span>
+        </div>
         <BookshelfCanvas
           albums={filteredAlbums}
           onBookClick={handleAlbumClick}

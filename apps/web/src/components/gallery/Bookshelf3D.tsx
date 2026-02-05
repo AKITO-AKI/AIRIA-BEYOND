@@ -11,6 +11,33 @@ import {
   updateMaterialGrainTime,
 } from './toonTextures';
 
+const LAYOUT_STORAGE_KEY = 'airia-bookshelf-layout-v1';
+
+type BookshelfLayoutStore = {
+  orderIds?: string[];
+  faceOutIds?: Record<string, boolean>;
+};
+
+function safeReadLayoutStore(): BookshelfLayoutStore | null {
+  try {
+    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as BookshelfLayoutStore;
+  } catch {
+    return null;
+  }
+}
+
+function safeWriteLayoutStore(next: BookshelfLayoutStore): void {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
 interface Bookshelf3DProps {
   albums: Album[];
   onBookClick: (albumId: string) => void;
@@ -50,8 +77,25 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     };
   }, [noiseTex, toonGradient]);
 
-  const [orderIds, setOrderIds] = useState<string[]>(() => albums.map((a) => a.id));
-  const [faceOutIds, setFaceOutIds] = useState<Record<string, boolean>>({});
+  const [orderIds, setOrderIds] = useState<string[]>(() => {
+    const incoming = albums.map((a) => a.id);
+    const stored = safeReadLayoutStore();
+    const storedOrder = Array.isArray(stored?.orderIds) ? stored.orderIds : null;
+    if (!storedOrder?.length) return incoming;
+
+    const set = new Set(incoming);
+    const next = storedOrder.filter((id) => set.has(id));
+    for (const id of incoming) {
+      if (!next.includes(id)) next.push(id);
+    }
+    return next;
+  });
+
+  const [faceOutIds, setFaceOutIds] = useState<Record<string, boolean>>(() => {
+    const stored = safeReadLayoutStore();
+    const raw = stored?.faceOutIds;
+    return raw && typeof raw === 'object' ? raw : {};
+  });
   const [focusedBookId, setFocusedBookId] = useState<string | null>(null);
 
   const isFocusMode = focusedBookId !== null;
@@ -99,6 +143,27 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   }, [albums]);
 
   useEffect(() => {
+    // Prune stored faceOut ids for removed albums.
+    const incoming = new Set(albums.map((a) => a.id));
+    setFaceOutIds((prev) => {
+      let changed = false;
+      const next: Record<string, boolean> = {};
+      for (const [id, v] of Object.entries(prev)) {
+        if (!incoming.has(id)) {
+          changed = true;
+          continue;
+        }
+        if (v) next[id] = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [albums]);
+
+  useEffect(() => {
+    safeWriteLayoutStore({ orderIds, faceOutIds });
+  }, [orderIds, faceOutIds]);
+
+  useEffect(() => {
     // While a book is focused, disable shelf panning to avoid accidental camera motion.
     if (focusedBookId) {
       inputRef.current.blockPan = true;
@@ -113,19 +178,29 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
     return map;
   }, [albums]);
 
-  const shelves = 3;
+  const minSlotsPerShelf = 14;
+  const shelves = Math.max(3, Math.ceil(Math.max(1, orderIds.length) / minSlotsPerShelf));
   const bookSlotSpacing = 0.30;
   const bookWidth = 0.22;
   const sidePadding = 0.60;
-  const minSlotsPerShelf = 14;
-  const slotsPerShelf = Math.max(minSlotsPerShelf, Math.ceil(Math.max(1, orderIds.length) / shelves));
+  const slotsPerShelf = minSlotsPerShelf;
   const shelfInnerWidth = (slotsPerShelf - 1) * bookSlotSpacing + bookWidth;
   const shelfOuterWidth = shelfInnerWidth + sidePadding * 2;
 
   const shelfYs = useMemo(() => {
     // Top -> bottom. Tune for current camera.
-    return [1.35, 0.05, -1.25];
-  }, []);
+    const topY = 1.35;
+    const spacing = 1.30;
+    return Array.from({ length: shelves }, (_, i) => topY - i * spacing);
+  }, [shelves]);
+
+  const frameDims = useMemo(() => {
+    const topFrameY = shelfYs[0] + 0.60;
+    const bottomFrameY = shelfYs[shelfYs.length - 1] - 0.72;
+    const height = Math.max(3.8, topFrameY - bottomFrameY);
+    const centerY = (topFrameY + bottomFrameY) / 2;
+    return { topFrameY, bottomFrameY, height, centerY };
+  }, [shelfYs]);
 
   const maxPan = useMemo(() => {
     const pad = 0.4;
@@ -153,15 +228,18 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   const focusedPosition: [number, number, number] = [0, 0.55, 1.55];
 
   const clearFocus = () => {
-    setFocusedBookId((prev) => {
-      if (!prev) return null;
-      const id = prev;
-      setFaceOutIds((m) => ({ ...m, [id]: false }));
-      return null;
-    });
+    setFocusedBookId(null);
     if (!dragRef.current.activeId) {
       inputRef.current.blockPan = false;
     }
+  };
+
+  const toggleFaceOut = (albumId: string) => {
+    setFaceOutIds((prev) => {
+      const next = { ...prev, [albumId]: !prev[albumId] };
+      if (!next[albumId]) delete next[albumId];
+      return next;
+    });
   };
 
   const pointToSlot = (p: THREE.Vector3) => {
@@ -359,7 +437,6 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
   const handleDoubleClick = (albumId: string) => {
     // Pull book to camera and show cover.
     setFocusedBookId((prev) => (prev === albumId ? null : albumId));
-    setFaceOutIds((prev) => ({ ...prev, [albumId]: true }));
     onBookClick(albumId);
   };
 
@@ -400,7 +477,12 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
           onPointerUp={(e) => endDragAny(e)}
           onPointerCancel={(e) => endDragAny(e)}
         >
-          <planeGeometry args={[Math.max(14, shelfOuterWidth + 4), 7]} />
+          <planeGeometry
+            args={[
+              Math.max(14, shelfOuterWidth + 4),
+              Math.max(7, (shelfYs[0] - shelfYs[shelfYs.length - 1]) + 5.2),
+            ]}
+          />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
 
@@ -415,21 +497,21 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
         {/* Bookshelf frame (white) */}
         <group position={[0, 0.05, -0.25]}>
           {/* Side panels */}
-          <mesh position={[-shelfOuterWidth / 2 + 0.08, 0.0, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.16, 3.8, 0.9]} />
+          <mesh position={[-shelfOuterWidth / 2 + 0.08, frameDims.centerY, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.16, frameDims.height, 0.9]} />
             <meshToonMaterial ref={shelfMatRef} color="#ffffff" gradientMap={toonGradient} />
           </mesh>
-          <mesh position={[shelfOuterWidth / 2 - 0.08, 0.0, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.16, 3.8, 0.9]} />
+          <mesh position={[shelfOuterWidth / 2 - 0.08, frameDims.centerY, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.16, frameDims.height, 0.9]} />
             <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
           </mesh>
 
           {/* Top / bottom */}
-          <mesh position={[0, 1.95, 0]} castShadow receiveShadow>
+          <mesh position={[0, frameDims.topFrameY, 0]} castShadow receiveShadow>
             <boxGeometry args={[shelfOuterWidth, 0.18, 0.9]} />
             <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
           </mesh>
-          <mesh position={[0, -1.95, 0]} castShadow receiveShadow>
+          <mesh position={[0, frameDims.bottomFrameY, 0]} castShadow receiveShadow>
             <boxGeometry args={[shelfOuterWidth, 0.18, 0.9]} />
             <meshToonMaterial color="#ffffff" gradientMap={toonGradient} />
           </mesh>
@@ -483,6 +565,7 @@ const Bookshelf3D: React.FC<Bookshelf3DProps> = ({
               onPointerDown={(e) => beginDrag(album.id, e, slotIndex)}
               onPointerMove={(e) => updateDrag(e)}
               onPointerUp={(e) => endDrag(album.id, e)}
+              onContextMenu={() => toggleFaceOut(album.id)}
               onClick={() => {
                 if (focusedBookId === albumId) {
                   (onBookOpen || onBookClick)(albumId);

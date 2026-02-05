@@ -21,6 +21,7 @@ interface Book3DProps {
   onPointerDown?: (e: any) => void;
   onPointerMove?: (e: any) => void;
   onPointerUp?: (e: any) => void;
+  onContextMenu?: () => void;
   onClick?: () => void;
   onDoubleClick?: () => void;
 }
@@ -36,6 +37,7 @@ const Book3D: React.FC<Book3DProps> = ({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onContextMenu,
   onClick,
   onDoubleClick,
 }) => {
@@ -112,7 +114,11 @@ const Book3D: React.FC<Book3DProps> = ({
       }
     }
 
-    const target = faceOut || dragging ? 1 : 0;
+    // Display modes:
+    // - Focused: cover pulled forward (1)
+    // - faceOut: cover facing outward, but only slightly forward (0.35)
+    // - dragging: treat like focused (1)
+    const target = dragging ? 1 : isFocused ? 1 : faceOut ? 0.35 : 0;
     const speed = 8;
     coverProgressRef.current = THREE.MathUtils.lerp(
       coverProgressRef.current,
@@ -157,6 +163,15 @@ const Book3D: React.FC<Book3DProps> = ({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onContextMenu={(e) => {
+          e.stopPropagation();
+          try {
+            e.nativeEvent?.preventDefault?.();
+          } catch {
+            // ignore
+          }
+          onContextMenu?.();
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onClick?.();
@@ -246,6 +261,15 @@ const Book3D: React.FC<Book3DProps> = ({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onContextMenu={(e) => {
+            e.stopPropagation();
+            try {
+              e.nativeEvent?.preventDefault?.();
+            } catch {
+              // ignore
+            }
+            onContextMenu?.();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             onClick?.();
