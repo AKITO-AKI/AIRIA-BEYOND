@@ -29,7 +29,12 @@
         background: rgba(242, 244, 248, 0.9);
         backdrop-filter: blur(8px);
         border-bottom: 1px solid rgba(0,0,0,0.06);
-        padding: 10px 14px;
+        padding: 10px 0;
+      }
+      .toolbar-inner {
+        width: min(210mm, calc(100vw - 28px));
+        margin: 0 auto;
+        padding: 0 14px;
         display: flex;
         gap: 10px;
         align-items: center;
@@ -236,13 +241,15 @@
   </head>
   <body>
     <div class="toolbar">
-      <div class="toolbar-left">
-        <span class="hint">配布URL：</span>
-        <input id="urlInput" type="url" spellcheck="false" />
-        <button class="btn primary" id="applyBtn" type="button">反映</button>
-        <button class="btn" id="printBtn" type="button">印刷</button>
+      <div class="toolbar-inner">
+        <div class="toolbar-left">
+          <span class="hint">配布URL：</span>
+          <input id="urlInput" type="url" spellcheck="false" />
+          <button class="btn primary" id="applyBtn" type="button">反映</button>
+          <button class="btn" id="printBtn" type="button">印刷</button>
+        </div>
+        <div class="hint">初回はネット接続した状態で開いてください（QR画像を読み込みます）</div>
       </div>
-      <div class="hint">初回はネット接続した状態で開いてください（QR画像を読み込みます）</div>
     </div>
 
     <main class="page">
