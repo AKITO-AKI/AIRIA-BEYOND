@@ -34,6 +34,10 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [lastCheckAt, setLastCheckAt] = React.useState<string | null>(null);
   const [checkSeq, setCheckSeq] = React.useState(0);
 
+  const [adminToken, setAdminToken] = React.useState('');
+  const [adminIncludeEmail, setAdminIncludeEmail] = React.useState(false);
+  const [adminUsersStatus, setAdminUsersStatus] = React.useState<{ ok: boolean; status: number; body?: any } | null>(null);
+
   const deploymentHint = React.useMemo(() => {
     try {
       const host = String(window.location.host || '').toLowerCase();
@@ -363,6 +367,79 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 ブロッカー: バックエンド側でメール/パスワード認証が無効です。Render の環境変数に `AUTH_ALLOW_PASSWORD=true` を追加して再デプロイしてください。
               </div>
             ) : null}
+
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              <div style={{ fontWeight: 650 }}>管理（ADMIN_TOKEN 必須）</div>
+              <div style={{ marginTop: 6, opacity: 0.9 }}>
+                注意: トークンは共有しないでください。入力値はこの画面のメモリにのみ保持されます。
+              </div>
+
+              <div style={{ marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  className="auth-input"
+                  style={{ maxWidth: 360 }}
+                  type="password"
+                  value={adminToken}
+                  onChange={(e) => setAdminToken(e.target.value)}
+                  placeholder="ADMIN_TOKEN"
+                  autoComplete="off"
+                  disabled={busy}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, opacity: 0.9 }}>
+                  <input
+                    type="checkbox"
+                    checked={adminIncludeEmail}
+                    onChange={(e) => setAdminIncludeEmail(e.target.checked)}
+                    disabled={busy}
+                  />
+                  email も表示
+                </label>
+                <button
+                  className="btn"
+                  type="button"
+                  disabled={busy || !API_BASE || !adminToken.trim()}
+                  onClick={async () => {
+                    try {
+                      setAdminUsersStatus(null);
+                      const url = `${API_BASE}/api/admin/users?token=${encodeURIComponent(adminToken.trim())}&limit=50&includeEmail=${adminIncludeEmail ? '1' : '0'}`;
+                      const resp = await fetch(url).catch(() => null);
+                      if (!resp) {
+                        setAdminUsersStatus({ ok: false, status: 0, body: { error: 'No response' } });
+                        return;
+                      }
+                      const body = await resp.json().catch(() => null);
+                      setAdminUsersStatus({ ok: Boolean(resp.ok), status: resp.status, body });
+                    } catch (e) {
+                      setAdminUsersStatus({ ok: false, status: 0, body: { error: e instanceof Error ? e.message : String(e) } });
+                    }
+                  }}
+                >
+                  ユーザー一覧取得
+                </button>
+              </div>
+
+              {adminUsersStatus ? (
+                <div style={{ marginTop: 8 }}>
+                  <div>
+                    /api/admin/users: {adminUsersStatus.ok ? `OK (${adminUsersStatus.status})` : `NG (${adminUsersStatus.status})`}
+                  </div>
+                  <pre
+                    style={{
+                      marginTop: 6,
+                      padding: 10,
+                      borderRadius: 10,
+                      background: 'rgba(0,0,0,0.35)',
+                      maxHeight: 240,
+                      overflow: 'auto',
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {JSON.stringify(adminUsersStatus.body, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
           </div>
         </details>
 

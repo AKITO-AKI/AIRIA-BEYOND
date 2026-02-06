@@ -486,3 +486,31 @@ export async function getAdminUserMetrics() {
     users: listRes.rows.map((u) => ({ id: String(u.id), createdAt: new Date(u.created_at).toISOString() })),
   };
 }
+
+export async function listAdminUsers({ limit = 50, offset = 0, includeEmail = false } = {}) {
+  await ensureSchema();
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 50));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  const totalRes = await dbQuery('SELECT COUNT(*)::int AS c FROM users');
+  const res = await dbQuery(
+    `SELECT id, handle, display_name, bio, email, created_at, updated_at
+       FROM users
+      ORDER BY created_at DESC
+      LIMIT $1 OFFSET $2`,
+    [safeLimit, safeOffset]
+  );
+
+  return {
+    total: Number(totalRes.rows?.[0]?.c || 0),
+    users: res.rows.map((r) => ({
+      id: String(r.id),
+      handle: String(r.handle),
+      displayName: String(r.display_name || r.handle),
+      bio: String(r.bio || ''),
+      email: includeEmail ? String(r.email || '') : undefined,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : '',
+      updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : '',
+    })),
+  };
+}

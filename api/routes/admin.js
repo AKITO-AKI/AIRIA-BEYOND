@@ -1,7 +1,7 @@
 import express from 'express';
 import { getUsage, getJobs } from '../controllers/admin.js';
 import { listAuditEvents, subscribeAuditSse } from '../lib/auditLog.js';
-import { getAdminUserMetrics, getAuthStoreDebugInfo } from '../authStore.js';
+import { getAdminUserMetrics, getAuthStoreDebugInfo, listAdminUsers } from '../authStore.js';
 
 const router = express.Router();
 
@@ -126,6 +126,21 @@ router.get('/auth-store', authMiddleware, async (req, res) => {
   try {
     const info = await getAuthStoreDebugInfo();
     return res.json(info);
+  } catch (error) {
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+router.get('/users', authMiddleware, async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(500, Number(req.query.limit ?? 50) || 50));
+    const offset = Math.max(0, Number(req.query.offset ?? 0) || 0);
+    const includeEmail = String(req.query.includeEmail ?? '').trim() === '1' || String(req.query.includeEmail ?? '').trim().toLowerCase() === 'true';
+    const out = await listAdminUsers({ limit, offset, includeEmail });
+    return res.json({ ...out, now: new Date().toISOString(), limit, offset, includeEmail });
   } catch (error) {
     return res.status(500).json({
       error: 'Internal server error',

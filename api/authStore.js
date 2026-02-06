@@ -504,6 +504,26 @@ export async function getAdminUserMetrics() {
   };
 }
 
+export async function listAdminUsers({ limit = 50, offset = 0, includeEmail = false } = {}) {
+  if (isDbEnabled()) return dbStore.listAdminUsers({ limit, offset, includeEmail });
+  await loadIfNeeded();
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 50));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const slice = users.slice(safeOffset, safeOffset + safeLimit);
+  return {
+    total: users.length,
+    users: slice.map((u) => ({
+      id: String(u?.id || ''),
+      handle: String(u?.handle || ''),
+      displayName: String(u?.displayName || u?.handle || ''),
+      bio: String(u?.bio || ''),
+      email: includeEmail ? String(u?.email || '') : undefined,
+      createdAt: String(u?.createdAt || ''),
+      updatedAt: String(u?.updatedAt || ''),
+    })),
+  };
+}
+
 export function toPublicUser(user) {
   if (isDbEnabled()) return dbStore.toPublicUser(user);
   if (!user) return null;
