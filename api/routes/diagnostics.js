@@ -1,6 +1,7 @@
 import express from 'express';
 import { getImageDiagnostics } from '../controllers/diagnostics.js';
 import { getAuthStorePath } from '../authStore.js';
+import { getDbDebugInfo } from '../db.js';
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.get('/version', (req, res) => {
 		instance: instance || undefined,
 		commit: commit || undefined,
 		authStorePath: getAuthStorePath(),
+		db: getDbDebugInfo(),
 	});
 });
 
