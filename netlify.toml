@@ -9,6 +9,8 @@
   NODE_VERSION = "20"
   # Custom domain deployments should use the root base path.
   VITE_PUBLIC_BASE_PATH = "/"
+  # Default backend API for Netlify builds. Can be overridden in Netlify UI env vars.
+  VITE_API_BASE_URL = "https://airia-beyond.onrender.com"
 
 # SPA fallback (direct links should work)
 [[redirects]]
