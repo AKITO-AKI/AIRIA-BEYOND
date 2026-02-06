@@ -61,11 +61,40 @@ async function loadIfNeeded() {
       sessions = [];
     }
   } catch {
-    users = [];
-    sessions = [];
+    // If the store doesn't exist yet (common on fresh deployments), attempt a one-time
+    // migration from the previous default path. This helps when switching to a
+    // persistent disk path via AUTH_STORE_PATH.
+    const migrated = await tryMigrateFromDefaultStore();
+    if (!migrated) {
+      users = [];
+      sessions = [];
+    }
   }
 
   cleanupExpiredSessionsSync();
+}
+
+async function tryMigrateFromDefaultStore() {
+  try {
+    if (STORE_PATH === DEFAULT_PATH) return false;
+
+    const raw = await fs.readFile(DEFAULT_PATH, 'utf-8').catch(() => '');
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw);
+    const migratedUsers = Array.isArray(parsed?.users) ? parsed.users : [];
+    const migratedSessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+    if (!migratedUsers.length && !migratedSessions.length) return false;
+
+    users = migratedUsers;
+    sessions = migratedSessions;
+    cleanupExpiredSessionsSync();
+
+    await persist();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 let persistChain = Promise.resolve();
