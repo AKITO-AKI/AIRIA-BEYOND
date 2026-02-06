@@ -1,7 +1,7 @@
 import express from 'express';
 import { getUsage, getJobs } from '../controllers/admin.js';
 import { listAuditEvents, subscribeAuditSse } from '../lib/auditLog.js';
-import { getAdminUserMetrics } from '../authStore.js';
+import { getAdminUserMetrics, getAuthStoreDebugInfo } from '../authStore.js';
 
 const router = express.Router();
 
@@ -114,6 +114,18 @@ router.get('/metrics', authMiddleware, async (req, res) => {
         actionsPerDay,
       },
     });
+  } catch (error) {
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+router.get('/auth-store', authMiddleware, async (req, res) => {
+  try {
+    const info = await getAuthStoreDebugInfo();
+    return res.json(info);
   } catch (error) {
     return res.status(500).json({
       error: 'Internal server error',

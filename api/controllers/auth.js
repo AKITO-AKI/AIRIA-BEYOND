@@ -74,9 +74,17 @@ export async function registerHandler(req, res) {
       user: { ...user, followingIds: Array.isArray(rec?.followingIds) ? rec.followingIds : [] },
     });
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const alreadyRegistered = /already registered/i.test(msg) || /email is already registered/i.test(msg);
+    if (alreadyRegistered) {
+      return res.status(409).json({
+        error: 'Conflict',
+        message: 'このメールアドレスは既に登録済みです。ログインしてください。',
+      });
+    }
     return res.status(400).json({
       error: 'Bad request',
-      message: error instanceof Error ? error.message : String(error),
+      message: msg,
     });
   }
 }

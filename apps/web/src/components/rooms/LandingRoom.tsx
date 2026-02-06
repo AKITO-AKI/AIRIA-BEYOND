@@ -88,13 +88,13 @@ const LandingRoom: React.FC<Props> = ({ onStart, onOpenTerms, onOpenPrivacy }) =
 
             <div className="landing-meta">
               <span className="landing-chip">プレリリース</span>
-              <span className="landing-chip">Google / Apple ログイン</span>
+              <span className="landing-chip">Email / Password</span>
               <span className="landing-chip">生成失敗でも止めない設計</span>
               <span className="landing-chip">最短ルート：ログイン → 「創作から」</span>
             </div>
 
             <div className="landing-signup-note">
-              初めての方も、このボタンでOKです（初回ログイン＝新規登録）。パスワード登録はありません。
+              初めての方は「無料で新規登録」からメール/パスワードを作成 → その後ログインしてください。
             </div>
           </div>
 

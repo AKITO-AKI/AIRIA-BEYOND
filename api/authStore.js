@@ -9,6 +9,21 @@ let loaded = false;
 let users = [];
 let sessions = [];
 
+export function getAuthStorePath() {
+  return STORE_PATH;
+}
+
+export async function getAuthStoreDebugInfo() {
+  await loadIfNeeded();
+  return {
+    storePath: STORE_PATH,
+    loaded,
+    userCount: Array.isArray(users) ? users.length : 0,
+    sessionCount: Array.isArray(sessions) ? sessions.length : 0,
+    now: new Date().toISOString(),
+  };
+}
+
 function isPasswordAuthEnabled() {
   const allow = String(process.env.AUTH_ALLOW_PASSWORD || '').trim().toLowerCase();
   if (allow === 'true') return true;

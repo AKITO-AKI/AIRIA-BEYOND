@@ -144,6 +144,18 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 Pre-release uses **email/password only**. OAuth (Google/Apple) is disabled by default.
 
+If you deploy **Frontend: Netlify** + **Backend: Render**, make sure both sides are set and redeployed:
+
+- Netlify (build-time env):
+  - `VITE_API_BASE_URL=https://airia-beyond.onrender.com`
+  - `VITE_PUBLIC_BASE_PATH=/`
+- Render (runtime env):
+  - `APP_PUBLIC_URL=https://<your-netlify-site>.netlify.app`
+  - `APP_ALLOWED_ORIGINS=https://<your-netlify-site>.netlify.app`
+  - `AUTH_ALLOW_PASSWORD=true`
+
+Tip: The login screen includes a “接続/認証チェック（診断）” panel. If it shows `passwordEnabled=false`, password login is blocked by backend env.
+
 Backend env vars:
 ```
 # Default: true
@@ -151,6 +163,10 @@ AUTH_ALLOW_PASSWORD=true
 
 # Default: false
 AUTH_ALLOW_OAUTH=false
+
+# (Recommended on Render) Persist the auth store to a disk mount
+# Example: /var/data/auth-store.json (see render.yaml)
+AUTH_STORE_PATH=/var/data/auth-store.json
 ```
 
 Frontend (Vite) env vars:

@@ -28,6 +28,11 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [success, setSuccess] = React.useState<string | null>(null);
   const [passwordEnabled, setPasswordEnabled] = React.useState<boolean>(true);
   const [apiReachable, setApiReachable] = React.useState<boolean | null>(null);
+  const [healthStatus, setHealthStatus] = React.useState<{ ok: boolean; status: number; body?: any } | null>(null);
+  const [authCfg, setAuthCfg] = React.useState<{ passwordEnabled: boolean; oauth: { enabled?: boolean; google: boolean; apple: boolean } } | null>(null);
+  const [versionStatus, setVersionStatus] = React.useState<{ ok: boolean; status: number; body?: any } | null>(null);
+  const [lastCheckAt, setLastCheckAt] = React.useState<string | null>(null);
+  const [checkSeq, setCheckSeq] = React.useState(0);
 
   const deploymentHint = React.useMemo(() => {
     try {
@@ -62,26 +67,53 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     let alive = true;
     (async () => {
       try {
+        setLastCheckAt(new Date().toISOString());
         if (!API_BASE) {
           setApiReachable(false);
+          setHealthStatus(null);
+          setAuthCfg(null);
+          setVersionStatus(null);
           return;
         }
-        const health = await fetch(`${API_BASE}/api/health`).catch(() => null);
+
+        const healthResp = await fetch(`${API_BASE}/api/health`).catch(() => null);
         if (!alive) return;
-        setApiReachable(Boolean(health && health.ok));
+        if (!healthResp) {
+          setApiReachable(false);
+          setHealthStatus(null);
+        } else {
+          const body = await healthResp.json().catch(() => null);
+          setApiReachable(Boolean(healthResp.ok));
+          setHealthStatus({ ok: Boolean(healthResp.ok), status: healthResp.status, body });
+        }
 
         const cfg = await apiAuthConfig();
         if (!alive) return;
+        setAuthCfg(cfg);
         setPasswordEnabled(Boolean(cfg?.passwordEnabled));
+
+        const verResp = await fetch(`${API_BASE}/api/diagnostics/version`).catch(() => null);
+        if (!alive) return;
+        if (!verResp) {
+          setVersionStatus(null);
+        } else {
+          const body = await verResp.json().catch(() => null);
+          setVersionStatus({ ok: Boolean(verResp.ok), status: verResp.status, body });
+        }
       } catch {
         // If config can't be loaded (e.g. API base misconfigured), keep password UI visible.
-        if (alive) setApiReachable(false);
+        if (alive) {
+          setApiReachable(false);
+          setHealthStatus(null);
+          setAuthCfg(null);
+          setVersionStatus(null);
+        }
       }
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [checkSeq]);
 
   React.useEffect(() => {
     setError(null);
@@ -277,6 +309,62 @@ const AuthRoom: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
           </div>
         ) : null}
+
+        <details className="auth-loading" style={{ marginTop: 10 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 650 }}>接続/認証チェック（診断）</summary>
+          <div className="auth-loading-sub" style={{ marginTop: 8 }}>
+            <div>API: {API_BASE || '(未設定)'}</div>
+            <div>Origin: {(() => { try { return window.location.origin; } catch { return '(unknown)'; } })()}</div>
+            <div>
+              /api/health: {healthStatus ? (healthStatus.ok ? `OK (${healthStatus.status})` : `NG (${healthStatus.status})`) : apiReachable === false ? 'NG (no response)' : '未取得'}
+            </div>
+            <div>
+              /api/auth/config: {authCfg ? `passwordEnabled=${String(Boolean(authCfg.passwordEnabled))}` : '未取得'}
+            </div>
+            <div>
+              /api/diagnostics/version:{' '}
+              {versionStatus
+                ? versionStatus.ok
+                  ? `OK (${versionStatus.status})`
+                  : `NG (${versionStatus.status})`
+                : '未取得'}
+            </div>
+            {versionStatus?.body ? (
+              <div style={{ opacity: 0.9 }}>
+                authStorePath: {String(versionStatus.body?.authStorePath ?? '(unknown)')}
+                {versionStatus.body?.commit ? ` / commit: ${String(versionStatus.body.commit)}` : ''}
+              </div>
+            ) : null}
+            {lastCheckAt ? <div>checkedAt: {lastCheckAt}</div> : null}
+
+            <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button className="btn" type="button" onClick={() => setCheckSeq((v) => v + 1)} disabled={busy}>
+                再チェック
+              </button>
+              {API_BASE ? (
+                <a className="btn" href={`${API_BASE}/api/health`} target="_blank" rel="noreferrer">
+                  health を開く
+                </a>
+              ) : null}
+              {API_BASE ? (
+                <a className="btn" href={`${API_BASE}/api/auth/config`} target="_blank" rel="noreferrer">
+                  auth config を開く
+                </a>
+              ) : null}
+              {API_BASE ? (
+                <a className="btn" href={`${API_BASE}/api/diagnostics/version`} target="_blank" rel="noreferrer">
+                  version を開く
+                </a>
+              ) : null}
+            </div>
+
+            {authCfg && authCfg.passwordEnabled === false ? (
+              <div style={{ marginTop: 10 }}>
+                ブロッカー: バックエンド側でメール/パスワード認証が無効です。Render の環境変数に `AUTH_ALLOW_PASSWORD=true` を追加して再デプロイしてください。
+              </div>
+            ) : null}
+          </div>
+        </details>
 
         {OAUTH_ENABLED && missingOAuthProviders.length ? (
           <div className="auth-loading" role="note">
