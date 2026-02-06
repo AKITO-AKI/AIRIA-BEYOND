@@ -700,6 +700,8 @@ See [docs/SECURITY_SUMMARY.md](./docs/SECURITY_SUMMARY.md) for security analysis
 
 ## Deployment
 
+- Xserver（共有サーバ）へ移行する場合: [docs/XSERVER_DEPLOYMENT.md](docs/XSERVER_DEPLOYMENT.md)
+
 ### GitHub Pages (Frontend Only)
 
 The static frontend is automatically deployed to GitHub Pages when changes are pushed to the main branch. The deployment workflow:

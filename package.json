@@ -16,6 +16,7 @@
     "dev:api": "npm run server:dev",
     "build": "npm --workspace apps/web run build",
     "build:web": "npm --workspace apps/web run build",
+    "build:xserver": "npm --workspace apps/web run build:xserver",
     "deploy": "npm --workspace apps/web run deploy",
     "deploy:web": "npm --workspace apps/web run deploy",
     "start": "node server.js",

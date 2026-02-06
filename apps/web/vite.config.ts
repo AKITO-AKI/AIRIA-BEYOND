@@ -4,13 +4,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   // Vite env vars are injected at build time.
   // - GitHub Pages: VITE_PUBLIC_BASE_PATH=/AIRIA-BEYOND/
-  // - Custom domain / Netlify root: VITE_PUBLIC_BASE_PATH=/
+  // - Custom domain / Netlify root / Xserver root: VITE_PUBLIC_BASE_PATH=/
   const env = loadEnv(mode, process.cwd(), '');
-  // Netlify builds serve from domain root by default. If base is left unset,
-  // defaulting to GitHub Pages path will break asset URLs and result in a blank screen.
-  const base = String(
-    env.VITE_PUBLIC_BASE_PATH || (process.env.NETLIFY ? '/' : '/AIRIA-BEYOND/')
-  );
+  // Default to domain root unless explicitly overridden.
+  // GitHub Pages deployments set VITE_PUBLIC_BASE_PATH=/AIRIA-BEYOND/ via workflow env.
+  const base = String(env.VITE_PUBLIC_BASE_PATH || '/');
 
   return {
     plugins: [react()],

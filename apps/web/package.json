@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:xserver": "vite build --mode xserver",
     "preview": "vite preview",
     "analyze": "vite-bundle-visualizer",
     "predeploy": "npm run build",
