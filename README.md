@@ -164,7 +164,14 @@ AUTH_ALLOW_PASSWORD=true
 # Default: false
 AUTH_ALLOW_OAUTH=false
 
-# (Recommended on Render) Persist the auth store to a disk mount
+# Persistence options
+#
+# Option A (Recommended / Free): Neon Postgres
+# - Create a Neon database and set DATABASE_URL on the backend.
+# - When DATABASE_URL is set, the auth store uses Postgres instead of a JSON file.
+DATABASE_URL=postgresql://...
+
+# Option B: Persist the auth store to a disk mount (Render disk may be paid)
 # Example: /var/data/auth-store.json (see render.yaml)
 AUTH_STORE_PATH=/var/data/auth-store.json
 ```

@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import { isDbEnabled } from './db.js';
+import * as dbStore from './authStoreDb.js';
 
 const DEFAULT_PATH = path.join(process.cwd(), 'api', 'data', 'auth-store.json');
 const STORE_PATH = process.env.AUTH_STORE_PATH ? path.resolve(process.env.AUTH_STORE_PATH) : DEFAULT_PATH;
@@ -10,12 +12,15 @@ let users = [];
 let sessions = [];
 
 export function getAuthStorePath() {
+  if (isDbEnabled()) return 'postgres:DATABASE_URL';
   return STORE_PATH;
 }
 
 export async function getAuthStoreDebugInfo() {
+  if (isDbEnabled()) return dbStore.getAuthStoreDebugInfo();
   await loadIfNeeded();
   return {
+    mode: 'file',
     storePath: STORE_PATH,
     loaded,
     userCount: Array.isArray(users) ? users.length : 0,
@@ -209,6 +214,7 @@ function cleanupExpiredSessionsSync() {
 }
 
 export async function registerUser({ handle, email, password, displayName }) {
+  if (isDbEnabled()) return dbStore.registerUser({ handle, email, password, displayName });
   await loadIfNeeded();
 
   if (!isPasswordAuthEnabled()) {
@@ -261,6 +267,7 @@ export async function registerUser({ handle, email, password, displayName }) {
 }
 
 export async function authenticateUser({ handle, password }) {
+  if (isDbEnabled()) return dbStore.authenticateUser({ handle, password });
   await loadIfNeeded();
   if (!isPasswordAuthEnabled()) return null;
   const safeHandle = sanitizeHandle(handle);
@@ -279,6 +286,7 @@ export async function authenticateUser({ handle, password }) {
 }
 
 export async function authenticateUserByEmail({ email, password }) {
+  if (isDbEnabled()) return dbStore.authenticateUserByEmail({ email, password });
   await loadIfNeeded();
   if (!isPasswordAuthEnabled()) return null;
   const normalizedEmail = normalizeEmail(email);
@@ -298,6 +306,7 @@ export async function authenticateUserByEmail({ email, password }) {
 }
 
 export async function createSession(userId, { ttlDays = 30 } = {}) {
+  if (isDbEnabled()) return dbStore.createSession(userId, { ttlDays });
   await loadIfNeeded();
 
   const user = users.find((u) => u.id === userId);
@@ -315,6 +324,7 @@ export async function createSession(userId, { ttlDays = 30 } = {}) {
 }
 
 export async function deleteSession(token) {
+  if (isDbEnabled()) return dbStore.deleteSession(token);
   await loadIfNeeded();
   const t = String(token || '');
   const before = sessions.length;
@@ -323,6 +333,7 @@ export async function deleteSession(token) {
 }
 
 export async function getUserBySessionToken(token) {
+  if (isDbEnabled()) return dbStore.getUserBySessionToken(token);
   await loadIfNeeded();
   const t = String(token || '');
   if (!t) return null;
@@ -338,11 +349,13 @@ export async function getUserBySessionToken(token) {
 }
 
 export async function getUserRecordById(userId) {
+  if (isDbEnabled()) return dbStore.getUserRecordById(userId);
   await loadIfNeeded();
   return users.find((u) => u.id === userId) || null;
 }
 
 export async function findOrCreateUserForIdentity({ provider, subject, email, displayName } = {}) {
+  if (isDbEnabled()) return dbStore.findOrCreateUserForIdentity({ provider, subject, email, displayName });
   await loadIfNeeded();
 
   const p = normalizeProvider(provider);
@@ -406,11 +419,13 @@ export async function findOrCreateUserForIdentity({ provider, subject, email, di
 }
 
 export async function getPublicUserById(userId) {
+  if (isDbEnabled()) return dbStore.getPublicUserById(userId);
   const rec = await getUserRecordById(userId);
   return rec ? toPublicUser(rec) : null;
 }
 
 export async function updateMyProfile(userId, patch) {
+  if (isDbEnabled()) return dbStore.updateMyProfile(userId, patch);
   await loadIfNeeded();
   const user = users.find((u) => u.id === userId);
   if (!user) throw new Error('user not found');
@@ -430,6 +445,7 @@ export async function updateMyProfile(userId, patch) {
 }
 
 export async function toggleFollow(followerId, followeeId) {
+  if (isDbEnabled()) return dbStore.toggleFollow(followerId, followeeId);
   await loadIfNeeded();
 
   if (!followerId || !followeeId) throw new Error('invalid user id');
@@ -463,18 +479,21 @@ export async function toggleFollow(followerId, followeeId) {
 }
 
 export async function getFollowingIds(userId) {
+  if (isDbEnabled()) return dbStore.getFollowingIds(userId);
   const rec = await getUserRecordById(userId);
   const ids = rec?.followingIds;
   return Array.isArray(ids) ? ids.map(String) : [];
 }
 
 export async function listPublicUsers({ limit = 50 } = {}) {
+  if (isDbEnabled()) return dbStore.listPublicUsers({ limit });
   await loadIfNeeded();
   const safeLimit = Math.max(1, Math.min(200, Number(limit) || 50));
   return users.slice(0, safeLimit).map(toPublicUser);
 }
 
 export async function getAdminUserMetrics() {
+  if (isDbEnabled()) return dbStore.getAdminUserMetrics();
   await loadIfNeeded();
   return {
     totalUsers: users.length,
@@ -486,6 +505,7 @@ export async function getAdminUserMetrics() {
 }
 
 export function toPublicUser(user) {
+  if (isDbEnabled()) return dbStore.toPublicUser(user);
   if (!user) return null;
   return {
     id: String(user.id),
