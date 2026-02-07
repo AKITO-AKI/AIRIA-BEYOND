@@ -8,6 +8,7 @@
 import Replicate from 'replicate';
 import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore.js';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
+import { getClientIdentifier } from '../lib/client-id.js';
 import { buildPrompt } from '../promptBuilder.js';
 import { trackUsage } from '../lib/usage-tracker.js';
 import { debugAiConsole, debugAiLog } from '../lib/aiDebug.js';
@@ -206,18 +207,7 @@ async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed) {
   return { resultUrl, promptId };
 }
 
-/**
- * Get client identifier (IP address) from request
- * @param {Object} req - Express request object
- * @returns {string} Client identifier
- */
-function getClientIdentifier(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers['x-real-ip'] || 'unknown';
-}
+
 
 /**
  * Check if error is transient and should be retried

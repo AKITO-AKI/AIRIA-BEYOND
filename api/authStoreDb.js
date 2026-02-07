@@ -1,7 +1,10 @@
 import crypto from 'crypto';
+import { promisify } from 'util';
 import { dbQuery, isDbEnabled } from './db.js';
 
 let schemaReady = false;
+
+const scryptAsync = promisify(crypto.scrypt);
 
 function base64Url(buf) {
   return buf
@@ -64,11 +67,26 @@ function makeStableHandleFromIdentity(provider, subject) {
   return sanitizeHandle(base) || `u_${hash.slice(0, 10)}`;
 }
 
-function hashPassword(password, salt) {
+async function hashPassword(password, salt, { pepper = '' } = {}) {
   const pwd = String(password ?? '');
   if (!pwd) throw new Error('password is required');
-  const key = crypto.scryptSync(pwd, salt, 32);
-  return base64Url(key);
+  const s = String(salt ?? '');
+  if (!s) throw new Error('password salt is required');
+  const p = String(pepper ?? '');
+  const material = p ? `${pwd}\u0000${p}` : pwd;
+  const key = await scryptAsync(material, s, 32);
+  return base64Url(Buffer.isBuffer(key) ? key : Buffer.from(key));
+}
+
+function safeEqual(a, b) {
+  try {
+    const ba = Buffer.from(String(a || ''));
+    const bb = Buffer.from(String(b || ''));
+    if (ba.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
 }
 
 function isPasswordAuthEnabled() {
@@ -76,6 +94,36 @@ function isPasswordAuthEnabled() {
   if (allow === 'true') return true;
   if (allow === 'false') return false;
   return true;
+}
+
+function isEmailRequired() {
+  const v = String(process.env.AUTH_REQUIRE_EMAIL || '').trim().toLowerCase();
+  if (v === 'true' || v === '1' || v === 'yes' || v === 'on') return true;
+  if (v === 'false' || v === '0' || v === 'no' || v === 'off') return false;
+  return false;
+}
+
+function getPasswordPepper() {
+  return String(process.env.AUTH_PASSWORD_PEPPER || '');
+}
+
+async function verifyPasswordForUser(user, password) {
+  const salt = String(user?.passwordSalt || '');
+  const stored = String(user?.passwordHash || '');
+  if (!salt || !stored) return { ok: false, upgraded: false };
+
+  const pepper = getPasswordPepper();
+  if (pepper) {
+    const computedPeppered = await hashPassword(password, salt, { pepper });
+    if (safeEqual(computedPeppered, stored)) return { ok: true, upgraded: false };
+
+    const computedLegacy = await hashPassword(password, salt, { pepper: '' });
+    if (safeEqual(computedLegacy, stored)) return { ok: true, upgraded: true };
+    return { ok: false, upgraded: false };
+  }
+
+  const computed = await hashPassword(password, salt, { pepper: '' });
+  return { ok: safeEqual(computed, stored), upgraded: false };
 }
 
 async function ensureSchema() {
@@ -177,6 +225,9 @@ export async function registerUser({ handle, email, password, displayName }) {
   }
 
   const normalizedEmail = normalizeEmail(email);
+  if (isEmailRequired() && !normalizedEmail) {
+    throw new Error('email is required');
+  }
   const requestedHandle = sanitizeHandle(handle);
   const derivedHandle = !requestedHandle && normalizedEmail ? makeStableHandleFromEmail(normalizedEmail) : '';
   const baseHandle = requestedHandle || derivedHandle;
@@ -186,7 +237,7 @@ export async function registerUser({ handle, email, password, displayName }) {
   if (pwd.length < 6) throw new Error('password must be at least 6 characters');
 
   const salt = base64Url(crypto.randomBytes(16));
-  const passwordHash = hashPassword(pwd, salt);
+  const passwordHash = await hashPassword(pwd, salt, { pepper: getPasswordPepper() });
 
   // Allocate unique handle.
   let finalHandle = baseHandle;
@@ -243,9 +294,16 @@ export async function authenticateUser({ handle, password }) {
   if (!user.passwordSalt || !user.passwordHash) return null;
 
   try {
-    const computed = hashPassword(password, String(user.passwordSalt || ''));
-    const ok = crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(String(user.passwordHash || '')));
-    return ok ? toPublicUser(user) : null;
+    const result = await verifyPasswordForUser(user, password);
+    if (!result.ok) return null;
+
+    if (result.upgraded) {
+      const newSalt = base64Url(crypto.randomBytes(16));
+      const newHash = await hashPassword(password, newSalt, { pepper: getPasswordPepper() });
+      await dbQuery('UPDATE users SET password_salt=$1, password_hash=$2, updated_at=NOW() WHERE id=$3', [newSalt, newHash, user.id]);
+    }
+
+    return toPublicUser(user);
   } catch {
     return null;
   }
@@ -264,9 +322,16 @@ export async function authenticateUserByEmail({ email, password }) {
   if (!user.passwordSalt || !user.passwordHash) return null;
 
   try {
-    const computed = hashPassword(password, String(user.passwordSalt || ''));
-    const ok = crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(String(user.passwordHash || '')));
-    return ok ? toPublicUser(user) : null;
+    const result = await verifyPasswordForUser(user, password);
+    if (!result.ok) return null;
+
+    if (result.upgraded) {
+      const newSalt = base64Url(crypto.randomBytes(16));
+      const newHash = await hashPassword(password, newSalt, { pepper: getPasswordPepper() });
+      await dbQuery('UPDATE users SET password_salt=$1, password_hash=$2, updated_at=NOW() WHERE id=$3', [newSalt, newHash, user.id]);
+    }
+
+    return toPublicUser(user);
   } catch {
     return null;
   }

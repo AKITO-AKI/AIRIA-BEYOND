@@ -7,6 +7,7 @@
 
 import { createAnalysisJob, updateAnalysisJob } from '../analysisJobStore.js';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
+import { getClientIdentifier } from '../lib/client-id.js';
 import { generateIR } from '../llmService.js';
 
 function hasOllamaConfigured() {
@@ -56,18 +57,7 @@ async function runWithTimeout(promise, timeoutMs) {
   }
 }
 
-/**
- * Get client identifier (IP address) from request
- * @param {Object} req - Express request object
- * @returns {string} Client identifier
- */
-function getClientIdentifier(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers['x-real-ip'] || 'unknown';
-}
+
 
 /**
  * Execute analysis with retry logic

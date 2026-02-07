@@ -1,13 +1,7 @@
 import { checkRateLimit } from '../lib/rate-limit.js';
+import { getClientIdentifier } from '../lib/client-id.js';
 import { createFeedbackEntry } from '../feedbackStore.js';
 
-function getClientIdentifier(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers['x-real-ip'] || 'unknown';
-}
 
 function toOptionalString(value, maxLen) {
   if (value === null || value === undefined) return undefined;

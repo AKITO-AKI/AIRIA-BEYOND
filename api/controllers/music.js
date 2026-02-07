@@ -7,6 +7,7 @@
 
 import { createMusicJob, updateMusicJob, getMusicJob } from '../musicJobStore.js';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
+import { getClientIdentifier } from '../lib/client-id.js';
 import { generateMusicStructureWithFallback } from '../musicLLMService.js';
 import { musicStructureToMIDI } from '../midiConverter.js';
 import MidiWriter from 'midi-writer-js';
@@ -167,18 +168,7 @@ function safeStructureToMidi(structure, warnings) {
   }
 }
 
-/**
- * Get client identifier (IP address) from request
- * @param {Object} req - Express request object
- * @returns {string} Client identifier
- */
-function getClientIdentifier(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers['x-real-ip'] || 'unknown';
-}
+
 
 /**
  * Execute music generation with retry logic

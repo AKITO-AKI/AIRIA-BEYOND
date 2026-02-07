@@ -5,6 +5,81 @@
 
 import OpenAI from 'openai';
 import { ollamaChatJson } from './lib/ollamaClient.js';
+import { parseJsonLoose } from './lib/json.js';
+
+function envStr(name, fallback = '') {
+  const v = String(process.env[name] ?? '').trim();
+  return v || fallback;
+}
+
+function envNum(name, fallback) {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) ? v : fallback;
+}
+
+function getMusicModel() {
+  return envStr('OPENAI_MODEL_MUSIC', 'gpt-4o-mini');
+}
+
+function getMusicTemperature() {
+  return Math.max(0, Math.min(1, envNum('LLM_TEMPERATURE_MUSIC', 0.65)));
+}
+
+function clamp(n, min, max, fallback) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fallback;
+  return Math.max(min, Math.min(max, x));
+}
+
+function sanitizeMusicStructure(raw) {
+  const s = raw && typeof raw === 'object' ? raw : {};
+  const tempo = clamp(s.tempo, 40, 220, 96);
+  const sections = Array.isArray(s.sections) ? s.sections : [];
+
+  const safeSections = sections.slice(0, 8).map((sec, idx) => {
+    const obj = sec && typeof sec === 'object' ? sec : {};
+    const melody = obj.melody && typeof obj.melody === 'object' ? obj.melody : {};
+    const motifs = Array.isArray(melody.motifs) ? melody.motifs : [];
+
+    const safeMotifs = motifs.slice(0, 4).map((m) => {
+      const mm = m && typeof m === 'object' ? m : {};
+      const degrees = Array.isArray(mm.degrees) ? mm.degrees.map((d) => clamp(d, 1, 7, 1)).filter(Number.isFinite) : [1, 3, 5, 3];
+      const rhythm = Array.isArray(mm.rhythm) ? mm.rhythm.map((r) => clamp(r, 0.25, 8, 1)).filter(Number.isFinite) : [1, 1, 1, 1];
+      return { degrees: degrees.slice(0, 16), rhythm: rhythm.slice(0, 16) };
+    });
+
+    return {
+      name: String(obj.name || String.fromCharCode(65 + (idx % 26))).slice(0, 20),
+      measures: clamp(obj.measures, 1, 256, 8),
+      chordProgression: Array.isArray(obj.chordProgression)
+        ? obj.chordProgression.map((c) => String(c || '').trim()).filter(Boolean).slice(0, 32)
+        : ['I', 'IV', 'V', 'I'],
+      melody: { motifs: safeMotifs.length ? safeMotifs : [{ degrees: [1, 3, 5, 3], rhythm: [1, 1, 1, 1] }] },
+      dynamics: String(obj.dynamics || 'mf').slice(0, 4),
+      texture: String(obj.texture || 'simple').slice(0, 24),
+    };
+  });
+
+  return {
+    key: String(s.key || 'C major').slice(0, 24),
+    tempo,
+    timeSignature: String(s.timeSignature || '4/4').slice(0, 12),
+    form: String(s.form || 'ABA').slice(0, 24),
+    sections: safeSections.length ? safeSections : [
+      {
+        name: 'A',
+        measures: 8,
+        chordProgression: ['I', 'IV', 'V', 'I'],
+        melody: { motifs: [{ degrees: [1, 3, 5, 3], rhythm: [1, 1, 1, 1] }] },
+        dynamics: 'mf',
+        texture: 'simple',
+      },
+    ],
+    instrumentation: String(s.instrumentation || 'piano').slice(0, 40),
+    character: String(s.character || '').slice(0, 160),
+    reasoning: s.reasoning ? String(s.reasoning).slice(0, 1200) : undefined,
+  };
+}
 
 // Initialize OpenAI client
 const openai = process.env.OPENAI_API_KEY
@@ -99,13 +174,14 @@ Output ONLY valid JSON with this exact structure:
     const musicStructure = await ollamaChatJson({
       system: systemPrompt,
       user: userPrompt,
-      temperature: 0.8,
+      temperature: getMusicTemperature(),
       maxTokens: 1800,
       model: process.env.OLLAMA_MODEL_MUSIC || process.env.OLLAMA_MODEL,
       debugTag: 'MusicLLM',
     });
 
-    if (!musicStructure?.key || !musicStructure?.tempo || !musicStructure?.sections) {
+    const sanitized = sanitizeMusicStructure(musicStructure);
+    if (!sanitized?.key || !sanitized?.tempo || !sanitized?.sections?.length) {
       throw new Error('Invalid music structure from Ollama');
     }
 
@@ -116,7 +192,7 @@ Output ONLY valid JSON with this exact structure:
       sections: Array.isArray(musicStructure.sections) ? musicStructure.sections.length : 0,
     });
 
-    return musicStructure;
+    return sanitized;
   }
 
   if (!openai) {
@@ -196,27 +272,42 @@ Target duration: ${duration} seconds
 Create a composition that reflects these emotional qualities, staying within the allowed genre palette and respecting the timbre arc when provided.${constraintsBlock}`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 2000,
-      response_format: { type: 'json_object' },
-    });
+    const attempt = async (temperature, strictTag) => {
+      const completion = await openai.chat.completions.create({
+        model: getMusicModel(),
+        messages: [
+          {
+            role: 'system',
+            content:
+              systemPrompt +
+              (strictTag
+                ? '\n\nSTRICT MODE: Output ONLY valid JSON. Ensure types: tempo/measures are numbers, arrays are arrays.'
+                : ''),
+          },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature,
+        max_tokens: 2200,
+        response_format: { type: 'json_object' },
+      });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No content in LLM response');
-    }
+      const content = completion.choices[0]?.message?.content;
+      if (!content) throw new Error('No content in LLM response');
+      const parsed = parseJsonLoose(content);
+      if (parsed == null) throw new Error('Music JSON parse failed');
+      const sanitized = sanitizeMusicStructure(parsed);
+      if (!sanitized.key || !sanitized.tempo || !Array.isArray(sanitized.sections) || !sanitized.sections.length) {
+        throw new Error('Invalid music structure from LLM');
+      }
+      return sanitized;
+    };
 
-    const musicStructure = JSON.parse(content);
-
-    // Validate structure
-    if (!musicStructure.key || !musicStructure.tempo || !musicStructure.sections) {
-      throw new Error('Invalid music structure from LLM');
+    let musicStructure;
+    try {
+      musicStructure = await attempt(getMusicTemperature(), false);
+    } catch (e) {
+      console.warn('[MusicLLM] First attempt invalid; retrying strict mode');
+      musicStructure = await attempt(0.2, true);
     }
 
     console.log('[MusicLLM] Generated music structure:', {
@@ -241,7 +332,9 @@ Create a composition that reflects these emotional qualities, staying within the
 export async function generateMusicStructureWithFallback(request) {
   try {
     const structure = await generateMusicStructure(request);
-    return { structure, provider: 'openai' };
+    const providerPref = getProviderPreference();
+    const provider = providerPref === 'ollama' || (!openai && hasOllamaConfigured()) ? 'ollama' : 'openai';
+    return { structure, provider };
   } catch (error) {
     console.warn('[MusicLLM] Falling back to rule-based generation:', error);
     const structure = generateRuleBasedMusic(request);

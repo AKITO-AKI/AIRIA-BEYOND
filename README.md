@@ -701,6 +701,7 @@ See [docs/SECURITY_SUMMARY.md](./docs/SECURITY_SUMMARY.md) for security analysis
 ## Deployment
 
 - Xserver（共有サーバ）へ移行する場合: [docs/XSERVER_DEPLOYMENT.md](docs/XSERVER_DEPLOYMENT.md)
+- Xserver VPS で API を運用する場合: [docs/XSERVER_VPS_DEPLOYMENT.md](docs/XSERVER_VPS_DEPLOYMENT.md)
 
 ### GitHub Pages (Frontend Only)
 

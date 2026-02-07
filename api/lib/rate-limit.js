@@ -17,7 +17,7 @@
  * @property {number} activeJobs
  */
 
-// Per-IP rate limiting (N requests per minute)
+// Per-key rate limiting (N requests per minute)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 5; // 5 requests per minute
 
@@ -45,23 +45,27 @@ setInterval(() => {
  * @param {string} identifier - IP address or session ID
  * @returns {boolean} true if allowed, false if rate limited
  */
-export function checkRateLimit(identifier) {
+export function checkRateLimit(identifier, opts = undefined) {
   const now = Date.now();
-  const entry = rateLimits.get(identifier);
-  
+  const windowMs = Number(opts?.windowMs ?? RATE_LIMIT_WINDOW_MS) || RATE_LIMIT_WINDOW_MS;
+  const maxRequests = Number(opts?.maxRequests ?? RATE_LIMIT_MAX_REQUESTS) || RATE_LIMIT_MAX_REQUESTS;
+
+  const key = `${String(identifier || '')}|${windowMs}|${maxRequests}`;
+  const entry = rateLimits.get(key);
+
   if (!entry || entry.resetAt < now) {
     // New window
-    rateLimits.set(identifier, {
+    rateLimits.set(key, {
       count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW_MS,
+      resetAt: now + windowMs,
     });
     return true;
   }
-  
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+
+  if (entry.count >= maxRequests) {
     return false;
   }
-  
+
   entry.count++;
   return true;
 }
@@ -103,19 +107,22 @@ export function releaseJob(identifier) {
  * @param {string} identifier - IP address or session ID
  * @returns {{requestsUsed: number, requestsRemaining: number, resetAt: number}}
  */
-export function getRateLimitInfo(identifier) {
-  const entry = rateLimits.get(identifier);
+export function getRateLimitInfo(identifier, opts = undefined) {
+  const windowMs = Number(opts?.windowMs ?? RATE_LIMIT_WINDOW_MS) || RATE_LIMIT_WINDOW_MS;
+  const maxRequests = Number(opts?.maxRequests ?? RATE_LIMIT_MAX_REQUESTS) || RATE_LIMIT_MAX_REQUESTS;
+  const key = `${String(identifier || '')}|${windowMs}|${maxRequests}`;
+  const entry = rateLimits.get(key);
   if (!entry) {
     return {
       requestsUsed: 0,
-      requestsRemaining: RATE_LIMIT_MAX_REQUESTS,
-      resetAt: Date.now() + RATE_LIMIT_WINDOW_MS,
+      requestsRemaining: maxRequests,
+      resetAt: Date.now() + windowMs,
     };
   }
   
   return {
     requestsUsed: entry.count,
-    requestsRemaining: Math.max(0, RATE_LIMIT_MAX_REQUESTS - entry.count),
+    requestsRemaining: Math.max(0, maxRequests - entry.count),
     resetAt: entry.resetAt,
   };
 }

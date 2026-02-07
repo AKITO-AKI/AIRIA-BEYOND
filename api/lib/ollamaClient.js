@@ -1,4 +1,5 @@
 import { debugAiConsole, debugAiLog } from './aiDebug.js';
+import { parseJsonLoose } from './json.js';
 
 function getBaseUrl() {
   const raw = process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
@@ -118,11 +119,11 @@ export async function ollamaChatJson({
     debugTag,
   });
 
-  try {
-    return JSON.parse(out.content);
-  } catch {
+  const parsed = parseJsonLoose(out.content);
+  if (parsed == null) {
     const err = new Error('Ollama JSON parse failed (model did not return JSON)');
     err.raw = out.content;
     throw err;
   }
+  return parsed;
 }

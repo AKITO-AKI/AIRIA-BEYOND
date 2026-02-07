@@ -1,11 +1,16 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+import { promisify } from 'util';
 import { isDbEnabled } from './db.js';
 import * as dbStore from './authStoreDb.js';
 
-const DEFAULT_PATH = path.join(process.cwd(), 'api', 'data', 'auth-store.json');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_PATH = path.join(__dirname, 'data', 'auth-store.json');
 const STORE_PATH = process.env.AUTH_STORE_PATH ? path.resolve(process.env.AUTH_STORE_PATH) : DEFAULT_PATH;
+
+const scryptAsync = promisify(crypto.scrypt);
 
 let loaded = false;
 let users = [];
@@ -35,6 +40,17 @@ function isPasswordAuthEnabled() {
   if (allow === 'false') return false;
   // Pre-release default: password auth is ON unless explicitly disabled.
   return true;
+}
+
+function isEmailRequired() {
+  const v = String(process.env.AUTH_REQUIRE_EMAIL || '').trim().toLowerCase();
+  if (v === 'true' || v === '1' || v === 'yes' || v === 'on') return true;
+  if (v === 'false' || v === '0' || v === 'no' || v === 'off') return false;
+  return false;
+}
+
+function getPasswordPepper() {
+  return String(process.env.AUTH_PASSWORD_PEPPER || '');
 }
 
 async function ensureDirExists(filePath) {
@@ -67,9 +83,9 @@ async function loadIfNeeded() {
     }
   } catch {
     // If the store doesn't exist yet (common on fresh deployments), attempt a one-time
-    // migration from the previous default path. This helps when switching to a
-    // persistent disk path via AUTH_STORE_PATH.
-    const migrated = await tryMigrateFromDefaultStore();
+    // migration from legacy/default paths. This helps when switching to a persistent
+    // disk path via AUTH_STORE_PATH, or when older deployments depended on process.cwd().
+    const migrated = await tryMigrateFromLegacyStores();
     if (!migrated) {
       users = [];
       sessions = [];
@@ -77,6 +93,35 @@ async function loadIfNeeded() {
   }
 
   cleanupExpiredSessionsSync();
+}
+
+async function tryMigrateFromLegacyStores() {
+  // Prefer explicit previous default path migration.
+  const migratedDefault = await tryMigrateFromDefaultStore();
+  if (migratedDefault) return true;
+
+  // Legacy: earlier versions used process.cwd() to compute the default path.
+  // When systemd didn't set WorkingDirectory, this could have pointed at `/api/data/...`.
+  const legacyCwdPath = path.join(process.cwd(), 'api', 'data', 'auth-store.json');
+  if (legacyCwdPath === STORE_PATH || legacyCwdPath === DEFAULT_PATH) return false;
+
+  try {
+    const raw = await fs.readFile(legacyCwdPath, 'utf-8').catch(() => '');
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    const migratedUsers = Array.isArray(parsed?.users) ? parsed.users : [];
+    const migratedSessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+    if (!migratedUsers.length && !migratedSessions.length) return false;
+
+    users = migratedUsers;
+    sessions = migratedSessions;
+    cleanupExpiredSessionsSync();
+
+    await persist();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function tryMigrateFromDefaultStore() {
@@ -198,11 +243,50 @@ function normalizeSubject(subject) {
   return s.slice(0, 200);
 }
 
-function hashPassword(password, salt) {
+async function hashPassword(password, salt, { pepper = '' } = {}) {
   const pwd = String(password ?? '');
   if (!pwd) throw new Error('password is required');
-  const key = crypto.scryptSync(pwd, salt, 32);
-  return base64Url(key);
+  const s = String(salt ?? '');
+  if (!s) throw new Error('password salt is required');
+  const p = String(pepper ?? '');
+  const material = p ? `${pwd}\u0000${p}` : pwd;
+  const key = await scryptAsync(material, s, 32);
+  return base64Url(Buffer.isBuffer(key) ? key : Buffer.from(key));
+}
+
+function safeEqual(a, b) {
+  try {
+    const ba = Buffer.from(String(a || ''));
+    const bb = Buffer.from(String(b || ''));
+    if (ba.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
+
+async function verifyPasswordForUserRecord(user, password) {
+  const salt = String(user?.passwordSalt || '');
+  const stored = String(user?.passwordHash || '');
+  if (!salt || !stored) return { ok: false, upgraded: false };
+
+  const pepper = getPasswordPepper();
+
+  if (pepper) {
+    const computedPeppered = await hashPassword(password, salt, { pepper });
+    if (safeEqual(computedPeppered, stored)) return { ok: true, upgraded: false };
+
+    // Backward compatibility: legacy accounts created before pepper was configured.
+    const computedLegacy = await hashPassword(password, salt, { pepper: '' });
+    if (safeEqual(computedLegacy, stored)) {
+      return { ok: true, upgraded: true };
+    }
+
+    return { ok: false, upgraded: false };
+  }
+
+  const computed = await hashPassword(password, salt, { pepper: '' });
+  return { ok: safeEqual(computed, stored), upgraded: false };
 }
 
 function cleanupExpiredSessionsSync() {
@@ -222,6 +306,9 @@ export async function registerUser({ handle, email, password, displayName }) {
   }
 
   const normalizedEmail = normalizeEmail(email);
+  if (isEmailRequired() && !normalizedEmail) {
+    throw new Error('email is required');
+  }
   if (normalizedEmail) {
     const emailTaken = users.some((u) => normalizeEmail(u?.email) === normalizedEmail);
     if (emailTaken) throw new Error('email is already registered');
@@ -245,7 +332,7 @@ export async function registerUser({ handle, email, password, displayName }) {
   if (pwd.length < 6) throw new Error('password must be at least 6 characters');
 
   const salt = base64Url(crypto.randomBytes(16));
-  const passwordHash = hashPassword(pwd, salt);
+  const passwordHash = await hashPassword(pwd, salt, { pepper: getPasswordPepper() });
 
   const now = new Date().toISOString();
   const user = {
@@ -277,9 +364,18 @@ export async function authenticateUser({ handle, password }) {
   if (!user) return null;
 
   try {
-    const computed = hashPassword(password, String(user.passwordSalt || ''));
-    const ok = crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(String(user.passwordHash || '')));
-    return ok ? toPublicUser(user) : null;
+    const result = await verifyPasswordForUserRecord(user, password);
+    if (!result.ok) return null;
+
+    if (result.upgraded) {
+      const newSalt = base64Url(crypto.randomBytes(16));
+      user.passwordSalt = newSalt;
+      user.passwordHash = await hashPassword(password, newSalt, { pepper: getPasswordPepper() });
+      user.updatedAt = new Date().toISOString();
+      await persist();
+    }
+
+    return toPublicUser(user);
   } catch {
     return null;
   }
@@ -297,9 +393,18 @@ export async function authenticateUserByEmail({ email, password }) {
   if (!user.passwordSalt || !user.passwordHash) return null;
 
   try {
-    const computed = hashPassword(password, String(user.passwordSalt || ''));
-    const ok = crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(String(user.passwordHash || '')));
-    return ok ? toPublicUser(user) : null;
+    const result = await verifyPasswordForUserRecord(user, password);
+    if (!result.ok) return null;
+
+    if (result.upgraded) {
+      const newSalt = base64Url(crypto.randomBytes(16));
+      user.passwordSalt = newSalt;
+      user.passwordHash = await hashPassword(password, newSalt, { pepper: getPasswordPepper() });
+      user.updatedAt = new Date().toISOString();
+      await persist();
+    }
+
+    return toPublicUser(user);
   } catch {
     return null;
   }

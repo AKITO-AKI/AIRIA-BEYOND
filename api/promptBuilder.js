@@ -12,6 +12,16 @@
  */
 
 export const STYLE_PRESETS = {
+  'white-world': {
+    name: '白の世界 (White World)'
+    ,
+    promptSuffix:
+      'minimalist album cover, white matte paper, gallery framing, soft diffuse light, porcelain texture, frosted glass atmosphere, subtle grain, elegant negative space, fine art, masterpiece',
+    negativePrompt:
+      'text, watermark, logo, signature, typography, modern ui, screenshot, low quality, blurry, noisy artifacts, oversaturated, harsh contrast',
+    valenceRange: [-1.0, 1.0],
+    arousalRange: [0.0, 1.0],
+  },
   'oil-painting': {
     name: '油絵 (Oil Painting)',
     promptSuffix: 'oil painting, thick brushstrokes, rich texture, classical oil painting, masterpiece, fine art',
@@ -48,6 +58,30 @@ export const STYLE_PRESETS = {
     arousalRange: [0.5, 1.0], // intense, dynamic
   },
 };
+
+function envStr(name) {
+  return String(process.env[name] ?? '').trim();
+}
+
+function getDefaultStylePresetId() {
+  const v = envStr('IMAGE_DEFAULT_STYLE_PRESET');
+  return v || '';
+}
+
+function isWhiteWorldOverlayEnabled() {
+  const v = envStr('IMAGE_WHITE_WORLD_OVERLAY').toLowerCase();
+  if (!v) return false;
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
+function getWhiteWorldOverlay() {
+  return {
+    prompt:
+      'white world aesthetic, clean ceramic base, paper-like texture, frosted glass haze, subtle micro-grain, minimal composition, high-end gallery print',
+    negative:
+      'text, letters, watermark, logo, signature, ui elements, borders with text, poster typography, clutter',
+  };
+}
 
 // Mood keys for consistency
 export const MOOD_KEYS = {
@@ -196,6 +230,10 @@ export function buildPrompt(params) {
   
   // Auto-select style if not provided and we have IR data
   let selectedPreset = stylePreset;
+  if (!selectedPreset) {
+    const def = getDefaultStylePresetId();
+    if (def) selectedPreset = def;
+  }
   if (!selectedPreset && valence !== undefined && arousal !== undefined) {
     selectedPreset = autoSelectStylePreset(valence, arousal);
   }
@@ -248,11 +286,18 @@ export function buildPrompt(params) {
   
   // Combine with style preset
   const basePrompt = components.join(', ');
-  const fullPrompt = `${basePrompt}, ${preset.promptSuffix}`;
+  let fullPrompt = `${basePrompt}, ${preset.promptSuffix}`;
+  let fullNegative = preset.negativePrompt;
+
+  if (isWhiteWorldOverlayEnabled() && selectedPreset !== 'white-world') {
+    const overlay = getWhiteWorldOverlay();
+    fullPrompt = `${overlay.prompt}, ${fullPrompt}`;
+    fullNegative = `${fullNegative}, ${overlay.negative}`;
+  }
   
   return {
     prompt: fullPrompt,
-    negativePrompt: preset.negativePrompt,
+    negativePrompt: fullNegative,
   };
 }
 

@@ -3,14 +3,8 @@ import { addCommentV2, createPostV2, deletePostV2, getPostById, listPosts, toggl
 import { getFollowingIds, getPublicUserById, getUserRecordById, toggleFollow } from '../authStore.js';
 import { makeEngagementEmail, sendEmail } from '../lib/notifications.js';
 import { appendAuditEventFromReq } from '../lib/auditLog.js';
+import { getClientIdentifier } from '../lib/client-id.js';
 
-function getClientIdentifier(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers['x-real-ip'] || 'unknown';
-}
 
 export async function getPosts(req, res) {
   try {

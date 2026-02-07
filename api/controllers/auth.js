@@ -1,4 +1,5 @@
 import { checkRateLimit } from '../lib/rate-limit.js';
+import { getClientIdentifier } from '../lib/client-id.js';
 import { verifyAppleIdToken, verifyGoogleIdToken } from '../lib/oidc.js';
 import { appendAuditEventFromReq } from '../lib/auditLog.js';
 import {
@@ -30,12 +31,10 @@ function isOAuthEnabled() {
   return false;
 }
 
-function getClientIdentifier(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers['x-real-ip'] || 'unknown';
+function normalizeEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || !e.includes('@')) return '';
+  return e.slice(0, 254);
 }
 
 function getBearerToken(req) {
@@ -53,7 +52,7 @@ export async function registerHandler(req, res) {
     });
   }
   const clientId = getClientIdentifier(req);
-  if (!checkRateLimit(clientId)) {
+  if (!checkRateLimit(`auth:register:${clientId}`, { maxRequests: 10, windowMs: 60 * 1000 })) {
     return res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many requests. Please wait a minute and try again.',
@@ -62,6 +61,17 @@ export async function registerHandler(req, res) {
 
   try {
     const { handle, email, password, displayName } = req.body || {};
+
+    const normalizedEmail = normalizeEmail(email);
+    if (normalizedEmail) {
+      if (!checkRateLimit(`auth:register_email:${normalizedEmail}`, { maxRequests: 5, windowMs: 60 * 1000 })) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded',
+          message: 'Too many requests. Please wait a minute and try again.',
+        });
+      }
+    }
+
     const user = await registerUser({ handle, email, password, displayName });
     const rec = await getUserRecordById(user.id);
     appendAuditEventFromReq(req, {
@@ -97,7 +107,7 @@ export async function loginHandler(req, res) {
     });
   }
   const clientId = getClientIdentifier(req);
-  if (!checkRateLimit(clientId)) {
+  if (!checkRateLimit(`auth:login:${clientId}`, { maxRequests: 20, windowMs: 60 * 1000 })) {
     return res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many requests. Please wait a minute and try again.',
@@ -109,6 +119,24 @@ export async function loginHandler(req, res) {
     const handleOrEmail = String(handle || '').trim();
     const explicitEmail = String(email || '').trim();
     const looksLikeEmail = (explicitEmail || handleOrEmail).includes('@');
+
+    if (!String(password ?? '')) {
+      return res.status(400).json({
+        error: 'Bad request',
+        message: 'password is required',
+      });
+    }
+
+    const candidateEmail = looksLikeEmail ? normalizeEmail(explicitEmail || handleOrEmail) : '';
+    if (candidateEmail) {
+      if (!checkRateLimit(`auth:login_email:${candidateEmail}`, { maxRequests: 10, windowMs: 60 * 1000 })) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded',
+          message: 'Too many requests. Please wait a minute and try again.',
+        });
+      }
+    }
+
     const user = looksLikeEmail
       ? await authenticateUserByEmail({ email: explicitEmail || handleOrEmail, password })
       : await authenticateUser({ handle: handleOrEmail, password });
@@ -245,7 +273,7 @@ export async function oauthGoogleHandler(req, res) {
     });
   }
   const clientId = getClientIdentifier(req);
-  if (!checkRateLimit(clientId)) {
+  if (!checkRateLimit(`auth:oauth:${clientId}`, { maxRequests: 20, windowMs: 60 * 1000 })) {
     return res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many requests. Please wait a minute and try again.',
@@ -293,7 +321,7 @@ export async function oauthAppleHandler(req, res) {
     });
   }
   const clientId = getClientIdentifier(req);
-  if (!checkRateLimit(clientId)) {
+  if (!checkRateLimit(`auth:oauth:${clientId}`, { maxRequests: 20, windowMs: 60 * 1000 })) {
     return res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many requests. Please wait a minute and try again.',

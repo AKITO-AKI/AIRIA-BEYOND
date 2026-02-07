@@ -1,0 +1,21 @@
+[Unit]
+Description=AIRIA-BEYOND API (Node/Express)
+After=network.target
+
+[Service]
+Type=simple
+User=airia
+WorkingDirectory=/opt/airia-beyond
+EnvironmentFile=/opt/airia-beyond/.env
+ExecStart=/usr/bin/node /opt/airia-beyond/server.js
+Restart=on-failure
+RestartSec=3
+
+# Basic hardening (safe defaults)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
