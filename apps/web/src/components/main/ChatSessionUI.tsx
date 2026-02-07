@@ -32,6 +32,7 @@ import AlbumTitleModal from '../AlbumTitleModal';
 import ConfirmDialog from '../ConfirmDialog';
 import { useToast } from '../visual/feedback/ToastContainer';
 import { useGenerationOverlay } from '../../contexts/GenerationOverlayContext';
+import { basicStatusText } from '../../utils/jobStatusText';
 
 function nowIso() {
   return new Date().toISOString();
@@ -248,10 +249,7 @@ export default function ChatSessionUI() {
         ? pollJobStatus(
             imageJobId,
             (s) => {
-              if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-              else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
-              else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
-              else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+              setGenerationStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
             },
             90,
             2000,
@@ -268,10 +266,7 @@ export default function ChatSessionUI() {
         pollMusicJobStatus(
           musicJob.jobId,
           (s) => {
-            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-            else if (s.status === 'running') setGenerationStatusText('作曲中…');
-            else if (s.status === 'succeeded') setGenerationStatusText('作曲ができました。仕上げ中…');
-            else if (s.status === 'failed') setGenerationStatusText('作曲に失敗しました');
+            setGenerationStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
           },
           90,
           2000,
@@ -370,10 +365,7 @@ export default function ChatSessionUI() {
         ? pollJobStatus(
             pending.imageJobId,
             (s) => {
-              if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-              else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
-              else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
-              else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+              setGenerationStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
             },
             90,
             2000,
@@ -390,10 +382,7 @@ export default function ChatSessionUI() {
         pollMusicJobStatus(
           pending.musicJobId,
           (s) => {
-            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-            else if (s.status === 'running') setGenerationStatusText('作曲中…');
-            else if (s.status === 'succeeded') setGenerationStatusText('作曲ができました。仕上げ中…');
-            else if (s.status === 'failed') setGenerationStatusText('作曲に失敗しました');
+            setGenerationStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
           },
           90,
           2000,
@@ -624,10 +613,7 @@ export default function ChatSessionUI() {
         ? pollJobStatus(
             imageJobId,
             (s) => {
-              if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-              else if (s.status === 'running') setGenerationStatusText('画像を生成中…');
-              else if (s.status === 'succeeded') setGenerationStatusText('画像ができました。仕上げ中…');
-              else if (s.status === 'failed') setGenerationStatusText('画像生成に失敗しました');
+              setGenerationStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
             },
             90,
             2000,
@@ -644,10 +630,7 @@ export default function ChatSessionUI() {
         pollMusicJobStatus(
           musicJob.jobId,
           (s) => {
-            if (s.status === 'queued') setGenerationStatusText('順番待ち…');
-            else if (s.status === 'running') setGenerationStatusText('作曲中…');
-            else if (s.status === 'succeeded') setGenerationStatusText('作曲ができました。仕上げ中…');
-            else if (s.status === 'failed') setGenerationStatusText('作曲に失敗しました');
+            setGenerationStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
           },
           90,
           2000,

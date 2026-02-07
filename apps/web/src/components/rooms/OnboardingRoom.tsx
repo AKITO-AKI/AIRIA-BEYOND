@@ -17,6 +17,7 @@ import {
 import ConfirmDialog from '../ConfirmDialog';
 import { useToast } from '../visual/feedback/ToastContainer';
 import { useGenerationOverlay } from '../../contexts/GenerationOverlayContext';
+import { basicStatusText } from '../../utils/jobStatusText';
 
 type Props = {
   onExit?: () => void;
@@ -89,7 +90,6 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
   };
 
   const resumePendingIfAny = async () => {
-    if (!completedData) return;
     if (isGenerating) return;
 
     const pending = loadPendingOnboardingGeneration();
@@ -110,10 +110,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
       const finalStatus = await pollMusicJobStatus(
         pending.musicJobId,
         (s) => {
-          if (s.status === 'queued') setGenerateStatusText('順番待ち…');
-          else if (s.status === 'running') setGenerateStatusText('生成中…');
-          else if (s.status === 'succeeded') setGenerateStatusText('仕上げ中…');
-          else if (s.status === 'failed') setGenerateStatusText('失敗しました');
+          setGenerateStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
         },
         90,
         2000,
@@ -153,7 +150,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
           provider: finalStatus.provider,
         },
         sessionData: {
-          onboarding: completedData,
+          onboarding: completedData ?? null,
         },
       } as any);
 
@@ -188,7 +185,6 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
 
   const retryPendingGeneration = async () => {
     if (isGenerating) return;
-    if (!completedData) return;
     const pending = loadPendingOnboardingGeneration();
     if (!pending) return;
 
@@ -216,10 +212,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
       const finalStatus = await pollMusicJobStatus(
         job.jobId,
         (s) => {
-          if (s.status === 'queued') setGenerateStatusText('順番待ち…');
-          else if (s.status === 'running') setGenerateStatusText('生成中…');
-          else if (s.status === 'succeeded') setGenerateStatusText('仕上げ中…');
-          else if (s.status === 'failed') setGenerateStatusText('失敗しました');
+          setGenerateStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
         },
         90,
         2000,
@@ -340,10 +333,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
       const finalStatus = await pollMusicJobStatus(
         job.jobId,
         (s) => {
-          if (s.status === 'queued') setGenerateStatusText('順番待ち…');
-          else if (s.status === 'running') setGenerateStatusText('生成中…');
-          else if (s.status === 'succeeded') setGenerateStatusText('仕上げ中…');
-          else if (s.status === 'failed') setGenerateStatusText('失敗しました');
+          setGenerateStatusText(basicStatusText(s.status, s.effectiveProvider || s.provider));
         },
         90,
         2000,
