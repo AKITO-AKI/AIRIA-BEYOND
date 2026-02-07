@@ -326,6 +326,7 @@ export function buildPrompt(params) {
   return {
     prompt: fullPrompt,
     negativePrompt: fullNegative,
+    stylePreset: selectedPreset || 'oil-painting',
   };
 }
 

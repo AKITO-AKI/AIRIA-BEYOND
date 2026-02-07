@@ -1025,6 +1025,25 @@ function generateRuleBasedMusic(request) {
     rhythm: normalizeRhythmSeed(request?.rhythm_seed || request?.rhythmSeed) || [1, 1, 1, 1, 2],
   };
 
+  const humanize = normalizeHumanize(request?.humanize, request);
+
+  const motifTags = Array.isArray(request?.motif_tags)
+    ? request.motif_tags.map((t) => String(t).trim()).filter(Boolean)
+    : Array.isArray(request?.motifTags)
+      ? request.motifTags.map((t) => String(t).trim()).filter(Boolean)
+      : [];
+
+  const leitmotifs = motifTags.slice(0, 3).map((tag, idx) => {
+    const variation = idx === 1 ? 'inversion' : idx === 2 ? 'augmentation' : 'none';
+    const m = varyMotif(baseMotif, variation);
+    return {
+      tag: String(tag).slice(0, 32),
+      degrees: m.degrees,
+      rhythm: m.rhythm,
+      transformations: variation === 'none' ? ['theme'] : [variation],
+    };
+  });
+
   const dynamics = clamp(arousal, 0, 1, 0.5) < 0.3 ? 'p' : clamp(arousal, 0, 1, 0.5) > 0.7 ? 'f' : 'mf';
   const sections = plan.sections.map((p) => {
     const sectionKey = normalizeKey(p.key, { valence });
@@ -1056,5 +1075,7 @@ function generateRuleBasedMusic(request) {
       ? 'piano (jazz-influenced)'
       : 'piano',
     character,
+    leitmotifs: leitmotifs.length ? leitmotifs : undefined,
+    humanize,
   };
 }

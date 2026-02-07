@@ -13,7 +13,7 @@
  * @property {number} [arousal]
  * @property {number} [focus]
  * @property {number} [confidence]
- * @property {string[]} [motifTags]
+ * @property {string[]} [motif_tags]
  * @property {string} [key] - e.g., "C major" or "d minor"
  * @property {number} [tempo] - BPM (40..220)
  * @property {string} [timeSignature] - e.g., "3/4", "4/4", "6/8"
@@ -23,6 +23,8 @@
  * @property {number[]} [motif_seed] - seed degrees (1..14)
  * @property {number[]} [rhythm_seed] - seed rhythm in beats
  * @property {any} [section_plan] - optional override object
+ * @property {any} [emotional_arc] - optional narrative arc object
+ * @property {any} [humanize] - optional performance shaping override
  */
 
 /**
@@ -43,6 +45,12 @@
  * @property {GenerateMusicRequest} input
  * @property {string} [result]
  * @property {string} [resultUrl]
+ * @property {string} [midiData]
+ * @property {string[]} [warnings]
+ * @property {boolean} [fallbackUsed]
+ * @property {string} [effectiveProvider]
+ * @property {string} [fallbackReason]
+ * @property {string} [generationError]
  */
 
 // In-memory job store

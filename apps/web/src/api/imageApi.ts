@@ -470,6 +470,10 @@ export interface GenerateMusicRequest {
   duration?: number;
   seed?: number;
 
+  // Optional narrative/performance inputs (from event refine)
+  emotional_arc?: any;
+  humanize?: any;
+
   // Advanced controls (optional)
   key?: string;
   tempo?: number;
@@ -496,6 +500,10 @@ export interface MusicStructure {
   sections: any[];
   instrumentation: string;
   character: string;
+
+  // Optional artistic depth fields
+  leitmotifs?: any[];
+  humanize?: any;
 }
 
 export interface MusicJobStatus {
