@@ -8,6 +8,13 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function envFlag(name, defaultValue = false) {
+  const raw = process.env[name];
+  if (raw == null) return defaultValue;
+  const v = String(raw).trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
 async function fetchJson(url, options = {}) {
   const resp = await fetch(url, {
     ...options,
@@ -59,6 +66,12 @@ async function poll(getFn, { timeoutMs = 30000, intervalMs = 500 } = {}) {
 
 const port = Number(process.env.SMOKE_PORT || 3099);
 const baseUrl = `http://localhost:${port}`;
+const argv = process.argv.slice(2);
+const requireRealProviders =
+  argv.includes('--strict') ||
+  argv.includes('--require-real-providers') ||
+  envFlag('SMOKE_REQUIRE_REAL_PROVIDERS') ||
+  envFlag('SMOKE_STRICT');
 
 console.log(`[smoke-e2e-http] starting server on ${baseUrl}`);
 const child = spawn(process.execPath, ['server.js'], {
@@ -77,9 +90,17 @@ try {
   const health = await waitForHealthy(baseUrl);
   console.log('[smoke-e2e-http] health ok:', {
     openai: health?.services?.openai?.configured,
+    ollama: health?.services?.ollama?.configured,
     replicate: health?.services?.replicate?.configured,
     comfyui: health?.services?.comfyui?.configured,
   });
+
+  if (requireRealProviders) {
+    const musicOk = !!(health?.services?.openai?.configured || health?.services?.ollama?.configured);
+    const imageOk = !!(health?.services?.replicate?.configured || health?.services?.comfyui?.configured);
+    assert(musicOk, 'Strict mode: OpenAI or Ollama must be configured for music');
+    assert(imageOk, 'Strict mode: Replicate or ComfyUI must be configured for images');
+  }
 
   const messages = [
     { role: 'user', content: '静かながらも希望が差す、冬の夜明けのような音楽を作りたい。' },
@@ -175,6 +196,13 @@ try {
     midiLen: musicJob.midiData.length,
   });
 
+  if (requireRealProviders) {
+    assert(
+      musicJob?.effectiveProvider && musicJob.effectiveProvider !== 'rule-based' && musicJob.effectiveProvider !== 'emergency',
+      `Strict mode: expected real music provider, got ${musicJob?.effectiveProvider}`
+    );
+  }
+
   const imageStart = await fetchJson(`${baseUrl}/api/image/generate`, {
     method: 'POST',
     body: JSON.stringify(refined.image),
@@ -194,6 +222,13 @@ try {
     effectiveProvider: imageJob.effectiveProvider,
     resultUrlPrefix: String(imageJob.resultUrl).slice(0, 32),
   });
+
+  if (requireRealProviders) {
+    assert(
+      imageJob?.effectiveProvider && imageJob.effectiveProvider !== 'placeholder',
+      `Strict mode: expected real image provider, got ${imageJob?.effectiveProvider}`
+    );
+  }
 
   console.log('[smoke-e2e-http] OK');
 } finally {

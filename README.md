@@ -73,6 +73,10 @@ Custom domain migration guide:
 
 **See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for deployment instructions.**
 
+## Roadmap
+
+See [docs/ROADMAP.md](./docs/ROADMAP.md) for prioritized next steps across UX, reliability, provider quality, and production hardening.
+
 ## Repository Structure
 
 ```

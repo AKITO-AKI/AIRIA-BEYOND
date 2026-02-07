@@ -626,6 +626,7 @@ export async function generateImage(req, res) {
         duration,
         stylePreset,
         seed,
+        density,
       },
     });
 

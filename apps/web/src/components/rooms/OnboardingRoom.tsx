@@ -204,7 +204,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
     abortRef.current = controller;
 
     try {
-      const job = await generateMusic(pending.request as any);
+      const job = await generateMusic(pending.request);
 
       savePendingOnboardingGeneration({
         ...pending,

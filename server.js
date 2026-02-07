@@ -61,6 +61,10 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'production',
     services: {
+      ollama: {
+        available: true,
+        configured: !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL),
+      },
       comfyui: {
         available: true,
         configured: !!(process.env.COMFYUI_BASE_URL || process.env.IMAGE_PROVIDER === 'comfyui' || process.env.IMAGE_PROVIDER === 'comfy'),

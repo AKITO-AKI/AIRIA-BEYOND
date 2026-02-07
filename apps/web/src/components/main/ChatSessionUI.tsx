@@ -13,6 +13,8 @@ import {
   nameAlbumTitle,
   getMusicPreview,
   ChatMessage,
+  GenerateMusicRequest,
+  RefinedEventResponse,
 } from '../../api/imageApi';
 import {
   logAlbumStage,
@@ -35,7 +37,7 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function makeFallbackCoverDataUrl(refined: any, note: string) {
+function makeFallbackCoverDataUrl(refined: RefinedEventResponse, note: string) {
   return createPlaceholderCoverDataUrl({
     title: refined?.brief?.theme?.title,
     mood: refined?.image?.mood,
@@ -227,7 +229,11 @@ export default function ChatSessionUI() {
       }
 
       setGenerationStatusText('作曲を開始しています…');
-      const musicJob = await generateMusic(refined.music as any);
+      const musicReq: GenerateMusicRequest = {
+        ...refined.music,
+        confidence: refined?.analysisLike?.confidence ?? 0.7,
+      };
+      const musicJob = await generateMusic(musicReq);
 
       savePendingChatGeneration({
         ...pending,
@@ -593,7 +599,11 @@ export default function ChatSessionUI() {
       }
 
       setGenerationStatusText('作曲を開始しています…');
-      const musicJob = await generateMusic(refined.music as any);
+      const musicReq: GenerateMusicRequest = {
+        ...refined.music,
+        confidence: refined?.analysisLike?.confidence ?? 0.7,
+      };
+      const musicJob = await generateMusic(musicReq);
 
       savePendingChatGeneration({
         v: 1,

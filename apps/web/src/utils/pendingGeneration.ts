@@ -1,3 +1,5 @@
+import type { RefinedEventResponse } from '../api/imageApi';
+
 export type PendingChatGenerationV1 = {
   v: 1;
   kind: 'chat';
@@ -5,7 +7,7 @@ export type PendingChatGenerationV1 = {
   imageJobId?: string | null;
   musicJobId: string;
   coverDataUrl?: string;
-  refined: any;
+  refined: RefinedEventResponse;
   sessionMessages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   sessionRecommendations?: Array<{ composer: string; title: string; era?: string; why: string }>;
   causalLogId?: string | null;

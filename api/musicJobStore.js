@@ -43,6 +43,16 @@
  * @property {number} maxRetries
  * @property {'openai' | 'ollama' | 'rule-based'} provider
  * @property {GenerateMusicRequest} input
+ * @property {Object} [inputSummary]
+ * @property {number} [inputSummary.duration]
+ * @property {string} [inputSummary.period]
+ * @property {string} [inputSummary.form]
+ * @property {string} [inputSummary.key]
+ * @property {number} [inputSummary.tempo]
+ * @property {string} [inputSummary.timeSignature]
+ * @property {number} [inputSummary.motifTagsCount]
+ * @property {number} [inputSummary.instrumentationCount]
+ * @property {Object} [inputSummary.humanize]
  * @property {string} [result]
  * @property {string} [resultUrl]
  * @property {string} [midiData]
@@ -80,6 +90,17 @@ export function createMusicJob(data) {
     maxRetries: data.maxRetries ?? 2,
     provider: data.provider,
     input: data.input,
+    inputSummary: {
+      duration: typeof data?.input?.duration === 'number' ? data.input.duration : undefined,
+      period: typeof data?.input?.period === 'string' ? data.input.period : undefined,
+      form: typeof data?.input?.form === 'string' ? data.input.form : undefined,
+      key: typeof data?.input?.key === 'string' ? data.input.key : undefined,
+      tempo: typeof data?.input?.tempo === 'number' ? data.input.tempo : undefined,
+      timeSignature: typeof data?.input?.timeSignature === 'string' ? data.input.timeSignature : undefined,
+      motifTagsCount: Array.isArray(data?.input?.motif_tags) ? data.input.motif_tags.length : undefined,
+      instrumentationCount: Array.isArray(data?.input?.instrumentation) ? data.input.instrumentation.length : undefined,
+      humanize: data?.input?.humanize && typeof data.input.humanize === 'object' ? data.input.humanize : undefined,
+    },
   };
 
   jobs.set(jobId, job);

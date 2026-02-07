@@ -109,6 +109,7 @@ export interface JobStatus {
     duration?: number;
     stylePreset?: string;
     seed?: number;
+    density?: number;
   };
   result?: string;
   resultUrl?: string;
@@ -520,6 +521,17 @@ export interface MusicJobStatus {
   maxRetries: number;
   provider: 'openai' | 'ollama' | 'rule-based' | 'emergency' | string;
   input: GenerateMusicRequest;
+  inputSummary?: {
+    duration?: number;
+    period?: string;
+    form?: string;
+    key?: string;
+    tempo?: number;
+    timeSignature?: string;
+    motifTagsCount?: number;
+    instrumentationCount?: number;
+    humanize?: any;
+  };
   result?: MusicStructure;
   midiData?: string;
 
