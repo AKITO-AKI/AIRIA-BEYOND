@@ -56,14 +56,34 @@ export const IntermediateRepresentationSchema = z.object({
  */
 
 /**
+ * @typedef {Object} Leitmotif
+ * @property {string} tag - keyword label from the theme (e.g., "光")
+ * @property {number[]} degrees
+ * @property {number[]} rhythm
+ * @property {string} [meaning]
+ * @property {string[]} [transformations]
+ */
+
+/**
+ * @typedef {Object} MusicHumanize
+ * @property {"none"|"subtle"|"expressive"} rubato
+ * @property {"flat"|"phrase"} velocityCurve
+ * @property {number} peakBoost - 0..0.6
+ * @property {number} phraseEndSoftness - 0..0.8
+ */
+
+/**
  * @typedef {Object} MusicSection
  * @property {string} name - e.g., "A", "B"
+ * @property {string} [key] - Optional local key for this section (modulation), e.g., "G major"
  * @property {number} measures
  * @property {string[]} chordProgression - Roman numeral analysis, e.g., ["i", "iv", "V", "i"]
  * @property {Object} melody
  * @property {MusicMotif[]} melody.motifs
  * @property {string} dynamics - pp, p, mp, mf, f, ff
  * @property {string} texture - simple, contrapuntal, homophonic
+ * @property {string} [cadence] - Optional cadence goal (HC|PAC|DC|PICARDY)
+ * @property {Array<"tension"|"release"|"ambiguity">} [harmonicFunctions] - Optional per-chord emotional function tags
  */
 
 /**
@@ -76,4 +96,6 @@ export const IntermediateRepresentationSchema = z.object({
  * @property {string} instrumentation - e.g., "piano"
  * @property {string} character - e.g., "melancholic and introspective"
  * @property {string} [reasoning] - LLM's explanation of musical choices
+ * @property {Leitmotif[]} [leitmotifs]
+ * @property {MusicHumanize} [humanize]
  */

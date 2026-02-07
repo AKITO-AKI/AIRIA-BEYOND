@@ -25,7 +25,9 @@
     "lint": "echo \"TODO: add lint\"",
     "format": "echo \"TODO: add format\"",
     "smoke:comfyui": "node scripts/smoke-comfyui-direct.mjs",
-    "smoke:image:comfyui": "node scripts/smoke-image-api-comfyui.mjs"
+    "smoke:image:comfyui": "node scripts/smoke-image-api-comfyui.mjs",
+    "smoke:require": "node scripts/smoke-require.mjs",
+    "smoke:music-controller": "node scripts/smoke-require.mjs ./api/controllers/music.js --timeout=5000"
   },
   "dependencies": {
     "cors": "^2.8.5",

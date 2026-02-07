@@ -68,6 +68,23 @@ function toNumberOrUndefined(value) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function toStringOrUndefined(value) {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (typeof value !== 'string') return undefined;
+  const s = value.trim();
+  return s ? s : undefined;
+}
+
+function normalizeInstrumentation(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((v) => String(v).trim()).filter(Boolean).slice(0, 12);
+  }
+  if (typeof raw === 'string') {
+    return raw.split(',').map((v) => v.trim()).filter(Boolean).slice(0, 12);
+  }
+  return undefined;
+}
+
 function normalizeMotifTags(raw) {
   let tags = [];
   if (Array.isArray(raw)) tags = raw;
@@ -510,6 +527,12 @@ export async function generateImage(req, res) {
     const arousal = toNumberOrUndefined(req.body?.arousal);
     const focus = toNumberOrUndefined(req.body?.focus);
     const confidence = toNumberOrUndefined(req.body?.confidence);
+    const ambiguity = toNumberOrUndefined(req.body?.ambiguity);
+    const density = toNumberOrUndefined(req.body?.density);
+    const subject = toStringOrUndefined(req.body?.subject);
+    const palette = toStringOrUndefined(req.body?.palette);
+    const period = toStringOrUndefined(req.body?.period);
+    const instrumentation = normalizeInstrumentation(req.body?.instrumentation);
 
     // If mood is missing, do not hard-fail. Use placeholder so the user can still proceed.
     if (!mood) {
@@ -540,6 +563,12 @@ export async function generateImage(req, res) {
         valence,
         arousal,
         focus,
+        ambiguity,
+        density,
+        subject,
+        palette,
+        period,
+        instrumentation,
       });
       prompt = out.prompt;
       negativePrompt = out.negativePrompt;
@@ -583,6 +612,12 @@ export async function generateImage(req, res) {
         arousal,
         focus,
         confidence,
+        ambiguity,
+        density,
+        subject,
+        palette,
+        period,
+        instrumentation,
         providerRequested: providerRequestedRaw,
         providerResolved: provider,
       },

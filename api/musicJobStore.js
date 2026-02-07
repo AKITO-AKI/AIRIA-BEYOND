@@ -14,20 +14,15 @@
  * @property {number} [focus]
  * @property {number} [confidence]
  * @property {string[]} [motifTags]
- * @property {string[]} [motif_tags]
- * @property {number} [tempoBpm]
- * @property {string} [timeSignature]
- * @property {string} [form]
- * @property {string} [key]
- * @property {string} [cadencePlan]
- * @property {string[]} [composerHints]
- * @property {number} [originality]
- * @property {string[]} [genre_palette]
- * @property {string} [primary_genre]
- * @property {string[]} [instrumentation]
- * @property {{early?:string,middle?:string,late?:string}} [timbre_arc]
- * @property {{title?:string,keywords?:string[]}} [theme]
- * @property {Array<{name:string,description?:string,weight?:number}>} [personality_axes]
+ * @property {string} [key] - e.g., "C major" or "d minor"
+ * @property {number} [tempo] - BPM (40..220)
+ * @property {string} [timeSignature] - e.g., "3/4", "4/4", "6/8"
+ * @property {string} [form] - e.g., "sonata", "rondo", "ABA", "theme-variation"
+ * @property {string} [period] - baroque|classical|romantic|modern
+ * @property {string[]} [instrumentation] - hint list
+ * @property {number[]} [motif_seed] - seed degrees (1..14)
+ * @property {number[]} [rhythm_seed] - seed rhythm in beats
+ * @property {any} [section_plan] - optional override object
  */
 
 /**

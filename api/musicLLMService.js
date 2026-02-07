@@ -31,6 +31,27 @@ function clamp(n, min, max, fallback) {
   return Math.max(min, Math.min(max, x));
 }
 
+function normalizePeriod(p) {
+  const s = String(p ?? '').trim().toLowerCase();
+  if (!s) return '';
+  if (['baroque', 'baroq', 'barok'].includes(s)) return 'baroque';
+  if (['classical', 'classic', 'viennese'].includes(s)) return 'classical';
+  if (['romantic', 'rom'].includes(s)) return 'romantic';
+  if (['modern', '20c', '20th', 'impressionist', 'neoclassical'].includes(s)) return 'modern';
+  return s.slice(0, 24);
+}
+
+function normalizeForm(f) {
+  const s = String(f ?? '').trim().toLowerCase();
+  if (!s) return '';
+  if (['aba', 'ternary'].includes(s)) return 'ABA';
+  if (['rondo', 'abaca', 'abacaba'].includes(s)) return 'rondo';
+  if (['theme-variation', 'theme-variations', 'theme and variations', 'variations'].includes(s)) return 'theme-variation';
+  if (['sonata', 'sonata-allegro', 'sonata allegro'].includes(s)) return 'sonata';
+  if (['minuet', 'minuet-trio', 'minuet and trio', 'scherzo'].includes(s)) return 'minuet-trio';
+  return String(f).slice(0, 24);
+}
+
 function normalizeTimeSignature(ts) {
   const s = String(ts || '').trim();
   if (!s) return '4/4';
@@ -79,6 +100,33 @@ function normalizeKey(rawKey, { valence } = {}) {
   return 'C major';
 }
 
+function relatedKey(key, kind) {
+  const k = normalizeKey(key);
+  const map = {
+    'C major': { dominant: 'G major', subdominant: 'F major', relMinor: 'a minor' },
+    'D major': { dominant: 'A major', subdominant: 'G major', relMinor: 'b minor' },
+    'E major': { dominant: 'B major', subdominant: 'A major', relMinor: 'c minor' },
+    'F major': { dominant: 'C major', subdominant: 'B major', relMinor: 'd minor' },
+    'G major': { dominant: 'D major', subdominant: 'C major', relMinor: 'e minor' },
+    'A major': { dominant: 'E major', subdominant: 'D major', relMinor: 'f minor' },
+    'B major': { dominant: 'F major', subdominant: 'E major', relMinor: 'g minor' },
+    'c minor': { dominant: 'G major', subdominant: 'f minor', relMajor: 'E major' },
+    'd minor': { dominant: 'A major', subdominant: 'g minor', relMajor: 'F major' },
+    'e minor': { dominant: 'B major', subdominant: 'a minor', relMajor: 'G major' },
+    'f minor': { dominant: 'C major', subdominant: 'b minor', relMajor: 'A major' },
+    'g minor': { dominant: 'D major', subdominant: 'c minor', relMajor: 'B major' },
+    'a minor': { dominant: 'E major', subdominant: 'd minor', relMajor: 'C major' },
+    'b minor': { dominant: 'F major', subdominant: 'e minor', relMajor: 'D major' },
+  };
+
+  const entry = map[k];
+  if (!entry) return k;
+  if (kind === 'dominant') return entry.dominant || k;
+  if (kind === 'subdominant') return entry.subdominant || k;
+  if (kind === 'relative') return entry.relMajor || entry.relMinor || k;
+  return k;
+}
+
 function modeFromKey(key) {
   const s = String(key || '').toLowerCase();
   return s.includes('minor') ? 'minor' : 'major';
@@ -118,145 +166,264 @@ function normalizeChordProgression(raw, { key }) {
     .map((c) => romanDegreeFromText(c))
     .filter((d) => Number.isFinite(d));
 
-  const fallback = mode === 'minor' ? ['i', 'VI', 'III', 'VII'] : ['I', 'V', 'vi', 'IV'];
+  // Prefer functional-harmony defaults (avoid pop-loop feel).
+  const fallback = mode === 'minor' ? ['i', 'iv', 'V', 'i'] : ['I', 'ii', 'V', 'I'];
   const use = degrees.length ? degrees : fallback.map((c) => romanDegreeFromText(c)).filter(Boolean);
   const normalized = use.map((d) => romanForDegree(d, mode));
   const uniq = normalized.filter(Boolean);
   return uniq.length ? uniq.slice(0, 32) : fallback;
 }
 
-function getCadencePlan(raw) {
-  const s = String(raw ?? '').trim().toLowerCase();
-  if (!s) return 'classical-balanced';
-  if (['balanced', 'classic', 'classical', 'classical-balanced'].includes(s)) return 'classical-balanced';
-  if (['strong', 'strong-final', 'final-strong'].includes(s)) return 'strong-final';
-  if (['closed', 'closed-every-section', 'all-authentic'].includes(s)) return 'closed-every-section';
-  if (['open', 'open-ended', 'half-cadence'].includes(s)) return 'open-ended';
-  return 'classical-balanced';
+function applyCadence(chords, { mode, cadence }) {
+  const prog = Array.isArray(chords) ? chords.filter(Boolean).map((c) => String(c).trim()).filter(Boolean) : [];
+  const tonic = mode === 'minor' ? 'i' : 'I';
+  const picardyTonic = mode === 'minor' ? 'I' : tonic;
+  const dominant = 'V';
+  const submediant = mode === 'minor' ? 'VI' : 'vi';
+
+  if (!prog.length) return cadence === 'HC' ? [tonic, dominant] : [tonic, dominant, tonic];
+
+  // Ensure starts on tonic-ish.
+  if (romanDegreeFromText(prog[0]) !== 1) {
+    prog.unshift(tonic);
+  }
+
+  if (cadence === 'HC') {
+    prog[prog.length - 1] = dominant;
+    return prog.slice(0, 32);
+  }
+  if (cadence === 'DC') {
+    // V -> vi/VI
+    if (prog.length < 2) prog.push(dominant);
+    prog[prog.length - 2] = dominant;
+    prog[prog.length - 1] = submediant;
+    return prog.slice(0, 32);
+  }
+
+  if (cadence === 'PICARDY') {
+    // Picardy third: minor-key resolution to major tonic.
+    // For major mode, treat as a normal cadence.
+    if (prog.length < 2) prog.push(dominant);
+    prog[prog.length - 2] = dominant;
+    prog[prog.length - 1] = picardyTonic;
+    return prog.slice(0, 32);
+  }
+
+  // Default PAC/IAC-ish: ... V - I
+  if (prog.length < 2) prog.push(dominant);
+  prog[prog.length - 2] = dominant;
+  prog[prog.length - 1] = tonic;
+  return prog.slice(0, 32);
 }
 
-function tonicRoman(mode) {
-  return mode === 'minor' ? 'i' : 'I';
-}
-
-function dominantRoman() {
-  return 'V';
-}
-
-function predominantRoman(mode) {
-  return mode === 'minor' ? 'iv' : 'ii';
-}
-
-function makeClassicalProgression({ mode, measures, cadenceType }) {
-  const m = Math.max(1, Number(measures) || 1);
-  const I = tonicRoman(mode);
-  const V = dominantRoman();
-  const PD = predominantRoman(mode);
-  const vi = mode === 'minor' ? 'VI' : 'vi';
-  const iii = mode === 'minor' ? 'III' : 'iii';
-  const IV = mode === 'minor' ? 'iv' : 'IV';
-  const VII = mode === 'minor' ? 'VII' : 'vii';
-
-  // Default 4-bar phrase (tonic → prolongation → predominant → dominant)
-  const phrase4 = [I, vi, PD, V];
+function normalizeHarmonicFunctions(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  const allowed = new Set(['tension', 'release', 'ambiguity']);
   const out = [];
-  while (out.length < m) out.push(...phrase4);
-  out.length = m;
-
-  // Add a touch of variety in the middle for longer sections.
-  if (m >= 8) {
-    out[Math.floor(m / 2) - 1] = iii;
-    out[Math.floor(m / 2)] = IV;
-    out[Math.floor(m / 2) + 1] = PD;
+  for (const v of arr) {
+    const s = String(v ?? '').trim().toLowerCase();
+    if (!s) continue;
+    if (allowed.has(s)) out.push(s);
   }
-  if (m >= 12) {
-    out[2] = IV;
-    out[3] = V;
-    out[4] = I;
-    out[5] = VII;
-  }
-
-  return applyCadence(out, { mode, measures: m, cadenceType });
+  return out.length ? out.slice(0, 64) : undefined;
 }
 
-function applyCadence(prog, { mode, measures, cadenceType }) {
-  const m = Math.max(1, Number(measures) || 1);
-  const out = Array.isArray(prog) ? prog.slice(0, m) : [];
-  while (out.length < m) out.push(tonicRoman(mode));
-
-  const I = tonicRoman(mode);
-  const V = dominantRoman();
-  const PD = predominantRoman(mode);
-
-  if (m === 1) {
-    out[0] = cadenceType === 'half' ? V : I;
-    return out;
-  }
-
-  if (cadenceType === 'half') {
-    out[m - 1] = V;
-    if (m >= 2) out[m - 2] = PD;
-    if (m >= 4) out[0] = I;
-    return out;
-  }
-
-  // authentic
-  out[m - 1] = I;
-  out[m - 2] = V;
-  if (m >= 3) out[m - 3] = PD;
-  if (m >= 4) out[0] = I;
-  return out;
-}
-
-function expandChordProgressionToMeasures(chords, measures, { key, cadenceType }) {
-  const mode = modeFromKey(key);
-  const m = Math.max(1, Number(measures) || 1);
-  const normalized = normalizeChordProgression(chords, { key });
-  if (!Array.isArray(normalized) || !normalized.length) {
-    return makeClassicalProgression({ mode, measures: m, cadenceType });
-  }
-
-  // If LLM already provided one-chord-per-bar, keep it (then enforce cadence).
+function normalizeLeitmotifs(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
   const out = [];
-  while (out.length < m) out.push(...normalized);
-  out.length = m;
-  return applyCadence(out, { mode, measures: m, cadenceType });
+  for (const item of arr.slice(0, 6)) {
+    const obj = item && typeof item === 'object' ? item : {};
+    const tag = String(obj.tag ?? obj.keyword ?? '').trim().slice(0, 32);
+    if (!tag) continue;
+    const motif = obj.motif && typeof obj.motif === 'object' ? obj.motif : obj;
+    const motifs = normalizeMotifs([{ degrees: motif.degrees, rhythm: motif.rhythm }]);
+    const m0 = motifs[0];
+    out.push({
+      tag,
+      degrees: m0.degrees,
+      rhythm: m0.rhythm,
+      meaning: obj.meaning ? String(obj.meaning).slice(0, 160) : undefined,
+      transformations: Array.isArray(obj.transformations)
+        ? obj.transformations.map((t) => String(t).slice(0, 48)).filter(Boolean).slice(0, 8)
+        : undefined,
+    });
+  }
+  return out.length ? out : undefined;
 }
 
-function wrapDegreeToScale(d) {
-  const x = Number(d);
-  if (!Number.isFinite(x)) return 1;
-  const base = ((Math.round(x) - 1) % 7 + 7) % 7;
-  return base + 1;
+function normalizeHumanize(raw, request) {
+  const obj = raw && typeof raw === 'object' ? raw : {};
+
+  const rubatoRaw = String(obj.rubato ?? obj.rubatoLevel ?? '').trim().toLowerCase();
+  const rubato = rubatoRaw === 'expressive' || rubatoRaw === 'strong'
+    ? 'expressive'
+    : rubatoRaw === 'subtle' || rubatoRaw === 'light'
+      ? 'subtle'
+      : 'none';
+
+  const phraseCurveRaw = String(obj.velocityCurve ?? obj.dynamicsCurve ?? '').trim().toLowerCase();
+  const velocityCurve = phraseCurveRaw === 'phrase' || phraseCurveRaw === 'arc' ? 'phrase' : 'flat';
+
+  const peakBoost = clamp(obj.peakBoost ?? obj.peak_boost, 0, 0.6, 0.22);
+  const phraseEndSoftness = clamp(obj.phraseEndSoftness ?? obj.phrase_end_softness, 0, 0.8, 0.35);
+
+  // Allow explicit request overrides (future UI use); keep optional.
+  const requestHumanize = request?.humanize && typeof request.humanize === 'object' ? request.humanize : null;
+  const requestRubato = requestHumanize ? String(requestHumanize.rubato ?? '').toLowerCase() : '';
+  const rubatoFinal = requestRubato === 'subtle' || requestRubato === 'expressive' || requestRubato === 'none'
+    ? requestRubato
+    : rubato;
+
+  return {
+    rubato: rubatoFinal || rubato,
+    velocityCurve,
+    peakBoost,
+    phraseEndSoftness,
+  };
 }
 
-function ensureMotifsForClassicalCadence(motifs, { key }) {
+function normalizeMotifSeed(seed) {
+  const arr = Array.isArray(seed) ? seed : [];
+  const degrees = arr.map((d) => clamp(d, 1, 14, 1)).filter((d) => Number.isFinite(d)).slice(0, 12);
+  return degrees.length ? degrees : null;
+}
+
+function normalizeRhythmSeed(seed) {
+  const arr = Array.isArray(seed) ? seed : [];
+  const choices = [0.25, 0.5, 1, 2, 4];
+  const out = [];
+  for (const r0 of arr) {
+    const r = Number(r0);
+    if (!Number.isFinite(r) || r <= 0) continue;
+    let best = 1;
+    let bestErr = Infinity;
+    for (const c of choices) {
+      const err = Math.abs(r - c);
+      if (err < bestErr) {
+        bestErr = err;
+        best = c;
+      }
+    }
+    out.push(best);
+  }
+  return out.length ? out.slice(0, 12) : null;
+}
+
+function varyMotif(motif, variation) {
+  const m = motif && typeof motif === 'object' ? motif : {};
+  const degrees = Array.isArray(m.degrees) ? m.degrees.map((d) => clamp(d, 1, 14, 1)) : [1, 3, 5, 3];
+  const rhythm = Array.isArray(m.rhythm) ? m.rhythm.map((r) => Number(r) || 1) : [1, 1, 1, 1];
+
+  const clampDeg = (d) => clamp(d, 1, 14, 1);
+  const snapRh = (r) => {
+    const choices = [0.25, 0.5, 1, 2, 4];
+    let best = 1;
+    let bestErr = Infinity;
+    for (const c of choices) {
+      const err = Math.abs((Number(r) || 1) - c);
+      if (err < bestErr) {
+        bestErr = err;
+        best = c;
+      }
+    }
+    return best;
+  };
+
+  if (variation === 'sequence-up') {
+    return {
+      degrees: degrees.map((d) => clampDeg(d + 1)),
+      rhythm: rhythm.map((r) => snapRh(r)),
+    };
+  }
+  if (variation === 'sequence-down') {
+    return {
+      degrees: degrees.map((d) => clampDeg(d - 1)),
+      rhythm: rhythm.map((r) => snapRh(r)),
+    };
+  }
+  if (variation === 'inversion') {
+    const center = clampDeg(degrees[0] || 1);
+    return {
+      degrees: degrees.map((d) => clampDeg(center + (center - clampDeg(d)))),
+      rhythm: rhythm.map((r) => snapRh(r)),
+    };
+  }
+  if (variation === 'augmentation') {
+    return {
+      degrees: degrees.map((d) => clampDeg(d)),
+      rhythm: rhythm.map((r) => snapRh((Number(r) || 1) * 2)),
+    };
+  }
+  if (variation === 'diminution') {
+    return {
+      degrees: degrees.map((d) => clampDeg(d)),
+      rhythm: rhythm.map((r) => snapRh((Number(r) || 1) / 2)),
+    };
+  }
+  return {
+    degrees: degrees.map((d) => clampDeg(d)),
+    rhythm: rhythm.map((r) => snapRh(r)),
+  };
+}
+
+function buildClassicalPlan(request, { key, tempo, timeSignature }) {
+  const form = normalizeForm(request?.form) || (Number(request?.focus) > 0.72 ? 'sonata' : Number(request?.focus) > 0.5 ? 'ABA' : 'theme-variation');
+  const period = normalizePeriod(request?.period);
   const mode = modeFromKey(key);
-  const base = Array.isArray(motifs) && motifs.length ? motifs : [{ degrees: [1, 3, 5, 3], rhythm: [1, 1, 1, 1] }];
-  const m0 = base[0] || { degrees: [1, 3, 5, 3], rhythm: [1, 1, 1, 1] };
 
-  const degrees0 = Array.isArray(m0.degrees) && m0.degrees.length ? m0.degrees : [1, 3, 5, 3];
-  const rhythm0 = Array.isArray(m0.rhythm) && m0.rhythm.length ? m0.rhythm : [1, 1, 1, 1];
-
-  const opening = { degrees: degrees0.slice(0, 10), rhythm: rhythm0.slice(0, 10) };
-  const sequence = {
-    degrees: degrees0.map((d) => wrapDegreeToScale(d + 1)).slice(0, 10),
-    rhythm: rhythm0.slice(0, 10),
+  // baseline measures allocation by form; final measures will be fit-to-duration.
+  const base = {
+    ABA: [
+      { name: 'A', role: 'theme', weight: 1.0, key: key, cadence: 'PAC', variation: 'none' },
+      { name: 'B', role: 'contrast', weight: 1.0, key: relatedKey(key, mode === 'minor' ? 'relative' : 'dominant'), cadence: 'HC', variation: 'sequence-up' },
+      { name: "A'", role: 'return', weight: 1.0, key: key, cadence: 'PAC', variation: 'inversion' },
+    ],
+    rondo: [
+      { name: 'A', role: 'refrain', weight: 1.0, key: key, cadence: 'PAC', variation: 'none' },
+      { name: 'B', role: 'episode', weight: 0.9, key: relatedKey(key, 'dominant'), cadence: 'PAC', variation: 'sequence-up' },
+      { name: 'A2', role: 'refrain', weight: 0.8, key: key, cadence: 'PAC', variation: 'diminution' },
+      { name: 'C', role: 'episode', weight: 0.9, key: relatedKey(key, 'subdominant'), cadence: 'HC', variation: 'inversion' },
+      { name: 'A3', role: 'refrain', weight: 1.0, key: key, cadence: 'PAC', variation: 'augmentation' },
+    ],
+    'theme-variation': [
+      { name: 'Theme', role: 'theme', weight: 1.0, key: key, cadence: 'PAC', variation: 'none' },
+      { name: 'Var.1', role: 'variation', weight: 0.9, key: key, cadence: 'PAC', variation: 'diminution' },
+      { name: 'Var.2', role: 'variation', weight: 0.9, key: relatedKey(key, 'relative'), cadence: 'PAC', variation: 'sequence-up' },
+      { name: 'Var.3', role: 'variation', weight: 0.9, key: key, cadence: 'PAC', variation: 'inversion' },
+      { name: 'Coda', role: 'coda', weight: 0.6, key: key, cadence: 'PAC', variation: 'augmentation' },
+    ],
+    sonata: [
+      { name: 'Exposition (P)', role: 'exposition', weight: 1.0, key: key, cadence: 'HC', variation: 'none' },
+      { name: 'Exposition (S)', role: 'exposition', weight: 1.1, key: relatedKey(key, mode === 'minor' ? 'relative' : 'dominant'), cadence: 'PAC', variation: 'sequence-up' },
+      { name: 'Development', role: 'development', weight: 1.0, key: relatedKey(key, 'subdominant'), cadence: 'HC', variation: 'inversion' },
+      { name: 'Recapitulation', role: 'recap', weight: 1.2, key: key, cadence: 'PAC', variation: 'augmentation' },
+      { name: 'Coda', role: 'coda', weight: 0.6, key: key, cadence: 'PAC', variation: 'none' },
+    ],
+    'minuet-trio': [
+      { name: 'Minuet', role: 'dance', weight: 1.0, key: key, cadence: 'PAC', variation: 'none' },
+      { name: 'Trio', role: 'dance', weight: 1.0, key: relatedKey(key, 'subdominant'), cadence: 'PAC', variation: 'sequence-down' },
+      { name: 'Minuet da capo', role: 'dance', weight: 1.0, key: key, cadence: 'PAC', variation: 'diminution' },
+    ],
   };
-  const continuation = {
-    degrees: degrees0
-      .slice(0, 6)
-      .map((d, i, arr) => (i % 2 === 0 ? wrapDegreeToScale(d) : wrapDegreeToScale(arr[Math.max(0, i - 1)] - 1)))
-      .slice(0, 10),
-    rhythm: rhythm0.map((r) => (Number(r) <= 0.5 ? 0.5 : 1)).slice(0, 10),
-  };
 
-  // Cadential motif: stepwise approach to tonic.
-  const cadenceDegrees = mode === 'minor' ? [2, 7, 1, 1] : [2, 7, 1, 1];
-  const cadence = { degrees: cadenceDegrees, rhythm: [0.5, 0.5, 1, 2] };
+  const sections = base[form] || base.ABA;
+  const totalWeight = sections.reduce((a, s) => a + (Number(s.weight) || 1), 0) || 1;
+  const durationSec = Number(request?.duration);
+  let desiredMeasures = null;
+  if (Number.isFinite(durationSec) && durationSec > 0) {
+    const { measureBeats } = parseTimeSignature(timeSignature);
+    const secPerMeasure = (measureBeats * 60) / Math.max(1, Number(tempo) || 90);
+    desiredMeasures = Math.max(12, Math.min(220, Math.round(durationSec / Math.max(0.001, secPerMeasure))));
+  }
 
-  const out = [opening, sequence, continuation, cadence];
-  return normalizeMotifs(out);
+  const seeded = sections.map((s) => ({
+    ...s,
+    measures: desiredMeasures
+      ? Math.max(6, Math.round((desiredMeasures * (Number(s.weight) || 1)) / totalWeight))
+      : 8,
+  }));
+
+  return { form, period, sections: seeded };
 }
 
 function normalizeMotifs(rawMotifs) {
@@ -334,81 +501,125 @@ function sanitizeMusicStructure(raw, request) {
   const valence = request?.valence;
   const durationSec = request?.duration;
 
-  const requestedKey = request?.key || request?.requestedKey;
-  const requestedForm = request?.form;
-  const requestedTimeSignature = request?.timeSignature;
-  const requestedTempo = request?.tempoBpm ?? request?.tempo;
-  const cadencePlan = getCadencePlan(request?.cadencePlan);
-
-  const key = normalizeKey(requestedKey || s.key, { valence });
+  const requestKey = request?.key || request?.music_key;
+  const key = normalizeKey(requestKey || s.key, { valence });
+  const tempoHint = request?.tempo ?? request?.bpm;
   const tempo = clamp(
-    requestedTempo ?? s.tempo,
+    tempoHint != null ? tempoHint : s.tempo,
     40,
     220,
     clamp(60 + clamp(request?.arousal, 0, 1, 0.5) * 80, 40, 220, 96)
   );
-  const timeSignature = normalizeTimeSignature(requestedTimeSignature || s.timeSignature);
+  const timeSignature = normalizeTimeSignature(request?.timeSignature || request?.time_signature || s.timeSignature);
+  const reqForm = normalizeForm(request?.form);
+  const form = reqForm || String(s.form || 'ABA').slice(0, 24);
+  const period = normalizePeriod(request?.period);
+
+  const plan = buildClassicalPlan(request, { key, tempo, timeSignature });
+
+  const leitmotifs = normalizeLeitmotifs(s.leitmotifs || s.leitMotifs || s.leit_motifs);
+  const humanize = normalizeHumanize(s.humanize || s.humanization || s.performance, request);
 
   const sections = Array.isArray(s.sections) ? s.sections : [];
 
-  const safeSections = sections.slice(0, 8).map((sec, idx) => {
+  const safeSections = sections.slice(0, 12).map((sec, idx) => {
     const obj = sec && typeof sec === 'object' ? sec : {};
+
+    const sectionKey = normalizeKey(obj.key || obj.localKey || obj.sectionKey || plan?.sections?.[idx]?.key || key, { valence });
+    const mode = modeFromKey(sectionKey);
+    const cadenceRaw = String(obj.cadence || obj.cadenceType || plan?.sections?.[idx]?.cadence || 'PAC').toUpperCase();
+    const cadence = cadenceRaw.includes('PIC') ? 'PICARDY' : cadenceRaw === 'HC' ? 'HC' : cadenceRaw === 'DC' ? 'DC' : 'PAC';
 
     const melody = obj.melody && typeof obj.melody === 'object' ? obj.melody : {};
     const safeMotifs = normalizeMotifs(melody.motifs);
 
+    const chordProgressionBase = normalizeChordProgression(obj.chordProgression, { key: sectionKey });
+    const chordProgression = applyCadence(chordProgressionBase, { mode, cadence });
+
+    const harmonicFunctions = normalizeHarmonicFunctions(obj.harmonicFunctions || obj.harmonic_functions || obj.emotional_function);
+
     return {
       name: String(obj.name || String.fromCharCode(65 + (idx % 26))).slice(0, 20),
       measures: clamp(obj.measures, 1, 256, 8),
-      chordProgression: obj.chordProgression,
+      key: sectionKey,
+      chordProgression,
       melody: { motifs: safeMotifs },
       dynamics: String(obj.dynamics || 'mf').slice(0, 4),
       texture: String(obj.texture || 'simple').slice(0, 24),
+      cadence: cadence === 'PICARDY' ? 'PICARDY' : cadence,
+      harmonicFunctions,
     };
   });
 
-  const fittedSections = fitMeasuresToDuration(safeSections.length ? safeSections : [{
+  // If the model didn't provide enough sections, seed from the plan.
+  let seededSections = safeSections;
+  if (!seededSections.length && plan?.sections?.length) {
+    seededSections = plan.sections.map((p) => {
+      const sectionKey = normalizeKey(p.key || key, { valence });
+      const mode = modeFromKey(sectionKey);
+      const chords = applyCadence(normalizeChordProgression([], { key: sectionKey }), { mode, cadence: p.cadence || 'PAC' });
+      return {
+        name: String(p.name || 'A').slice(0, 20),
+        measures: clamp(p.measures, 1, 256, 8),
+        key: sectionKey,
+        chordProgression: chords,
+        melody: { motifs: normalizeMotifs([]) },
+        dynamics: 'mf',
+        texture: period === 'baroque' ? 'contrapuntal' : 'homophonic',
+      };
+    });
+  }
+
+  // Apply motif seeding + development for stronger classical unity.
+  const motifSeedDegrees = normalizeMotifSeed(request?.motif_seed || request?.motifSeedDegrees);
+  const rhythmSeed = normalizeRhythmSeed(request?.rhythm_seed || request?.rhythmSeed);
+
+  const leitBase = leitmotifs?.[0]
+    ? { degrees: leitmotifs[0].degrees, rhythm: leitmotifs[0].rhythm }
+    : null;
+  const baseMotif = {
+    degrees: motifSeedDegrees || leitBase?.degrees || (seededSections?.[0]?.melody?.motifs?.[0]?.degrees ?? [1, 3, 5, 3]),
+    rhythm: rhythmSeed || leitBase?.rhythm || (seededSections?.[0]?.melody?.motifs?.[0]?.rhythm ?? [1, 1, 1, 1]),
+  };
+
+  const developedSections = seededSections.map((sec, idx) => {
+    const planVar = plan?.sections?.[idx]?.variation || 'none';
+    const variation = idx === 0 ? 'none' : planVar;
+    const motif = variation === 'none' ? varyMotif(baseMotif, 'none') : varyMotif(baseMotif, variation);
+    const extraLeit = Array.isArray(leitmotifs)
+      ? leitmotifs.slice(1, 3).map((m) => ({ degrees: m.degrees, rhythm: m.rhythm }))
+      : [];
+    return {
+      ...sec,
+      melody: {
+        motifs: Array.isArray(sec?.melody?.motifs) && sec.melody.motifs.length
+          ? sec.melody.motifs
+          : [motif, ...extraLeit].slice(0, 4),
+      },
+    };
+  });
+
+  const fittedSections = fitMeasuresToDuration(developedSections.length ? developedSections : [{
     name: 'A',
     measures: 8,
-    chordProgression: normalizeChordProgression(['I', 'V', 'vi', 'IV'], { key }),
+    key,
+    chordProgression: applyCadence(normalizeChordProgression(['I', 'V', 'vi', 'IV'], { key }), { mode: modeFromKey(key), cadence: 'PAC' }),
     melody: { motifs: normalizeMotifs([]) },
     dynamics: 'mf',
     texture: 'simple',
   }], { tempo, timeSignature, durationSec });
 
-  const finalSections = fittedSections.map((sec, idx) => {
-    const isLast = idx === fittedSections.length - 1;
-    const cadenceType =
-      cadencePlan === 'open-ended'
-        ? 'half'
-        : cadencePlan === 'closed-every-section'
-        ? 'authentic'
-        : isLast
-        ? 'authentic'
-        : 'half';
-
-    const measures = Math.max(1, Number(sec.measures) || 1);
-    const chordProgression = expandChordProgressionToMeasures(sec.chordProgression, measures, { key, cadenceType });
-
-    const motifs = ensureMotifsForClassicalCadence(sec.melody?.motifs, { key });
-
-    return {
-      ...sec,
-      measures,
-      chordProgression,
-      melody: { motifs },
-    };
-  });
-
   return {
     key,
     tempo,
     timeSignature,
-    form: String(requestedForm || s.form || 'ABA').slice(0, 24),
-    sections: finalSections,
-    instrumentation: String(s.instrumentation || 'piano').slice(0, 40),
+    form: String(form || plan.form || 'ABA').slice(0, 24),
+    sections: fittedSections,
+    instrumentation: String(request?.instrumentation ?? s.instrumentation ?? 'piano').slice(0, 40),
     character: String(s.character || '').slice(0, 160),
     reasoning: s.reasoning ? String(s.reasoning).slice(0, 1200) : undefined,
+    leitmotifs,
+    humanize,
   };
 }
 
@@ -456,7 +667,26 @@ export async function generateMusicStructure(request) {
       timbre_arc,
       theme,
       personality_axes,
+      emotional_arc,
+      key: requestKey,
+      tempo: requestTempo,
+      timeSignature: requestTimeSignature,
+      form: requestForm,
+      period,
+      motif_seed,
+      rhythm_seed,
+      section_plan,
     } = request;
+
+    const keyHint = normalizeKey(requestKey, { valence });
+    const tempoHint = clamp(requestTempo, 40, 220, null);
+    const timeSigHint = normalizeTimeSignature(requestTimeSignature);
+    const formHint = normalizeForm(requestForm);
+    const plan = buildClassicalPlan(request, {
+      key: keyHint,
+      tempo: tempoHint || Math.round(60 + clamp(arousal, 0, 1, 0.5) * 80),
+      timeSignature: timeSigHint,
+    });
 
     const systemPrompt = `You are a music composition assistant specializing in generating structured music data based on emotional parameters.
 
@@ -470,6 +700,14 @@ Guidelines:
 - If jazz influence is requested/allowed, incorporate it subtly (extended harmony, gentle syncopation) while keeping the overall form coherent
 - Avoid modern/pop music patterns
 
+Artistic "soul" requirements:
+- Map psychological tension/release to harmonic resolution:
+  - unresolved/conflicted: prefer HC or DC (deceptive), and carry dominant tension across section boundaries
+  - overcome/acceptance: prefer strong PAC; in minor keys you MAY use a Picardy third cadence (PICARDY) for redemption
+  - complex/ambiguous: use modal color by emphasizing non-tonic scale degrees (ii/IV in major; iv/VI in minor) and avoid overly-final cadences
+- Use leitmotifs: pick 2–3 theme keywords and define short motifs (degrees+rhythm). Reintroduce them with variation (sequence, inversion, augmentation, diminution).
+- Humanize performance (MIDI-friendly): describe rubato level + velocity shaping (peak emphasis, phrase-end softening).
+
 Output ONLY valid JSON with this exact structure:
 {
   "key": "string (e.g., 'd minor', 'C major')",
@@ -479,6 +717,7 @@ Output ONLY valid JSON with this exact structure:
   "sections": [
     {
       "name": "string (e.g., 'A', 'B')",
+      "key": "optional local key for this section (e.g., 'G major')",
       "measures": number,
       "chordProgression": ["array", "of", "roman", "numerals"],
       "melody": {
@@ -490,9 +729,26 @@ Output ONLY valid JSON with this exact structure:
         ]
       },
       "dynamics": "string (pp, p, mp, mf, f, ff)",
-      "texture": "string (simple, contrapuntal, homophonic)"
+      "texture": "string (simple, contrapuntal, homophonic)",
+      "cadence": "optional cadence goal (HC|PAC|DC|PICARDY)",
+      "harmonicFunctions": ["optional", "array", "of", "tension|release|ambiguity", "aligned", "to", "chords"]
     }
   ],
+  "leitmotifs": [
+    {
+      "tag": "string (picked from theme keywords)",
+      "degrees": [1, 3, 5, 3],
+      "rhythm": [0.5, 0.5, 1, 1],
+      "meaning": "optional short meaning",
+      "transformations": ["optional variation hints"]
+    }
+  ],
+  "humanize": {
+    "rubato": "none|subtle|expressive",
+    "velocityCurve": "flat|phrase",
+    "peakBoost": 0.0,
+    "phraseEndSoftness": 0.0
+  },
   "instrumentation": "string (e.g., 'piano' or 'piano trio')",
   "character": "string describing emotional character",
   "reasoning": "brief explanation of why you chose this key, tempo, form, and other musical decisions"
@@ -501,34 +757,17 @@ Output ONLY valid JSON with this exact structure:
 Hard constraints for MIDI compatibility:
 - timeSignature MUST be one of: "3/4", "4/4", "6/8" (recommended: 4/4)
 - tempo MUST be a number (40..220)
-- chordProgression MUST be exactly "measures" long (one chord per bar)
+- section.key (if provided) MUST be one of: C major, c minor, D major, d minor, E major, e minor, F major, f minor, G major, g minor, A major, a minor, B major, b minor
 - chordProgression MUST use ONLY these diatonic roman numerals (no slashes, no 7ths):
   - Major mode: I, ii, iii, IV, V, vi, vii
   - Minor mode: i, III, iv, V, VI, VII (and optionally ii)
 - degrees MUST be integers 1..7 (optionally up to 14 for octave shifts)
 - rhythm values MUST be in beats and should be from: 0.25, 0.5, 1, 2, 4
-
-Classical structure requirements:
-- Prefer 4-bar phrases with clear cadences.
-- Non-final sections should usually end with a HALF cadence (... V).
-- The final section MUST end with an AUTHENTIC cadence (V -> I for major, V -> i for minor).
 `;
 
-    const constraintsBlock = `\n\nCreative constraints (optional):\n- Allowed genres: ${Array.isArray(genre_palette) && genre_palette.length ? genre_palette.join(', ') : 'classical'}\n- Primary genre hint: ${primary_genre || 'classical'}\n- Instrumentation hint: ${Array.isArray(instrumentation) && instrumentation.length ? instrumentation.join(', ') : 'piano'}\n- Timbre arc: ${timbre_arc ? JSON.stringify(timbre_arc) : 'n/a'}\n- Theme: ${theme ? JSON.stringify({ title: theme.title, keywords: theme.keywords }) : 'n/a'}\n- Personality axes: ${Array.isArray(personality_axes) ? JSON.stringify(personality_axes.slice(0, 3)) : 'n/a'}\n`;
+    const constraintsBlock = `\n\nCreative constraints (optional):\n- Period/era: ${normalizePeriod(period) || 'classical'}\n- Preferred form: ${formHint || plan.form}\n- Preferred key (global): ${requestKey ? normalizeKey(requestKey, { valence }) : 'auto'}\n- Tempo hint: ${tempoHint ?? 'auto'}\n- Time signature hint: ${requestTimeSignature ? normalizeTimeSignature(requestTimeSignature) : 'auto'}\n- Motif seed degrees: ${Array.isArray(motif_seed) ? JSON.stringify(motif_seed.slice(0, 12)) : 'n/a'}\n- Rhythm seed (beats): ${Array.isArray(rhythm_seed) ? JSON.stringify(rhythm_seed.slice(0, 12)) : 'n/a'}\n- Section plan override: ${section_plan ? JSON.stringify(section_plan).slice(0, 600) : 'n/a'}\n- Allowed genres: ${Array.isArray(genre_palette) && genre_palette.length ? genre_palette.join(', ') : 'classical'}\n- Primary genre hint: ${primary_genre || 'classical'}\n- Instrumentation hint: ${Array.isArray(instrumentation) && instrumentation.length ? instrumentation.join(', ') : 'piano'}\n- Timbre arc: ${timbre_arc ? JSON.stringify(timbre_arc) : 'n/a'}\n- Theme: ${theme ? JSON.stringify({ title: theme.title, keywords: theme.keywords }) : 'n/a'}\n- Emotional arc: ${emotional_arc ? JSON.stringify(emotional_arc).slice(0, 600) : 'n/a'}\n- Personality axes: ${Array.isArray(personality_axes) ? JSON.stringify(personality_axes.slice(0, 3)) : 'n/a'}\n\nSection plan you MUST follow (names, approximate measures, section keys, cadence goals):\n${JSON.stringify(plan.sections.map((s) => ({ name: s.name, measures: s.measures, key: s.key, cadence: s.cadence })), null, 2)}\n`;
 
-    const prefLines = [];
-    if (request?.key) prefLines.push(`Preferred key: ${String(request.key).slice(0, 32)}`);
-    if (request?.tempoBpm || request?.tempo) prefLines.push(`Preferred tempo (BPM): ${Number(request.tempoBpm ?? request.tempo)}`);
-    if (request?.timeSignature) prefLines.push(`Preferred timeSignature: ${String(request.timeSignature).slice(0, 12)}`);
-    if (request?.form) prefLines.push(`Preferred form: ${String(request.form).slice(0, 32)}`);
-    if (request?.cadencePlan) prefLines.push(`Cadence plan: ${String(request.cadencePlan).slice(0, 32)}`);
-    if (Array.isArray(request?.composerHints) && request.composerHints.length) {
-      prefLines.push(`Composer/era hints: ${request.composerHints.map((s) => String(s).slice(0, 24)).slice(0, 4).join(', ')}`);
-    }
-
-    const preferenceBlock = prefLines.length ? `\n\nPreferences:\n- ${prefLines.join('\n- ')}` : '';
-
-    const userPrompt = `Generate a composition with the following emotional parameters:\n\nValence: ${Number(valence).toFixed(2)}\nArousal: ${Number(arousal).toFixed(2)}\nFocus: ${Number(focus).toFixed(2)}\nArtistic motifs: ${Array.isArray(motif_tags) ? motif_tags.join(', ') : ''}\nTarget duration: ${duration} seconds${preferenceBlock}\n\nCreate a composition that reflects these emotional qualities, staying within the allowed genre palette and respecting the timbre arc when provided.${constraintsBlock}`;
+    const userPrompt = `Generate a single cohesive classical piece (not a loop) with the following emotional parameters:\n\nValence: ${Number(valence).toFixed(2)}\nArousal: ${Number(arousal).toFixed(2)}\nFocus: ${Number(focus).toFixed(2)}\nArtistic motifs: ${Array.isArray(motif_tags) ? motif_tags.join(', ') : ''}\nTarget duration: ${duration} seconds\n\nClassical-theory requirements:\n- Use clear phrase structure (often 4+4 or 8-bar periods) and motivic unity across sections\n- Use functional harmony and cadences at section endings (HC/PAC)\n- Use development techniques (sequence, inversion, augmentation/diminution) especially in development/variation sections\n- Avoid pop-loop progressions and avoid random chord jumps\n\nNow add artistic depth:\n- Define 2–3 leitmotifs from the theme keywords (tagged), and restate them later with variation.\n- Annotate chord functions with tension/release/ambiguity where it helps the narrative (optional).\n- Add humanize guidance (rubato + velocity shaping) compatible with MIDI.${constraintsBlock}`;
 
     const musicStructure = await ollamaChatJson({
       system: systemPrompt,
@@ -570,7 +809,26 @@ Classical structure requirements:
     timbre_arc,
     theme,
     personality_axes,
+    emotional_arc,
+    key: requestKey,
+    tempo: requestTempo,
+    timeSignature: requestTimeSignature,
+    form: requestForm,
+    period,
+    motif_seed,
+    rhythm_seed,
+    section_plan,
   } = request;
+
+  const keyHint = normalizeKey(requestKey, { valence });
+  const tempoHint = clamp(requestTempo, 40, 220, null);
+  const timeSigHint = normalizeTimeSignature(requestTimeSignature);
+  const formHint = normalizeForm(requestForm);
+  const plan = buildClassicalPlan(request, {
+    key: keyHint,
+    tempo: tempoHint || Math.round(60 + clamp(arousal, 0, 1, 0.5) * 80),
+    timeSignature: timeSigHint,
+  });
 
   // Build the system prompt for music generation
   const systemPrompt = `You are a music composition assistant specializing in generating structured music data based on emotional parameters.
@@ -584,6 +842,14 @@ Guidelines:
 - Use functional harmony and proper cadences
 - If jazz influence is requested/allowed, incorporate it subtly (extended harmony, gentle syncopation) while keeping the overall form coherent
 - Avoid modern/pop music patterns
+
+Artistic "soul" requirements:
+- Map psychological tension/release to harmonic resolution:
+  - unresolved/conflicted: prefer HC or DC (deceptive), and carry dominant tension across section boundaries
+  - overcome/acceptance: prefer strong PAC; in minor keys you MAY use a Picardy third cadence (PICARDY) for redemption
+  - complex/ambiguous: use modal color by emphasizing non-tonic scale degrees (ii/IV in major; iv/VI in minor) and avoid overly-final cadences
+- Use leitmotifs: pick 2–3 theme keywords and define short motifs (degrees+rhythm). Reintroduce them with variation (sequence, inversion, augmentation, diminution).
+- Humanize performance (MIDI-friendly): describe rubato level + velocity shaping (peak emphasis, phrase-end softening).
 
 Emotional Parameter Interpretation:
 - Valence (-1 to +1): negative = minor keys, descending motifs, darker harmonies; positive = major keys, ascending motifs, brighter harmonies
@@ -599,6 +865,7 @@ Output ONLY valid JSON with this exact structure:
   "sections": [
     {
       "name": "string (e.g., 'A', 'B')",
+      "key": "optional local key for this section (e.g., 'G major')",
       "measures": number,
       "chordProgression": ["array", "of", "roman", "numerals"],
       "melody": {
@@ -610,9 +877,26 @@ Output ONLY valid JSON with this exact structure:
         ]
       },
       "dynamics": "string (pp, p, mp, mf, f, ff)",
-      "texture": "string (simple, contrapuntal, homophonic)"
+      "texture": "string (simple, contrapuntal, homophonic)",
+      "cadence": "optional cadence goal (HC|PAC|DC|PICARDY)",
+      "harmonicFunctions": ["optional", "array", "of", "tension|release|ambiguity", "aligned", "to", "chords"]
     }
   ],
+  "leitmotifs": [
+    {
+      "tag": "string (picked from theme keywords)",
+      "degrees": [1, 3, 5, 3],
+      "rhythm": [0.5, 0.5, 1, 1],
+      "meaning": "optional short meaning",
+      "transformations": ["optional variation hints"]
+    }
+  ],
+  "humanize": {
+    "rubato": "none|subtle|expressive",
+    "velocityCurve": "flat|phrase",
+    "peakBoost": 0.0,
+    "phraseEndSoftness": 0.0
+  },
   "instrumentation": "string (e.g., 'piano' or 'piano trio')",
   "character": "string describing emotional character",
   "reasoning": "brief explanation of why you chose this key, tempo, form, and other musical decisions"
@@ -621,41 +905,34 @@ Output ONLY valid JSON with this exact structure:
 Hard constraints for MIDI compatibility:
 - timeSignature MUST be one of: "3/4", "4/4", "6/8" (recommended: 4/4)
 - tempo MUST be a number (40..220)
-- chordProgression MUST be exactly "measures" long (one chord per bar)
+- section.key (if provided) MUST be one of: C major, c minor, D major, d minor, E major, e minor, F major, f minor, G major, g minor, A major, a minor, B major, b minor
 - chordProgression MUST use ONLY these diatonic roman numerals (no slashes, no 7ths):
   - Major mode: I, ii, iii, IV, V, vi, vii
   - Minor mode: i, III, iv, V, VI, VII (and optionally ii)
 - degrees MUST be integers 1..7 (optionally up to 14 for octave shifts)
 - rhythm values MUST be in beats and should be from: 0.25, 0.5, 1, 2, 4
-
-Classical structure requirements:
-- Prefer 4-bar phrases with clear cadences.
-- Non-final sections should usually end with a HALF cadence (… V).
-- The final section MUST end with an AUTHENTIC cadence (V -> I for major, V -> i for minor).
 `;
 
-  const constraintsBlock = `\n\nCreative constraints (optional):\n- Allowed genres: ${Array.isArray(genre_palette) && genre_palette.length ? genre_palette.join(', ') : 'classical'}\n- Primary genre hint: ${primary_genre || 'classical'}\n- Instrumentation hint: ${Array.isArray(instrumentation) && instrumentation.length ? instrumentation.join(', ') : 'piano'}\n- Timbre arc: ${timbre_arc ? JSON.stringify(timbre_arc) : 'n/a'}\n- Theme: ${theme ? JSON.stringify({ title: theme.title, keywords: theme.keywords }) : 'n/a'}\n- Personality axes: ${Array.isArray(personality_axes) ? JSON.stringify(personality_axes.slice(0, 3)) : 'n/a'}\n`;
+  const constraintsBlock = `\n\nCreative constraints (optional):\n- Period/era: ${normalizePeriod(period) || 'classical'}\n- Preferred form: ${formHint || plan.form}\n- Preferred key (global): ${requestKey ? normalizeKey(requestKey, { valence }) : 'auto'}\n- Tempo hint: ${tempoHint ?? 'auto'}\n- Time signature hint: ${requestTimeSignature ? normalizeTimeSignature(requestTimeSignature) : 'auto'}\n- Motif seed degrees: ${Array.isArray(motif_seed) ? JSON.stringify(motif_seed.slice(0, 12)) : 'n/a'}\n- Rhythm seed (beats): ${Array.isArray(rhythm_seed) ? JSON.stringify(rhythm_seed.slice(0, 12)) : 'n/a'}\n- Section plan override: ${section_plan ? JSON.stringify(section_plan).slice(0, 600) : 'n/a'}\n- Allowed genres: ${Array.isArray(genre_palette) && genre_palette.length ? genre_palette.join(', ') : 'classical'}\n- Primary genre hint: ${primary_genre || 'classical'}\n- Instrumentation hint: ${Array.isArray(instrumentation) && instrumentation.length ? instrumentation.join(', ') : 'piano'}\n- Timbre arc: ${timbre_arc ? JSON.stringify(timbre_arc) : 'n/a'}\n- Theme: ${theme ? JSON.stringify({ title: theme.title, keywords: theme.keywords }) : 'n/a'}\n- Emotional arc: ${emotional_arc ? JSON.stringify(emotional_arc).slice(0, 600) : 'n/a'}\n- Personality axes: ${Array.isArray(personality_axes) ? JSON.stringify(personality_axes.slice(0, 3)) : 'n/a'}\n\nSection plan you MUST follow (names, approximate measures, section keys, cadence goals):\n${JSON.stringify(plan.sections.map((s) => ({ name: s.name, measures: s.measures, key: s.key, cadence: s.cadence })), null, 2)}\n`;
 
-  const prefLines = [];
-  if (request?.key) prefLines.push(`Preferred key: ${String(request.key).slice(0, 32)}`);
-  if (request?.tempoBpm || request?.tempo) prefLines.push(`Preferred tempo (BPM): ${Number(request.tempoBpm ?? request.tempo)}`);
-  if (request?.timeSignature) prefLines.push(`Preferred timeSignature: ${String(request.timeSignature).slice(0, 12)}`);
-  if (request?.form) prefLines.push(`Preferred form: ${String(request.form).slice(0, 32)}`);
-  if (request?.cadencePlan) prefLines.push(`Cadence plan: ${String(request.cadencePlan).slice(0, 32)}`);
-  if (Array.isArray(request?.composerHints) && request.composerHints.length) {
-    prefLines.push(`Composer/era hints: ${request.composerHints.map((s) => String(s).slice(0, 24)).slice(0, 4).join(', ')}`);
-  }
-
-  const preferenceBlock = prefLines.length ? `\n\nPreferences:\n- ${prefLines.join('\n- ')}` : '';
-
-  const userPrompt = `Generate a composition with the following emotional parameters:
+  const userPrompt = `Generate a single cohesive classical piece (not a loop) with the following emotional parameters:
 
 Valence: ${valence.toFixed(2)} (${valence < -0.3 ? 'negative/sad' : valence > 0.3 ? 'positive/happy' : 'neutral'})
 Arousal: ${arousal.toFixed(2)} (${arousal < 0.3 ? 'calm' : arousal > 0.7 ? 'energetic' : 'moderate'})
 Focus: ${focus.toFixed(2)} (${focus < 0.3 ? 'diffuse' : focus > 0.7 ? 'concentrated' : 'balanced'})
 Artistic motifs: ${motif_tags.join(', ')}
 Target duration: ${duration} seconds
-${preferenceBlock}
+
+Classical-theory requirements:
+- Use clear phrase structure (often 4+4 or 8-bar periods) and motivic unity across sections
+- Use functional harmony and cadences at section endings (HC/PAC)
+- Use development techniques (sequence, inversion, augmentation/diminution) especially in development/variation sections
+- Avoid pop-loop progressions and avoid random chord jumps
+
+Now add artistic depth:
+- Define 2–3 leitmotifs from the theme keywords (tagged), and restate them later with variation.
+- Annotate chord functions with tension/release/ambiguity where it helps the narrative (optional).
+- Add humanize guidance (rubato + velocity shaping) compatible with MIDI.
 
 Create a composition that reflects these emotional qualities, staying within the allowed genre palette and respecting the timbre arc when provided.${constraintsBlock}`;
 
@@ -736,64 +1013,34 @@ export async function generateMusicStructureWithFallback(request) {
  * @returns {Object} Music structure
  */
 function generateRuleBasedMusic(request) {
-  const { valence, arousal, focus, motif_tags, instrumentation, primary_genre } = request;
+  const { valence, arousal, focus, instrumentation, primary_genre } = request;
 
-  // Determine key based on valence
-  const key = valence < 0 ? 'd minor' : 'C major';
+  const key = normalizeKey(request?.key || (valence < 0 ? 'd minor' : 'C major'), { valence });
+  const tempo = clamp(request?.tempo, 40, 220, Math.round(60 + clamp(arousal, 0, 1, 0.5) * 80));
+  const timeSignature = normalizeTimeSignature(request?.timeSignature || (focus > 0.6 ? '4/4' : '3/4'));
+  const plan = buildClassicalPlan(request, { key, tempo, timeSignature });
 
-  // Determine tempo based on arousal (40-160 BPM range)
-  const tempo = Math.round(60 + arousal * 80);
+  const baseMotif = {
+    degrees: normalizeMotifSeed(request?.motif_seed || request?.motifSeedDegrees) || (valence < 0 ? [5, 4, 3, 2, 1] : [1, 3, 5, 3, 1]),
+    rhythm: normalizeRhythmSeed(request?.rhythm_seed || request?.rhythmSeed) || [1, 1, 1, 1, 2],
+  };
 
-  // Determine time signature based on focus
-  const timeSignature = focus > 0.6 ? '4/4' : '3/4';
-
-  // Determine form based on focus
-  const form = focus > 0.5 ? 'ABA' : 'theme-variation';
-
-  // Determine dynamics based on arousal
-  const dynamics = arousal < 0.3 ? 'p' : arousal > 0.7 ? 'f' : 'mf';
-
-  // Create simple sections
-  const sections = [
-    {
-      name: 'A',
-      measures: 8,
-      chordProgression: valence < 0 ? ['i', 'iv', 'V', 'i'] : ['I', 'IV', 'V', 'I'],
-      melody: {
-        motifs: [
-          {
-            degrees: valence < 0 ? [5, 4, 3, 2, 1] : [1, 3, 5, 3, 1],
-            rhythm: [1, 1, 1, 1, 2],
-          },
-        ],
-      },
+  const dynamics = clamp(arousal, 0, 1, 0.5) < 0.3 ? 'p' : clamp(arousal, 0, 1, 0.5) > 0.7 ? 'f' : 'mf';
+  const sections = plan.sections.map((p) => {
+    const sectionKey = normalizeKey(p.key, { valence });
+    const mode = modeFromKey(sectionKey);
+    const chords = applyCadence(normalizeChordProgression([], { key: sectionKey }), { mode, cadence: p.cadence || 'PAC' });
+    const motif = p.variation && p.variation !== 'none' ? varyMotif(baseMotif, p.variation) : varyMotif(baseMotif, 'none');
+    return {
+      name: String(p.name || 'A').slice(0, 20),
+      measures: clamp(p.measures, 6, 256, 8),
+      key: sectionKey,
+      chordProgression: chords,
+      melody: { motifs: [motif] },
       dynamics,
-      texture: 'simple',
-    },
-    {
-      name: 'B',
-      measures: 8,
-      chordProgression: valence < 0 ? ['VI', 'iv', 'V', 'i'] : ['vi', 'IV', 'I', 'V'],
-      melody: {
-        motifs: [
-          {
-            degrees: [3, 5, 6, 5, 3],
-            rhythm: [0.5, 0.5, 1, 1, 2],
-          },
-        ],
-      },
-      dynamics,
-      texture: 'simple',
-    },
-  ];
-
-  // Add return to A if form is ABA
-  if (form === 'ABA') {
-    sections.push({
-      ...sections[0],
-      name: 'A (reprise)',
-    });
-  }
+      texture: normalizePeriod(request?.period) === 'baroque' ? 'contrapuntal' : 'homophonic',
+    };
+  });
 
   const character = `${valence < 0 ? 'melancholic' : 'uplifting'} and ${arousal < 0.5 ? 'calm' : 'energetic'}`;
 
@@ -801,8 +1048,8 @@ function generateRuleBasedMusic(request) {
     key,
     tempo,
     timeSignature,
-    form,
-    sections,
+    form: plan.form,
+    sections: fitMeasuresToDuration(sections, { tempo, timeSignature, durationSec: request?.duration }),
     instrumentation: Array.isArray(instrumentation) && instrumentation.length
       ? instrumentation.join(', ')
       : primary_genre === 'jazz'

@@ -226,6 +226,9 @@ export function buildPrompt(params) {
     subject,
     palette,
     ambiguity,
+    period,
+    instrumentation,
+    density,
   } = params;
   
   // Auto-select style if not provided and we have IR data
@@ -243,9 +246,32 @@ export function buildPrompt(params) {
   // Build prompt components
   const components = [];
 
+  // Art-historical mapping from music period (optional)
+  const periodArt = getArtHistoricalDirection(period);
+  if (periodArt) components.push(periodArt);
+
+  // Synesthesia mapping: instrumentation → texture/material vocabulary
+  const instDir = getSynestheticInstrumentationDirection(instrumentation);
+  if (instDir) components.push(instDir);
+
+  // Density (0..1): unify "busy vs empty" across modalities
+  const resolvedDensity = typeof density === 'number' && Number.isFinite(density)
+    ? Math.max(0, Math.min(1, density))
+    : arousal !== undefined && focus !== undefined
+      ? Math.max(0, Math.min(1, 0.55 * arousal + 0.35 * focus))
+      : undefined;
+  if (resolvedDensity !== undefined) {
+    components.push(resolvedDensity < 0.33
+      ? 'minimal, spacious, generous negative space, few elements'
+      : resolvedDensity < 0.66
+        ? 'balanced detail, tasteful ornament, curated composition'
+        : 'dense detail, intricate textures, layered symbolism, rich micro-structure');
+  }
+
   // Refined brief additions (kept optional)
   if (subject) {
-    components.push(`subject hints: ${subject}`);
+    const safeSubject = abstractifySubject(String(subject));
+    if (safeSubject) components.push(`subject hints: ${safeSubject}`);
   }
   if (palette) {
     components.push(`color palette: ${palette}`);
@@ -281,7 +307,9 @@ export function buildPrompt(params) {
   if (motifTags.length > 0) {
     // Translate common Japanese motif tags to English for SDXL
     const translatedTags = motifTags.map(tag => translateMotifTag(tag));
+    const objectiveHints = objectiveCorrelativeHints(motifTags);
     components.push(translatedTags.join(', '));
+    if (objectiveHints) components.push(objectiveHints);
   }
   
   // Combine with style preset
@@ -299,6 +327,78 @@ export function buildPrompt(params) {
     prompt: fullPrompt,
     negativePrompt: fullNegative,
   };
+}
+
+function getArtHistoricalDirection(period) {
+  const p = String(period ?? '').trim().toLowerCase();
+  if (!p) return '';
+  if (p === 'baroque') {
+    return 'baroque chiaroscuro, Rembrandt or Caravaggio lighting, dramatic shadows, divine light beams, ornate detail, oil painting';
+  }
+  if (p === 'classical') {
+    return 'neoclassical restraint, balanced geometry, museum-grade composition, timeless elegance, refined symbolism';
+  }
+  if (p === 'romantic') {
+    return 'romantic sublime, Caspar David Friedrich mood, vast landscape metaphor, emotional atmosphere, dramatic sky';
+  }
+  if (p === 'modern') {
+    return 'modern abstract expressionism or minimalism, Rothko-like color fields, emotional resonance through color, quiet intensity';
+  }
+  return '';
+}
+
+function getSynestheticInstrumentationDirection(instrumentation) {
+  const list = Array.isArray(instrumentation)
+    ? instrumentation
+    : typeof instrumentation === 'string'
+      ? instrumentation.split(',')
+      : [];
+
+  const tokens = list.map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+  if (!tokens.length) return '';
+
+  const out = [];
+  const has = (re) => tokens.some((t) => re.test(t));
+  if (has(/piano|keys|keyboard/)) out.push('liquid glass texture, water droplets, polished porcelain reflections');
+  if (has(/string|violin|cello|viola|harp/)) out.push('silk threads, flowing lines, continuous ribbons, woven texture');
+  if (has(/brass|horn|trumpet|trombone/)) out.push('metallic luster, golden rays, rigid architectural forms');
+  if (has(/woodwind|flute|clarinet|oboe|bassoon/)) out.push('airy translucency, reed-like fibers, whispering currents');
+  if (has(/choir|voice|vocal/)) out.push('incandescent haze, sacred aura, soft halos, breath-like fog');
+  return out.length ? out.join(', ') : '';
+}
+
+function abstractifySubject(text) {
+  const s0 = String(text ?? '').trim();
+  if (!s0) return '';
+
+  // Replace overly literal/modern nouns with metaphorical correlatives for album-cover aesthetics.
+  const replacements = [
+    { re: /(パソコン|pc|computer|laptop)/gi, to: 'cold glass rectangle glow, geometric light' },
+    { re: /(スマホ|スマートフォン|phone|smartphone)/gi, to: 'small illuminated rectangle, distant signal' },
+    { re: /(ビル|建物|building|city|都市)/gi, to: 'distant monolith silhouettes, vertical geometry' },
+    { re: /(電車|train|駅|station)/gi, to: 'vanishing lines, rhythmic rails, traveling horizon' },
+    { re: /(会社|office|会議|meeting)/gi, to: 'grid of windows, fluorescent haze, anonymous corridor' },
+    { re: /(SNS|social media|timeline)/gi, to: 'fragmented mirrors, drifting shards of light' },
+  ];
+
+  let s = s0;
+  for (const r of replacements) s = s.replace(r.re, r.to);
+
+  // Avoid explicit typography requests in subject.
+  s = s.replace(/(text|logo|typography|文字|ロゴ)/gi, '').trim();
+  return s.slice(0, 220);
+}
+
+function objectiveCorrelativeHints(motifTags) {
+  const tags = Array.isArray(motifTags) ? motifTags.map((t) => String(t).trim()) : [];
+  const has = (w) => tags.includes(w);
+  const out = [];
+  if (has('孤独')) out.push('objective correlative: vast snowfield, single leafless tree, empty chair');
+  if (has('希望')) out.push('objective correlative: dawn light through mist, thin gold horizon');
+  if (has('静寂')) out.push('objective correlative: still water surface, minimal ripples, quiet fog');
+  if (has('影')) out.push('objective correlative: long shadows, chiaroscuro gradients');
+  if (has('記憶')) out.push('objective correlative: faded layers, palimpsest texture, soft fragments');
+  return out.length ? out.join(', ') : '';
 }
 
 /**

@@ -63,6 +63,14 @@ export interface GenerateImageRequest {
   arousal?: number;
   focus?: number;
   confidence?: number;
+
+  // Optional art-direction inputs (from event refine)
+  subject?: string;
+  palette?: string;
+  ambiguity?: number;
+  density?: number;
+  period?: string;
+  instrumentation?: string[];
 }
 
 export interface GenerateImageResponse {
@@ -154,11 +162,7 @@ export interface RefinedEventResponse {
   provider: 'openai' | 'rule-based';
   brief: any;
   analysisLike: IntermediateRepresentation;
-  image: GenerateImageRequest & {
-    subject?: string;
-    palette?: string;
-    ambiguity?: number;
-  };
+  image: GenerateImageRequest;
   music: {
     valence: number;
     arousal: number;
@@ -171,6 +175,17 @@ export interface RefinedEventResponse {
     timbre_arc?: any;
     theme?: any;
     personality_axes?: any;
+    emotional_arc?: any;
+
+    // Advanced classical controls (optional)
+    key?: string;
+    tempo?: number;
+    timeSignature?: string;
+    form?: string;
+    period?: string;
+    motif_seed?: number[];
+    rhythm_seed?: number[];
+    section_plan?: any;
   };
 }
 
@@ -455,22 +470,16 @@ export interface GenerateMusicRequest {
   duration?: number;
   seed?: number;
 
-  // Optional composition controls
-  tempoBpm?: number;
+  // Advanced controls (optional)
+  key?: string;
+  tempo?: number;
   timeSignature?: string;
   form?: string;
-  key?: string;
-  cadencePlan?: string;
-  composerHints?: string[];
-  originality?: number;
-
-  // Optional creative brief passthrough
-  genre_palette?: string[];
-  primary_genre?: string;
+  period?: string;
   instrumentation?: string[];
-  timbre_arc?: { early?: string; middle?: string; late?: string };
-  theme?: { title?: string; keywords?: string[] };
-  personality_axes?: Array<{ name: string; description?: string; weight?: number }>;
+  motif_seed?: number[];
+  rhythm_seed?: number[];
+  section_plan?: any;
 }
 
 export interface GenerateMusicResponse {

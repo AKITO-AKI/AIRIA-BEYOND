@@ -52,10 +52,10 @@ const DYNAMICS_MAP = {
  * @returns {string} Base64-encoded MIDI data
  */
 export function musicStructureToMIDI(structure) {
-  const { key, tempo, timeSignature, sections } = structure;
+  const { key, tempo, timeSignature, sections, humanize } = structure;
 
   // Get key information
-  const keyInfo = KEY_SIGNATURES[key] || KEY_SIGNATURES['C major'];
+  const globalKeyInfo = KEY_SIGNATURES[key] || KEY_SIGNATURES['C major'];
 
   const { numerator, denominator, measureBeats } = parseTimeSignature(timeSignature);
 
@@ -71,7 +71,8 @@ export function musicStructureToMIDI(structure) {
 
   // Convert each section
   for (const section of sections) {
-    convertSectionToMIDI({ harmonyTrack, bassTrack, melodyTrack }, section, keyInfo, measureBeats);
+    const sectionKeyInfo = KEY_SIGNATURES[section?.key] || globalKeyInfo;
+    convertSectionToMIDI({ harmonyTrack, bassTrack, melodyTrack }, section, sectionKeyInfo, measureBeats, { tempo, humanize });
   }
 
   // Create MIDI file
@@ -99,9 +100,18 @@ function parseTimeSignature(timeSignature) {
   return { numerator: n, denominator: d, measureBeats };
 }
 
-function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
+function convertSectionToMIDI(tracks, section, keyInfo, measureBeats, options = {}) {
   const { chordProgression, melody, dynamics } = section;
   const velocity = DYNAMICS_MAP[dynamics] || 90;
+
+  const humanize = options?.humanize && typeof options.humanize === 'object' ? options.humanize : null;
+  const baseTempo = Number(options?.tempo) || 96;
+  const sectionTempo = computeSectionTempo(baseTempo, section, humanize);
+  if (Number.isFinite(sectionTempo) && sectionTempo > 0 && sectionTempo !== baseTempo) {
+    for (const t of [tracks.harmonyTrack, tracks.bassTrack, tracks.melodyTrack]) {
+      t.addEvent(new MidiWriter.TempoEvent({ tempo: sectionTempo }));
+    }
+  }
 
   const safeChordProgression = Array.isArray(chordProgression) && chordProgression.length ? chordProgression : ['I', 'V', 'vi', 'IV'];
   const motifs = Array.isArray(melody?.motifs) ? melody.motifs : [];
@@ -116,8 +126,10 @@ function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
   const bassTonic = clampMidi(keyInfo.tonic - 24);
   let prevMidVoicing = null;
 
-  for (let measure = 0; measure < Number(section.measures || 0); measure++) {
-    const chord = safeChordProgression[measure % safeChordProgression.length];
+  const measures = Math.max(0, Number(section.measures || 0));
+
+  for (let measure = 0; measure < measures; measure++) {
+    const chord = pickChordForMeasure(safeChordProgression, measure, measures);
     const midVoicingRaw = getChordNotes(chord, keyInfo, midTonic);
     const chordNotesMid = prevMidVoicing ? voiceLeadChord(midVoicingRaw, prevMidVoicing) : midVoicingRaw;
     prevMidVoicing = chordNotesMid.length ? chordNotesMid.slice() : prevMidVoicing;
@@ -148,7 +160,7 @@ function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
     // Melody: fit a motif into the measure.
     if (motifs.length) {
       const motif = motifs[measure % motifs.length];
-      addMotifToTrack(tracks.melodyTrack, motif, keyInfo, melodyVel, quarterBeats);
+      addMotifToTrack(tracks.melodyTrack, motif, keyInfo, melodyVel, quarterBeats, humanize);
     } else {
       // Minimal melodic time-keeper
       for (let b = 0; b < quarterBeats; b += 1) {
@@ -156,6 +168,56 @@ function convertSectionToMIDI(tracks, section, keyInfo, measureBeats) {
       }
     }
   }
+}
+
+function clampInt(n, min, max, fallback) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(x)));
+}
+
+function dynamicsIntensity(dynamics) {
+  const d = String(dynamics || '').trim().toLowerCase();
+  if (d === 'pp') return 0.15;
+  if (d === 'p') return 0.28;
+  if (d === 'mp') return 0.42;
+  if (d === 'mf') return 0.55;
+  if (d === 'f') return 0.72;
+  if (d === 'ff') return 0.85;
+  return 0.55;
+}
+
+function computeSectionTempo(baseTempo, section, humanize) {
+  const t = Number(baseTempo);
+  if (!Number.isFinite(t) || t <= 0) return baseTempo;
+  const rubato = String(humanize?.rubato ?? 'none').toLowerCase();
+  if (rubato === 'none') return baseTempo;
+
+  const intensity = dynamicsIntensity(section?.dynamics);
+  const maxPct = rubato === 'expressive' ? 0.06 : 0.03;
+
+  // Gentle push/pull: louder sections slightly faster, softer sections slightly slower.
+  const centered = (intensity - 0.55) / 0.55; // ~[-1..+1]
+  const pct = Math.max(-maxPct, Math.min(maxPct, centered * maxPct));
+  const out = t * (1 + pct);
+  return clampInt(out, 40, 220, baseTempo);
+}
+
+function pickChordForMeasure(chordProgression, measureIndex, totalMeasures) {
+  const prog = Array.isArray(chordProgression) ? chordProgression.filter(Boolean) : [];
+  if (!prog.length) return 'I';
+  if (prog.length >= totalMeasures) {
+    return prog[measureIndex] ?? prog[prog.length - 1] ?? 'I';
+  }
+
+  // If progression is shorter than the section, cycle normally except enforce a cadence
+  // by using the last chords of the progression for the final measures.
+  const remaining = totalMeasures - measureIndex;
+  if (remaining <= 2 && prog.length >= 2) {
+    return prog[prog.length - remaining] ?? prog[prog.length - 1] ?? prog[0] ?? 'I';
+  }
+
+  return prog[measureIndex % prog.length] ?? prog[0] ?? 'I';
 }
 
 /**
@@ -263,7 +325,7 @@ function addArpeggioPattern(track, chordNotes, quarterBeats, velocity) {
  * @param {Object} keyInfo - Key signature information
  * @param {number} velocity - MIDI velocity
  */
-function addMotifToTrack(track, motif, keyInfo, velocity, quarterBeats) {
+function addMotifToTrack(track, motif, keyInfo, velocity, quarterBeats, humanize) {
   const degrees = Array.isArray(motif?.degrees) ? motif.degrees : [];
   const rhythm = Array.isArray(motif?.rhythm) ? motif.rhythm : [];
   if (!degrees.length) {
@@ -277,7 +339,10 @@ function addMotifToTrack(track, motif, keyInfo, velocity, quarterBeats) {
   const sum = rawDurations.reduce((a, b) => a + b, 0) || 1;
   const scale = quarterBeats / sum;
 
+  // Build events first so we can humanize velocity with a simple phrase contour.
+  const noteEvents = [];
   let remaining = quarterBeats;
+  let beatPos = 0;
   for (let i = 0; i < degrees.length && remaining > 0.01; i++) {
     const degree = Number(degrees[i] ?? 1);
     const scaled = rawDurations[i] * scale;
@@ -288,13 +353,45 @@ function addMotifToTrack(track, motif, keyInfo, velocity, quarterBeats) {
     const octaveOffset = Math.floor((degree - 1) / keyInfo.scale.length) * 12;
     const note = keyInfo.tonic + 12 + keyInfo.scale[scaleIndex] + octaveOffset;
 
-    track.addEvent(
-      new MidiWriter.NoteEvent({
-        pitch: [note],
-        duration: beatsToMidiDuration(q),
-        velocity,
-      })
-    );
+    noteEvents.push({ note, beats: q, beatPos });
+    beatPos += q;
+  }
+
+  const peakBoost = typeof humanize?.peakBoost === 'number' && Number.isFinite(humanize.peakBoost)
+    ? Math.max(0, Math.min(0.6, humanize.peakBoost))
+    : 0.22;
+  const phraseEndSoftness = typeof humanize?.phraseEndSoftness === 'number' && Number.isFinite(humanize.phraseEndSoftness)
+    ? Math.max(0, Math.min(0.8, humanize.phraseEndSoftness))
+    : 0.35;
+  const curve = String(humanize?.velocityCurve ?? 'flat').toLowerCase();
+
+  let peakIdx = -1;
+  let peakPitch = -Infinity;
+  for (let i = 0; i < noteEvents.length; i += 1) {
+    if (noteEvents[i].note > peakPitch) {
+      peakPitch = noteEvents[i].note;
+      peakIdx = i;
+    }
+  }
+
+  for (let i = 0; i < noteEvents.length; i += 1) {
+    const ev = noteEvents[i];
+    let vel = velocity;
+
+    // Accent downbeats slightly (beat positions near integers).
+    const nearInt = Math.abs(ev.beatPos - Math.round(ev.beatPos)) < 0.01;
+    if (nearInt) vel = Math.floor(vel * 1.05);
+
+    // Phrase contour: emphasize peak note and soften the tail.
+    if (curve === 'phrase') {
+      if (i === peakIdx) vel = Math.floor(vel * (1 + peakBoost));
+      const tail = noteEvents.length > 1 ? i / (noteEvents.length - 1) : 1;
+      const soften = 1 - phraseEndSoftness * Math.pow(tail, 1.6);
+      vel = Math.floor(vel * soften);
+    }
+
+    vel = clampInt(vel, 18, 127, velocity);
+    track.addEvent(new MidiWriter.NoteEvent({ pitch: [ev.note], duration: beatsToMidiDuration(ev.beats), velocity: vel }));
   }
 
   // Fill any remaining time with a gentle sustain.
