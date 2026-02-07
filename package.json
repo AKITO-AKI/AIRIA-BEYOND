@@ -22,8 +22,10 @@
     "start": "node server.js",
     "server:dev": "nodemon server.js",
     "preview": "npm --workspace apps/web run preview",
-    "lint": "echo \"TODO: add lint\"",
-    "format": "echo \"TODO: add format\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "smoke:comfyui": "node scripts/smoke-comfyui-direct.mjs",
     "smoke:image:comfyui": "node scripts/smoke-image-api-comfyui.mjs",
     "smoke:require": "node scripts/smoke-require.mjs",
@@ -49,6 +51,14 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "concurrently": "^9.2.1",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/parser": "^8.32.0",
+    "eslint": "^9.10.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.5.3"
   }
 }
