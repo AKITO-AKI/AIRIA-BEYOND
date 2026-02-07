@@ -73,9 +73,18 @@ Custom domain migration guide:
 
 **See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for deployment instructions.**
 
-## Roadmap
+## ロードマップ
 
-See [docs/ROADMAP.md](./docs/ROADMAP.md) for prioritized next steps across UX, reliability, provider quality, and production hardening.
+次に優先して調整／実装していく項目（UX、信頼性、プロバイダ品質、本番運用の硬さ）を [docs/ROADMAP.md](./docs/ROADMAP.md) にまとめています。
+
+## ドキュメント（統合）
+
+ドキュメントは散らばりを減らすため、入口を [docs/INDEX.md](./docs/INDEX.md) に統合しました。
+
+- 全体像・思想・ロードマップ: [docs/PRODUCT.md](./docs/PRODUCT.md)
+- 開発・テスト（スモーク/strict含む）: [docs/DEV_GUIDE.md](./docs/DEV_GUIDE.md)
+- 運用・デプロイ・セキュリティ: [docs/OPS_GUIDE.md](./docs/OPS_GUIDE.md)
+- 引き継ぎログ（このチャットの作業履歴）: [docs/CHAT_HANDOVER_LOG.md](./docs/CHAT_HANDOVER_LOG.md)
 
 ## Repository Structure
 
@@ -632,9 +641,9 @@ The generated images reflect your emotional state through intelligent prompt gen
 
 ### Running Tests
 
-See [docs/TESTING.md](./docs/TESTING.md) for comprehensive test scenarios covering P0/P1/P2.
+開発・テスト・スモーク（strict-provider を含む）は [docs/DEV_GUIDE.md](./docs/DEV_GUIDE.md) に統合しました。
 
-See [docs/P3_IMPLEMENTATION.md](./docs/P3_IMPLEMENTATION.md) for P3 feature documentation and examples.
+旧ドキュメント（P1〜P5 の実装サマリ等）は [docs/archive/](./docs/archive/) に退避しています。
 
 ### P3 Test Scenarios
 
@@ -680,7 +689,7 @@ npm run dev
 
 ## Security
 
-See [docs/SECURITY_SUMMARY.md](./docs/SECURITY_SUMMARY.md) for security analysis.
+セキュリティの要点（優先度順）は [docs/OPS_GUIDE.md](./docs/OPS_GUIDE.md) に統合しました（旧版は [docs/SECURITY_SUMMARY.md](./docs/SECURITY_SUMMARY.md) から参照できます）。
 
 **Key Security Features:**
 - Rate limiting (5 requests/min per IP)
@@ -696,11 +705,14 @@ See [docs/SECURITY_SUMMARY.md](./docs/SECURITY_SUMMARY.md) for security analysis
 
 ## Documentation
 
-- **docs/P2_TESTING.md**: Test scenarios and guide for LLM analysis (P2)
-- **docs/P2_IMPLEMENTATION.md**: Detailed P2 implementation summary
-- **docs/TESTING.md**: Comprehensive test scenarios for P0 and P1
-- **docs/P1_IMPLEMENTATION.md**: Detailed P1 implementation summary
-- **docs/SECURITY_SUMMARY.md**: Security analysis and recommendations
+ドキュメントの入口は [docs/INDEX.md](./docs/INDEX.md) です。
+
+- 全体像・思想・ロードマップ: [docs/PRODUCT.md](./docs/PRODUCT.md)
+- 開発・テスト: [docs/DEV_GUIDE.md](./docs/DEV_GUIDE.md)
+- 運用・デプロイ・セキュリティ: [docs/OPS_GUIDE.md](./docs/OPS_GUIDE.md)
+- 引き継ぎログ: [docs/CHAT_HANDOVER_LOG.md](./docs/CHAT_HANDOVER_LOG.md)
+
+旧ドキュメントは [docs/archive/legacy/](./docs/archive/legacy/) に退避しています。
 
 ## Deployment
 
@@ -717,6 +729,8 @@ The static frontend is automatically deployed to GitHub Pages when changes are p
 **Note:** GitHub Pages only hosts the static frontend. External image generation requires the API to be deployed separately.
 
 ### Vercel (Full Stack - Recommended)
+
+※この節は旧構成の名残です。現状は「フロント静的 + API 常時稼働（Render / VPS）」を推奨しています（詳細: [docs/OPS_GUIDE.md](./docs/OPS_GUIDE.md)）。
 
 For the complete experience with external image generation:
 
