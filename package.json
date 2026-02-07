@@ -29,7 +29,9 @@
     "smoke:require": "node scripts/smoke-require.mjs",
     "smoke:music-controller": "node scripts/smoke-require.mjs ./api/controllers/music.js --timeout=5000",
     "smoke:artistic": "node scripts/smoke-artistic-pipeline.mjs",
-    "smoke:e2e:http": "node scripts/smoke-e2e-http.mjs"
+    "smoke:e2e:http": "node scripts/smoke-e2e-http.mjs",
+    "smoke:golden": "node scripts/smoke-golden-quality.mjs",
+    "smoke:golden:full": "node scripts/smoke-golden-quality.mjs --full"
   },
   "dependencies": {
     "cors": "^2.8.5",

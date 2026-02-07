@@ -64,7 +64,23 @@ node scripts/smoke-e2e-http.mjs --strict
 
 - `/api/health` の configured フラグを前提に、フォールバック（rule-based/placeholder）を許容しません
 
-### 3) その他スモーク（用途別）
+### 3) Golden Quality（ゴールデンケース + 不変条件チェック）
+
+ロードマップ **B. Quality loop** の中核です。ゴールデン・プロンプト（会話ログ）を複数ケース回し、
+refine → music → image の結果に対して「構造の不変条件」を検証します。
+
+```bash
+npm run smoke:golden
+```
+
+- デフォルトは一部ケースのみ実行（短時間で反復できるように）
+- 全件実行: `npm run smoke:golden:full`
+- 実プロバイダ必須: `node scripts/smoke-golden-quality.mjs --strict`
+- 追加ノブ:
+  - `SMOKE_GOLDEN_MAX_CASES`（実行ケース数の上限）
+  - `SMOKE_GOLDEN_TIMEOUT_MS`（ケースごとのタイムアウト）
+
+### 4) その他スモーク（用途別）
 
 - ComfyUI 直叩き: `npm run smoke:comfyui`
 - Image API + ComfyUI: `npm run smoke:image:comfyui`

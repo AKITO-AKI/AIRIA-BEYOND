@@ -120,6 +120,7 @@ function makeEmergencyStructure(input, reason) {
       },
       dynamics,
       texture: 'simple',
+      cadence: 'HC',
     },
     {
       name: 'B',
@@ -135,11 +136,12 @@ function makeEmergencyStructure(input, reason) {
       },
       dynamics,
       texture: 'simple',
+      cadence: valence < 0 ? 'PICARDY' : 'PAC',
     },
   ];
 
   if (form === 'ABA') {
-    sections.push({ ...sections[0], name: 'A (reprise)' });
+    sections.push({ ...sections[0], name: 'A (reprise)', cadence: valence < 0 ? 'PICARDY' : 'PAC' });
   }
 
   return {
@@ -228,6 +230,23 @@ async function executeMusicGeneration(jobId, request, clientId) {
       instrumentation: rawStructure?.instrumentation || 'piano',
       character: rawStructure?.character || 'unknown',
     };
+
+    // Quality-loop invariant: ensure at least one cadence goal exists.
+    try {
+      const sections = Array.isArray(structure?.sections) ? structure.sections : [];
+      const allowed = new Set(['HC', 'PAC', 'DC', 'PICARDY']);
+      const hasCadence = sections.some((s) => s && typeof s.cadence === 'string' && allowed.has(s.cadence));
+      if (!hasCadence && sections.length) {
+        const key = String(structure?.key || '').toLowerCase();
+        const minor = key.includes('minor');
+        sections[sections.length - 1] = {
+          ...(sections[sections.length - 1] || {}),
+          cadence: minor ? 'PICARDY' : 'PAC',
+        };
+      }
+    } catch {
+      // ignore
+    }
 
     // Update provider if it changed (e.g., fell back to rules)
     updateMusicJob(jobId, { provider });

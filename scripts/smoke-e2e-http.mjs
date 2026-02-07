@@ -8,6 +8,16 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function isFiniteNumber(v) {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+function hasCadence(sections) {
+  if (!Array.isArray(sections)) return false;
+  const allowed = new Set(['HC', 'PAC', 'DC', 'PICARDY']);
+  return sections.some((s) => allowed.has(String(s?.cadence || '').toUpperCase()));
+}
+
 function envFlag(name, defaultValue = false) {
   const raw = process.env[name];
   if (raw == null) return defaultValue;
@@ -184,6 +194,16 @@ try {
   assert(musicJob.status === 'succeeded', `music job did not succeed: ${musicJob.status}`);
   assert(typeof musicJob?.midiData === 'string' && musicJob.midiData.length > 100, 'music midiData missing/too short');
 
+  // Quality-loop invariants (should hold even under fallback)
+  assert(musicJob?.result && typeof musicJob.result === 'object', 'music result missing');
+  assert(isFiniteNumber(musicJob.result.tempo), 'music tempo missing');
+  assert(musicJob.result.tempo >= 40 && musicJob.result.tempo <= 220, 'music tempo out of range');
+  assert(typeof musicJob.result.timeSignature === 'string', 'music timeSignature missing');
+  assert(/^\d+\/\d+$/.test(musicJob.result.timeSignature), 'music timeSignature invalid');
+  assert(Array.isArray(musicJob.result.sections), 'music sections missing');
+  assert(musicJob.result.sections.length >= 2 && musicJob.result.sections.length <= 16, 'music sections length out of range');
+  assert(hasCadence(musicJob.result.sections), 'music cadence missing (expected at least 1 section cadence)');
+
   const hasLeit = Array.isArray(musicJob?.result?.leitmotifs) && musicJob.result.leitmotifs.length > 0;
   const hasHum = !!musicJob?.result?.humanize;
   console.log('[smoke-e2e-http] music ok:', {
@@ -217,6 +237,11 @@ try {
 
   assert(imageJob.status === 'succeeded', `image job did not succeed: ${imageJob.status}`);
   assert(typeof imageJob?.resultUrl === 'string' && imageJob.resultUrl.length > 20, 'image resultUrl missing/too short');
+
+  if (imageJob?.inputSummary && typeof imageJob.inputSummary === 'object' && 'density' in imageJob.inputSummary) {
+    assert(isFiniteNumber(imageJob.inputSummary.density), 'image inputSummary.density must be a number');
+    assert(imageJob.inputSummary.density >= 0 && imageJob.inputSummary.density <= 1, 'image inputSummary.density out of range');
+  }
   console.log('[smoke-e2e-http] image ok:', {
     provider: imageJob.provider,
     effectiveProvider: imageJob.effectiveProvider,
