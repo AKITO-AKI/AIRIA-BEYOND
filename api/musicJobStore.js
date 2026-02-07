@@ -14,6 +14,20 @@
  * @property {number} [focus]
  * @property {number} [confidence]
  * @property {string[]} [motifTags]
+ * @property {string[]} [motif_tags]
+ * @property {number} [tempoBpm]
+ * @property {string} [timeSignature]
+ * @property {string} [form]
+ * @property {string} [key]
+ * @property {string} [cadencePlan]
+ * @property {string[]} [composerHints]
+ * @property {number} [originality]
+ * @property {string[]} [genre_palette]
+ * @property {string} [primary_genre]
+ * @property {string[]} [instrumentation]
+ * @property {{early?:string,middle?:string,late?:string}} [timbre_arc]
+ * @property {{title?:string,keywords?:string[]}} [theme]
+ * @property {Array<{name:string,description?:string,weight?:number}>} [personality_axes]
  */
 
 /**

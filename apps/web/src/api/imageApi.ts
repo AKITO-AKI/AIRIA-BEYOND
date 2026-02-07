@@ -454,6 +454,23 @@ export interface GenerateMusicRequest {
   confidence: number;
   duration?: number;
   seed?: number;
+
+  // Optional composition controls
+  tempoBpm?: number;
+  timeSignature?: string;
+  form?: string;
+  key?: string;
+  cadencePlan?: string;
+  composerHints?: string[];
+  originality?: number;
+
+  // Optional creative brief passthrough
+  genre_palette?: string[];
+  primary_genre?: string;
+  instrumentation?: string[];
+  timbre_arc?: { early?: string; middle?: string; late?: string };
+  theme?: { title?: string; keywords?: string[] };
+  personality_axes?: Array<{ name: string; description?: string; weight?: number }>;
 }
 
 export interface GenerateMusicResponse {

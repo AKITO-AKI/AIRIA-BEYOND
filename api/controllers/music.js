@@ -69,14 +69,42 @@ function toTimeSignature(value) {
   return `${num}/${den}`;
 }
 
+function normalizeStringArray(raw, { max = 8, itemMaxLen = 40 } = {}) {
+  const arr = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
+  return arr
+    .map((s) => String(s).trim())
+    .filter(Boolean)
+    .slice(0, max)
+    .map((s) => s.slice(0, itemMaxLen));
+}
+
+function normalizeTimbreArc(raw) {
+  const obj = raw && typeof raw === 'object' ? raw : null;
+  if (!obj) return undefined;
+  const early = String(obj.early ?? '').slice(0, 160);
+  const middle = String(obj.middle ?? '').slice(0, 160);
+  const late = String(obj.late ?? '').slice(0, 160);
+  if (!early && !middle && !late) return undefined;
+  return { early: early || undefined, middle: middle || undefined, late: late || undefined };
+}
+
+function normalizeTheme(raw) {
+  const obj = raw && typeof raw === 'object' ? raw : null;
+  if (!obj) return undefined;
+  const title = String(obj.title ?? '').slice(0, 80);
+  const keywords = normalizeStringArray(obj.keywords, { max: 6, itemMaxLen: 24 });
+  if (!title && !keywords.length) return undefined;
+  return { title: title || undefined, keywords: keywords.length ? keywords : undefined };
+}
+
 function makeEmergencyStructure(input, reason) {
   const valence = clampNumber(input?.valence, { min: -1, max: 1, fallback: 0 });
   const arousal = clampNumber(input?.arousal, { min: 0, max: 1, fallback: 0.5 });
   const focus = clampNumber(input?.focus, { min: 0, max: 1, fallback: 0.5 });
-  const key = valence < 0 ? 'd minor' : 'C major';
-  const tempo = Math.round(60 + arousal * 80);
-  const timeSignature = focus > 0.6 ? '4/4' : '3/4';
-  const form = focus > 0.5 ? 'ABA' : 'theme-variation';
+  const key = String(input?.key ?? '').trim() || (valence < 0 ? 'd minor' : 'C major');
+  const tempo = clampNumber(input?.tempoBpm ?? input?.tempo, { min: 40, max: 220, fallback: Math.round(60 + arousal * 80) });
+  const timeSignature = toTimeSignature(input?.timeSignature || (focus > 0.6 ? '4/4' : '3/4'));
+  const form = String(input?.form ?? '').trim().slice(0, 24) || (focus > 0.5 ? 'ABA' : 'theme-variation');
   const dynamics = arousal < 0.3 ? 'p' : arousal > 0.7 ? 'f' : 'mf';
 
   const sections = [
@@ -350,6 +378,23 @@ export async function generateMusic(req, res) {
   const seed = body.seed;
   const motif_tags = normalizeMotifTags(body.motif_tags ?? body.motifTags);
 
+  // Extended musical controls (optional)
+  const tempoBpmRaw = body.tempoBpm ?? body.tempo ?? body.tempo_bpm;
+  const tempoBpm = Number.isFinite(Number(tempoBpmRaw)) ? clampNumber(tempoBpmRaw, { min: 40, max: 220, fallback: undefined }) : undefined;
+  const timeSignature = body.timeSignature ? toTimeSignature(body.timeSignature) : undefined;
+  const form = body.form ? String(body.form).trim().slice(0, 24) : undefined;
+  const key = body.key ? String(body.key).trim().slice(0, 24) : undefined;
+  const cadencePlan = body.cadencePlan ?? body.cadence_plan;
+  const composerHints = normalizeStringArray(body.composerHints ?? body.composer_hints, { max: 6, itemMaxLen: 24 });
+
+  // Creative brief passthrough fields (optional)
+  const genre_palette = normalizeStringArray(body.genre_palette ?? body.genrePalette, { max: 6, itemMaxLen: 16 });
+  const primary_genre = body.primary_genre ? String(body.primary_genre).trim().slice(0, 16) : body.primaryGenre ? String(body.primaryGenre).trim().slice(0, 16) : undefined;
+  const instrumentation = normalizeStringArray(body.instrumentation, { max: 6, itemMaxLen: 24 });
+  const timbre_arc = normalizeTimbreArc(body.timbre_arc ?? body.timbreArc);
+  const theme = normalizeTheme(body.theme);
+  const personality_axes = Array.isArray(body.personality_axes) ? body.personality_axes.slice(0, 3) : undefined;
+
   if (!Array.isArray(motif_tags) || motif_tags.length === 0) {
     warnings.push('motif_tags missing; using a default motif.');
   }
@@ -367,6 +412,18 @@ export async function generateMusic(req, res) {
         confidence,
         duration,
         seed,
+        tempoBpm,
+        timeSignature,
+        form,
+        key,
+        cadencePlan: cadencePlan ? String(cadencePlan).slice(0, 32) : undefined,
+        composerHints: composerHints.length ? composerHints : undefined,
+        genre_palette: genre_palette.length ? genre_palette : undefined,
+        primary_genre,
+        instrumentation: instrumentation.length ? instrumentation : undefined,
+        timbre_arc,
+        theme,
+        personality_axes,
       },
       maxRetries: 0,
     });
@@ -407,6 +464,18 @@ export async function generateMusic(req, res) {
         confidence,
         duration,
         seed,
+        tempoBpm,
+        timeSignature,
+        form,
+        key,
+        cadencePlan: cadencePlan ? String(cadencePlan).slice(0, 32) : undefined,
+        composerHints: composerHints.length ? composerHints : undefined,
+        genre_palette: genre_palette.length ? genre_palette : undefined,
+        primary_genre,
+        instrumentation: instrumentation.length ? instrumentation : undefined,
+        timbre_arc,
+        theme,
+        personality_axes,
       },
       maxRetries: 0,
     });
@@ -447,6 +516,18 @@ export async function generateMusic(req, res) {
         confidence,
         duration,
         seed,
+        tempoBpm,
+        timeSignature,
+        form,
+        key,
+        cadencePlan: cadencePlan ? String(cadencePlan).slice(0, 32) : undefined,
+        composerHints: composerHints.length ? composerHints : undefined,
+        genre_palette: genre_palette.length ? genre_palette : undefined,
+        primary_genre,
+        instrumentation: instrumentation.length ? instrumentation : undefined,
+        timbre_arc,
+        theme,
+        personality_axes,
       },
       maxRetries: 1,
     });

@@ -54,6 +54,44 @@ function pickStyleId(style) {
   return 'oil-painting';
 }
 
+function normalizeMusicControls(brief) {
+  if (!brief?.music || typeof brief.music !== 'object') return;
+  const m = brief.music;
+
+  if (typeof m.tempoBpm === 'number' && Number.isFinite(m.tempoBpm)) {
+    m.tempoBpm = Math.max(40, Math.min(220, Math.round(m.tempoBpm)));
+  }
+
+  if (typeof m.timeSignature === 'string') {
+    const ts = String(m.timeSignature).trim();
+    if (!['3/4', '4/4', '6/8'].includes(ts)) delete m.timeSignature;
+    else m.timeSignature = ts;
+  }
+
+  if (typeof m.form === 'string') {
+    m.form = String(m.form).trim().slice(0, 24);
+    if (!m.form) delete m.form;
+  }
+
+  if (typeof m.cadencePlan === 'string') {
+    m.cadencePlan = String(m.cadencePlan).trim().slice(0, 32);
+    if (!m.cadencePlan) delete m.cadencePlan;
+  }
+
+  if (Array.isArray(m.composerHints)) {
+    m.composerHints = m.composerHints
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+      .slice(0, 6)
+      .map((s) => s.slice(0, 24));
+    if (!m.composerHints.length) delete m.composerHints;
+  }
+
+  if (typeof m.originality === 'number' && Number.isFinite(m.originality)) {
+    m.originality = clamp01(m.originality);
+  }
+}
+
 function fallbackBrief(messages) {
   const normalized = normalizeMessages(messages);
   const lastUser = [...normalized].reverse().find((m) => m.role === 'user')?.content ?? '';
@@ -82,6 +120,13 @@ function fallbackBrief(messages) {
         middle: 'clearer attack, gentle motion',
         late: 'warm resonance, long reverb tail',
       },
+      // Optional composition controls
+      tempoBpm: 92,
+      timeSignature: '4/4',
+      form: 'ABA',
+      cadencePlan: 'classical-balanced',
+      composerHints: ['Mozart', 'Chopin'],
+      originality: 0.65,
     },
     image: {
       style: 'watercolor',
@@ -171,6 +216,13 @@ export function briefToGenerationInputs(brief) {
       timbre_arc: brief.music.timbre_arc,
       theme: brief.theme,
       personality_axes: brief.personality_axes,
+      // Pass through optional composition controls
+      tempoBpm: typeof brief?.music?.tempoBpm === 'number' ? brief.music.tempoBpm : undefined,
+      timeSignature: typeof brief?.music?.timeSignature === 'string' ? brief.music.timeSignature : undefined,
+      form: typeof brief?.music?.form === 'string' ? brief.music.form : undefined,
+      cadencePlan: typeof brief?.music?.cadencePlan === 'string' ? brief.music.cadencePlan : undefined,
+      composerHints: Array.isArray(brief?.music?.composerHints) ? brief.music.composerHints.slice(0, 6) : undefined,
+      originality: typeof brief?.music?.originality === 'number' ? brief.music.originality : undefined,
     },
   };
 }
@@ -209,7 +261,13 @@ export async function generateCreativeBrief({ messages, onboardingData }) {
     "genre_palette": ["classical","jazz"],
     "primary_genre": "classical|jazz|hybrid",
     "instrumentation": ["string"],
-    "timbre_arc": {"early":"string","middle":"string","late":"string"}
+    "timbre_arc": {"early":"string","middle":"string","late":"string"},
+    "tempoBpm": number,
+    "timeSignature": "3/4|4/4|6/8",
+    "form": "ABA|theme-variation|rondo|sonata|binary",
+    "cadencePlan": "classical-balanced|strong-final|open-ended|closed-every-section",
+    "composerHints": ["string"],
+    "originality": number
   },
   "image": {
     "style": "abstract|watercolor|oil",
@@ -252,6 +310,8 @@ export async function generateCreativeBrief({ messages, onboardingData }) {
         if (!palette.includes('jazz')) palette.push('jazz');
         brief.music.genre_palette = [...new Set(palette)];
       }
+
+      normalizeMusicControls(brief);
 
       validateBrief(brief);
       return { brief, provider: 'ollama' };
@@ -299,7 +359,13 @@ export async function generateCreativeBrief({ messages, onboardingData }) {
     "genre_palette": ["classical","jazz"],
     "primary_genre": "classical|jazz|hybrid",
     "instrumentation": ["string"],
-    "timbre_arc": {"early":"string","middle":"string","late":"string"}
+    "timbre_arc": {"early":"string","middle":"string","late":"string"},
+    "tempoBpm": number,
+    "timeSignature": "3/4|4/4|6/8",
+    "form": "ABA|theme-variation|rondo|sonata|binary",
+    "cadencePlan": "classical-balanced|strong-final|open-ended|closed-every-section",
+    "composerHints": ["string"],
+    "originality": number
   },
   "image": {
     "style": "abstract|watercolor|oil",
@@ -371,6 +437,8 @@ export async function generateCreativeBrief({ messages, onboardingData }) {
     if (!palette.includes('jazz')) palette.push('jazz');
     brief.music.genre_palette = [...new Set(palette)];
   }
+
+  normalizeMusicControls(brief);
 
   validateBrief(brief);
   return { brief, provider: 'openai' };
