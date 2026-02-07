@@ -28,7 +28,8 @@
     "smoke:image:comfyui": "node scripts/smoke-image-api-comfyui.mjs",
     "smoke:require": "node scripts/smoke-require.mjs",
     "smoke:music-controller": "node scripts/smoke-require.mjs ./api/controllers/music.js --timeout=5000",
-    "smoke:artistic": "node scripts/smoke-artistic-pipeline.mjs"
+    "smoke:artistic": "node scripts/smoke-artistic-pipeline.mjs",
+    "smoke:e2e:http": "node scripts/smoke-e2e-http.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

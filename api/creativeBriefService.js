@@ -154,6 +154,17 @@ export function briefToGenerationInputs(brief) {
   const imageDuration = Math.round(75 + (arousal - 0.5) * 30);
   const musicDuration = Math.round(180 + (arousal - 0.5) * 60);
 
+  // Cross-modal density (0..1): how busy/sparse the visual should feel.
+  const density = clamp01(0.55 * arousal + 0.35 * focus);
+
+  // Default performance humanization. This remains optional and can be overridden by callers.
+  const humanize = {
+    rubato: focus > 0.62 ? 'subtle' : 'none',
+    velocityCurve: focus > 0.55 ? 'phrase' : 'flat',
+    peakBoost: 0.22,
+    phraseEndSoftness: 0.35,
+  };
+
   return {
     brief,
     analysisLike: {
@@ -171,6 +182,7 @@ export function briefToGenerationInputs(brief) {
       valence,
       arousal,
       focus,
+      density,
       period,
       instrumentation: Array.isArray(brief?.music?.instrumentation) ? brief.music.instrumentation : undefined,
       subject: Array.isArray(brief?.image?.subjects) ? brief.image.subjects.join(', ') : undefined,
@@ -190,6 +202,7 @@ export function briefToGenerationInputs(brief) {
       theme: brief.theme,
       personality_axes: brief.personality_axes,
       emotional_arc: brief.emotional_arc,
+      humanize,
       period,
     },
   };

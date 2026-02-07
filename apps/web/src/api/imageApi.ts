@@ -176,6 +176,7 @@ export interface RefinedEventResponse {
     theme?: any;
     personality_axes?: any;
     emotional_arc?: any;
+    humanize?: any;
 
     // Advanced classical controls (optional)
     key?: string;
