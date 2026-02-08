@@ -8,74 +8,40 @@
 
 ```mermaid
 flowchart LR
-  user[User Browser]
-  subgraph FE[Frontend: Static Hosting]
-    fe[React + Vite / TypeScript]
+  U[ユーザー]
+
+  subgraph FE[フロント: 静的配信]
+    FE1[Web UI<br/>React + Vite]
   end
-  subgraph API[Backend API: Node.js/Express]
-    api[Express Server - server.js]
-    routes[API Routes - /api/*]
-    analyze["Analyze<br/>POST /api/analyze<br/>GET /api/analyze/:id"]
-    music["Music<br/>POST /api/music/generate<br/>GET /api/music/:id<br/>POST /api/music/preview"]
-    image["Image<br/>POST /api/image/generate<br/>GET /api/job/:id"]
-    auth["Auth<br/>/api/auth/*"]
-    diag["Diagnostics/Admin<br/>/api/diagnostics/*<br/>/api/admin/*"]
-    subgraph Stores[In-Memory Stores - prototype]
-      analysisStore[(analysisJobStore: Map, 1h expiry)]
-      musicStore[(musicJobStore: Map, 1h cleanup)]
-      imageStore[(jobStore: Map, 1h expiry)]
-      limiter["rate-limit: Map<br/>rate + concurrency"]
-    end
-    prompt[Prompt Builder - promptBuilder.js]
+
+  subgraph API[バックエンド: Node.js + Express]
+    API1[API<br/>/api/*]
+    JOB[ジョブ管理<br/>インメモリ + 自動削除]
+    RL[制限<br/>レート + 同時実行]
   end
-  subgraph Providers[External / Local Providers]
-    openai["OpenAI Chat Completions<br/>analysis + music"]
-    ollama["Ollama /api/chat<br/>analysis + music"]
-    replicate["Replicate SDXL<br/>image"]
-    comfy["ComfyUI<br/>/prompt, /history, /view"]
-    itunes["iTunes Search API<br/>music preview"]
+
+  subgraph PR[プロバイダ]
+    P[外部呼び出し<br/>LLM OpenAI または Ollama<br/>画像 Replicate または ComfyUI<br/>試聴 iTunes Search]
   end
-  subgraph Data[Persistence]
-    authFile["Auth Store JSON<br/>api/data/auth-store.json<br/>or AUTH_STORE_PATH"]
-    authDb["Postgres optional<br/>DATABASE_URL"]
-    audit["Audit Log JSON<br/>api/data/audit-log.json<br/>or AUDIT_LOG_PATH"]
+
+  subgraph DATA[永続化]
+    D[保存先<br/>認証 JSON または Postgres<br/>監査ログ JSON + SSE]
   end
-  user -->|HTTPS| fe
-  fe -->|CORS + JSON| routes
-  api --> routes
-  routes --> analyze
-  routes --> music
-  routes --> image
-  routes --> auth
-  routes --> diag
-  analyze --> analysisStore
-  music --> musicStore
-  image --> imageStore
-  analyze --> limiter
-  music --> limiter
-  image --> limiter
-  image --> prompt
-  analyze --> openai
-  analyze --> ollama
-  music --> openai
-  music --> ollama
-  image --> replicate
-  image --> comfy
-  music --> itunes
-  auth -.-> authFile
-  auth -.-> authDb
-  diag -.-> audit
-  classDef dim fill:#f7f7f7,stroke:#bbb,color:#333;
-  class FE,API,Providers,Data dim;
-````
+
+  U -->|HTTPS| FE1
+  FE1 -->|CORS + JSON| API1
+  API1 --> JOB
+  API1 --> RL
+  API1 --> P
+  API1 -.-> D
+```
 
 ### 補足（図の読み方）
 
-- **フロントエンド**は静的配信（例: GitHub Pages / Netlify 等）を前提に、UI と状態遷移を担います。
-- **バックエンドAPI**（Node.js/Express）が生成・認証・ジョブ状態を集約して扱うため、フロントは「ボタン → API → 進捗表示」という役割分担になります。
-- **バックエンドAPI**（Node.js/Express）が「分析・生成・認証・ジョブ状態」を集約して扱うため、フロントは「開始 → ポーリングで進捗表示 → 完了表示」に専念できます。
-- **ジョブストア（analysis/music/image）は現状すべてインメモリ**です（プロトタイプ）。そのため API 再起動でジョブが消え、一定時間で自動削除されます。
-- **プロバイダは差し替え可能**で、未設定・到達不能・失敗時のフォールバック（LLM は rule-based、画像は placeholder）を実装しています。
+- **フロントエンド**は静的配信を前提に、UI と状態遷移を担当します。
+- **バックエンドAPI**が「分析・生成・認証・ジョブ状態」を集約し、フロントは開始と進捗表示に専念できます。
+- **ジョブはインメモリ管理**のため、API再起動で消え、一定時間で自動削除されます。
+- **プロバイダは差し替え可能**で、未設定や失敗時はフォールバックして体験を止めません。
 
 ---
 
