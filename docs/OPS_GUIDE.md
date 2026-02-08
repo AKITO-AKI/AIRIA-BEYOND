@@ -32,6 +32,20 @@
 
 > 詳しい手順は旧ドキュメントを archive に退避しています（本書では要点のみ）。
 
+### GitHub Pages + カスタムドメイン（チェックリスト）
+
+- GitHub（Repo Settings → Pages）
+	- Custom domain に `www.airia-beyond.com` を設定
+	- HTTPS を有効化
+- DNS（ドメイン管理側）
+	- GitHub Pages の案内に従って A/AAAA もしくは CNAME を設定
+- フロント（ビルド時）
+	- ルート配信になるため `VITE_PUBLIC_BASE_PATH=/` を使用
+	- この repo は GitHub Actions の secret `VITE_PUBLIC_BASE_PATH` で上書き可能
+- API（Render の環境変数）
+	- CORS 許可のため `APP_PUBLIC_URL=https://www.airia-beyond.com/`（または `APP_ALLOWED_ORIGINS` に追加）
+	- OAuth を使う場合は Google/Apple 側の Origin/Redirect も更新
+
 ## 2. 監視・運用のチェックリスト
 
 ### 毎日
