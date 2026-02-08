@@ -7,19 +7,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-function originFromUrl(maybeUrl) {
-  try {
-    const u = new URL(String(maybeUrl || '').trim());
-    return u.origin;
-  } catch {
-    return '';
+function normalizeOrigin(maybeUrlOrOrigin) {
+  const raw = String(maybeUrlOrOrigin || '').trim();
+  if (!raw) return '';
+
+  // Convert full URLs like "https://example.com/path" into "https://example.com"
+  // and also tolerate accidental trailing slashes.
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    try {
+      return new URL(raw).origin;
+    } catch {
+      return raw.replace(/\/+$/, '');
+    }
   }
+
+  return raw.replace(/\/+$/, '');
 }
 
 function parseOriginList(value) {
   return String(value || '')
     .split(',')
-    .map((s) => s.trim())
+    .map((s) => normalizeOrigin(s))
     .filter(Boolean);
 }
 
@@ -27,22 +35,25 @@ function parseOriginList(value) {
 // - Keep localhost for dev
 // - Keep GitHub Pages origin for current deployment
 // - Add custom domain via APP_PUBLIC_URL / APP_ALLOWED_ORIGINS
-const allowedOrigins = Array.from(
-  new Set(
-    [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://akito-aki.github.io',
-      originFromUrl(process.env.APP_PUBLIC_URL),
-      ...parseOriginList(process.env.APP_ALLOWED_ORIGINS),
-    ].filter(Boolean)
-  )
+const allowedOrigins = new Set(
+  [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://akito-aki.github.io',
+    'https://www.airia-beyond.com',
+    'https://airia-beyond.com',
+    normalizeOrigin(process.env.APP_PUBLIC_URL),
+    ...parseOriginList(process.env.APP_ALLOWED_ORIGINS),
+  ]
+    .map((v) => normalizeOrigin(v))
+    .filter(Boolean)
 );
 
 app.use(cors({
   origin: (origin, callback) => {
     // allow same-origin / server-to-server / curl requests (no Origin header)
-    if (!origin || allowedOrigins.includes(origin)) {
+    const normalized = normalizeOrigin(origin);
+    if (!origin || allowedOrigins.has(normalized)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -145,4 +156,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 AIRIA BEYOND API server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`CORS allowed origins: ${Array.from(allowedOrigins).join(', ')}`);
 });

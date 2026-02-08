@@ -272,7 +272,11 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   };
 
   const containerWidth = containerRef.current?.clientWidth || window.innerWidth || 1;
-  const translateX = -currentIndex * 100 + (offsetX / containerWidth) * 100;
+  // IMPORTANT: translateX(%) is relative to the element's own width.
+  // Because `.rooms-container` becomes wider than the viewport (N rooms in a row),
+  // using percent here can over-shift by N*width and push content off-screen.
+  // Use pixel translation instead so one step == one viewport.
+  const translateXPx = -currentIndex * containerWidth + offsetX;
 
   const currentRoomId = rooms[currentIndex]?.id;
   const showIndicators = currentRoomId !== 'onboarding';
@@ -382,7 +386,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
             style={{
-              transform: `translateX(${translateX}%)`,
+              transform: `translateX(${translateXPx}px)`,
               transition: isDragging ? 'none' : 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)',
             }}
           >
