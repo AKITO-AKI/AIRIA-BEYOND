@@ -256,7 +256,12 @@ const AppContent = () => {
                 <div className="loading-panel" aria-live="polite" aria-busy="true">
                   <div className="loading-card">
                     <div className="loading-row">
-                      <div className="loading-spinner" aria-hidden="true" />
+                      <img
+                        className="loading-logo"
+                        src={`${import.meta.env.BASE_URL}img/airia-logo.png`}
+                        alt=""
+                        aria-hidden="true"
+                      />
                       <div>
                         <p className="loading-title">ログイン状態を確認しています…</p>
                         <p className="loading-sub">

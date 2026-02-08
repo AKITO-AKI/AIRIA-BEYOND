@@ -50,11 +50,27 @@
 }
 
 .room-sidebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.22em;
   color: color-mix(in srgb, var(--text-secondary) 70%, transparent 30%);
   user-select: none;
+}
+
+.room-sidebar-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.12));
+}
+
+.room-sidebar-brand-text {
+  line-height: 1;
 }
 
 .room-sidebar-toggle {

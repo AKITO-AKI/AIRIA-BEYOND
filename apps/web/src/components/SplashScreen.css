@@ -83,6 +83,14 @@
   margin: 0 auto 18px;
 }
 
+.splash-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 14px;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.16));
+}
+
 .splash-monogram {
   font-family: 'Times New Roman', serif;
   font-size: 36px;

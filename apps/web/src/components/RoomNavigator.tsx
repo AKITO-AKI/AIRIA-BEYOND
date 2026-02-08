@@ -3,6 +3,8 @@ import { RoomNavigationProvider, type RoomType } from '../contexts/RoomNavigatio
 import FeedbackNudgePopup from './visual/feedback/FeedbackNudgePopup';
 import './RoomNavigator.css';
 
+const BRAND_LOGO_SRC = `${import.meta.env.BASE_URL}img/airia-logo.png`;
+
 interface Room {
   id: RoomType;
   name: string;
@@ -327,7 +329,10 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
                   <span className="room-sidebar-toggle-bar" />
                   <span className="room-sidebar-toggle-bar" />
                 </button>
-                <div className="room-sidebar-brand">AIRIA</div>
+                <div className="room-sidebar-brand" aria-label="AIRIA BEYOND">
+                  <img className="room-sidebar-logo" src={BRAND_LOGO_SRC} alt="" aria-hidden="true" />
+                  <span className="room-sidebar-brand-text">AIRIA</span>
+                </div>
               </div>
 
               <nav className="room-sidebar-nav" aria-label="ルーム一覧">

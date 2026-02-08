@@ -206,6 +206,22 @@ body {
     gap: 12px;
 }
 
+.loading-logo {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    border-radius: 8px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+    filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.14));
+    animation: loadingLogoPulse 1.35s ease-in-out infinite;
+}
+
+@keyframes loadingLogoPulse {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.92; }
+    50% { transform: translateY(-1px) scale(1.03); opacity: 1; }
+}
+
 .loading-spinner {
     width: 22px;
     height: 22px;

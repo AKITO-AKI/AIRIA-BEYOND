@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './SplashScreen.css';
 
+const SPLASH_LOGO_SRC = `${import.meta.env.BASE_URL}img/airia-logo.png`;
+
 interface SplashScreenProps {
   onDismiss: () => void;
 }
@@ -46,7 +48,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
 
       <div className="splash-content">
         <div className="splash-mark" aria-hidden="true">
-          <div className="splash-monogram">A</div>
+          <img className="splash-logo" src={SPLASH_LOGO_SRC} alt="" aria-hidden="true" />
         </div>
 
         <h1 className="splash-title">AIRIA BEYOND</h1>
