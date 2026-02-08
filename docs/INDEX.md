@@ -7,6 +7,7 @@
 - プロダクト全体像／思想／ロードマップ: [docs/PRODUCT.md](PRODUCT.md)
 - 開発・テスト（ローカル起動、スモーク、strict 検証）: [docs/DEV_GUIDE.md](DEV_GUIDE.md)
 - 本番運用（デプロイ、監視、インシデント、セキュリティ）: [docs/OPS_GUIDE.md](OPS_GUIDE.md)
+- 変更を本番に反映する手順（迷ったらここ）: [docs/DEPLOY_PLAYBOOK.md](DEPLOY_PLAYBOOK.md)
 - システム構成図（構成＋データフロー）: [docs/SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)
 - このチャットでやったことの引き継ぎ（時系列ログ）: [docs/CHAT_HANDOVER_LOG.md](CHAT_HANDOVER_LOG.md)
 
