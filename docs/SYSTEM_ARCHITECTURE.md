@@ -10,34 +10,34 @@
 flowchart LR
   user[User Browser]
   subgraph FE[Frontend: Static Hosting]
-    fe[React + Vite (TypeScript)]
+    fe[React + Vite / TypeScript]
   end
   subgraph API[Backend API: Node.js/Express]
-    api[Express Server (server.js)]
-    routes[API Routes (/api/*)]
+    api[Express Server - server.js]
+    routes[API Routes - /api/*]
     analyze["Analyze<br/>POST /api/analyze<br/>GET /api/analyze/:id"]
     music["Music<br/>POST /api/music/generate<br/>GET /api/music/:id<br/>POST /api/music/preview"]
     image["Image<br/>POST /api/image/generate<br/>GET /api/job/:id"]
     auth["Auth<br/>/api/auth/*"]
     diag["Diagnostics/Admin<br/>/api/diagnostics/*<br/>/api/admin/*"]
-    subgraph Stores[In-Memory Stores (prototype)]
+    subgraph Stores[In-Memory Stores - prototype]
       analysisStore[(analysisJobStore: Map, 1h expiry)]
       musicStore[(musicJobStore: Map, 1h cleanup)]
       imageStore[(jobStore: Map, 1h expiry)]
       limiter["rate-limit: Map<br/>rate + concurrency"]
     end
-    prompt[Prompt Builder (promptBuilder.js)]
+    prompt[Prompt Builder - promptBuilder.js]
   end
   subgraph Providers[External / Local Providers]
-    openai["OpenAI Chat Completions<br/>(analysis/music)"]
-    ollama["Ollama /api/chat<br/>(analysis/music)"]
-    replicate["Replicate SDXL<br/>(image)"]
-    comfy["ComfyUI<br/>(/prompt,/history,/view)"]
-    itunes["iTunes Search API<br/>(music preview)"]
+    openai["OpenAI Chat Completions<br/>analysis + music"]
+    ollama["Ollama /api/chat<br/>analysis + music"]
+    replicate["Replicate SDXL<br/>image"]
+    comfy["ComfyUI<br/>/prompt, /history, /view"]
+    itunes["iTunes Search API<br/>music preview"]
   end
   subgraph Data[Persistence]
     authFile["Auth Store JSON<br/>api/data/auth-store.json<br/>or AUTH_STORE_PATH"]
-    authDb["Postgres (optional)<br/>DATABASE_URL"]
+    authDb["Postgres optional<br/>DATABASE_URL"]
     audit["Audit Log JSON<br/>api/data/audit-log.json<br/>or AUDIT_LOG_PATH"]
   end
   user -->|HTTPS| fe
@@ -67,7 +67,7 @@ flowchart LR
   diag -.-> audit
   classDef dim fill:#f7f7f7,stroke:#bbb,color:#333;
   class FE,API,Providers,Data dim;
-```
+````
 
 ### 補足（図の読み方）
 
