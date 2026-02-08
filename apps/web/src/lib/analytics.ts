@@ -7,6 +7,30 @@ export function initAnalytics() {
     return;
   }
 
+  // Vercel Analytics / Speed Insights load a local script under /_vercel/*.
+  // On non-Vercel hosting (GitHub Pages, local static hosting, etc.) that path returns HTML/404,
+  // which surfaces as: "Unexpected token '<'" in the console.
+  //
+  // Enable explicitly via `VITE_ENABLE_VERCEL_ANALYTICS=1` (recommended),
+  // or rely on a best-effort hostname heuristic.
+  const isVercelHostname = (() => {
+    try {
+      const host = String(window.location.hostname || '').toLowerCase();
+      return host.endsWith('.vercel.app') || host.endsWith('.now.sh');
+    } catch {
+      return false;
+    }
+  })();
+
+  const enabled =
+    String((import.meta as any).env?.VITE_ENABLE_VERCEL_ANALYTICS || '').trim() === '1' ||
+    isVercelHostname;
+
+  if (!enabled) {
+    console.log('[Analytics] Vercel analytics disabled (non-Vercel host)');
+    return;
+  }
+
   // Try to load Vercel Analytics
   const analyticsScript = document.createElement('script');
   analyticsScript.type = 'module';

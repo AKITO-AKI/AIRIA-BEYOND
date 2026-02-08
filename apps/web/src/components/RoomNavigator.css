@@ -251,7 +251,7 @@
   height: 100%;
   display: flex;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   flex-shrink: 0;
   background: var(--bg-primary);
   position: relative;
@@ -262,8 +262,8 @@
 
 .room-content {
   width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
+  max-width: 1200px;
+  margin: 0;
   padding: 28px 24px calc(32px + var(--player-safe-area, 96px));
   display: flex;
   flex-direction: column;
@@ -271,15 +271,6 @@
   justify-content: flex-start;
   text-align: left;
   position: relative;
-}
-
-/* Visual centering: when the desktop sidebar is collapsed, the stage center shifts
-   slightly to the right (by sidebarWidth/2). Nudge content left to keep it looking
-   centered in the full viewport. Keep the Album page unchanged (it uses full-bleed layout). */
-@media (min-width: 900px) {
-  .room-sidebar.wide.closed ~ .room-stage .room-content:not(.album-room) {
-    left: -43px;
-  }
 }
 
 .room-navigator.indicators-hidden .room-content {

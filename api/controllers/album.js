@@ -83,6 +83,8 @@ export async function nameAlbumTitle(req, res) {
     }
 
     const title = normalizeString(parsed?.title, 60).replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, '');
+    // Intentionally strip ASCII control characters (defense-in-depth).
+    // eslint-disable-next-line no-control-regex
     const cleaned = title.replace(/[\u0000-\u001f]/g, '').replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]/g, '').trim();
 
     return res.json({

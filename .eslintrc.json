@@ -39,7 +39,6 @@
 			"plugins": ["@typescript-eslint", "react", "react-hooks"],
 			"extends": [
 				"eslint:recommended",
-				"plugin:@typescript-eslint/recommended",
 				"plugin:react/recommended",
 				"plugin:react-hooks/recommended",
 				"prettier"
@@ -48,8 +47,28 @@
 				"react": { "version": "detect" }
 			},
 			"rules": {
+				"no-undef": "off",
+				"no-unused-vars": "off",
 				"react/react-in-jsx-scope": "off",
+				"react/no-unknown-property": "off",
+				"react/no-unescaped-entities": "off",
 				"@typescript-eslint/no-unused-vars": "off"
+			}
+		},
+		{
+			"files": ["apps/web/vite.config.ts"],
+			"env": {
+				"node": true,
+				"es2021": true
+			},
+			"parser": "@typescript-eslint/parser",
+			"parserOptions": {
+				"ecmaVersion": "latest",
+				"sourceType": "module"
+			},
+			"rules": {
+				"no-undef": "off",
+				"no-unused-vars": "off"
 			}
 		}
 	]

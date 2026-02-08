@@ -44,45 +44,109 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
   const pendingPlayRequestIdRef = useRef(0);
   const handledPlayRequestIdRef = useRef(0);
 
+  const [audioUnlocked, setAudioUnlocked] = useState(() => {
+    try {
+      return Tone.context.state === 'running';
+    } catch {
+      return false;
+    }
+  });
+
   const [frequencyData, setFrequencyData] = useState<Uint8Array | null>(null);
   const [timeDomainData, setTimeDomainData] = useState<Uint8Array | null>(null);
 
-  // Initialize Tone.js analyser
+  const ensureAnalyser = React.useCallback(() => {
+    try {
+      if (analyserRef.current) return;
+
+      const analyser = Tone.context.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.8;
+
+      // Connect Tone.js destination to analyser for visualizations.
+      Tone.getDestination().connect(analyser);
+
+      analyserRef.current = analyser;
+      frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+      timeDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+    } catch (error) {
+      console.error('[EnhancedMiniPlayer] Failed to initialize analyser:', error);
+    }
+  }, []);
+
+  // Unlock AudioContext on first user gesture (autoplay policy).
+  // IMPORTANT: do not call Tone.start() in a mount effect.
   useEffect(() => {
-    const initAnalyser = async () => {
+    let cancelled = false;
+
+    const maybeAutoplayPending = async () => {
+      const currentAlbum = state.currentAlbum || album;
+      const requestId = pendingPlayRequestIdRef.current;
+
+      if (!currentAlbum?.musicData) return;
+      if (requestId === 0 || requestId === handledPlayRequestIdRef.current) return;
+
       try {
-        // Ensure Tone.js context is started
-        await Tone.start();
-        
-        // Create analyser node
-        const analyser = Tone.context.createAnalyser();
-        analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.8;
-        
-        // Connect Tone.js destination to analyser
-        Tone.getDestination().connect(analyser);
-        
-        analyserRef.current = analyser;
-        frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
-        timeDataRef.current = new Uint8Array(analyser.frequencyBinCount);
-      } catch (error) {
-        console.error('Failed to initialize analyser:', error);
+        await loadMIDI(currentAlbum);
+        if (cancelled) return;
+        await startPlayback();
+        handledPlayRequestIdRef.current = requestId;
+      } catch (err) {
+        console.error('[EnhancedMiniPlayer] Pending autoplay failed after unlock:', err);
       }
     };
 
-    initAnalyser();
+    const unlock = async () => {
+      try {
+        await Tone.start();
+        if (cancelled) return;
+        const running = Tone.context.state === 'running';
+        setAudioUnlocked(running);
+        if (running) {
+          ensureAnalyser();
+          await maybeAutoplayPending();
+        }
+      } catch (error) {
+        console.warn('[EnhancedMiniPlayer] Audio unlock failed:', error);
+      }
+    };
+
+    // If already running, ensure analyser and we're done.
+    try {
+      if (Tone.context.state === 'running') {
+        setAudioUnlocked(true);
+        ensureAnalyser();
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    const handler = () => {
+      // Fire-and-forget; also remove listeners.
+      void unlock();
+      window.removeEventListener('pointerdown', handler, true);
+      window.removeEventListener('keydown', handler, true);
+    };
+
+    window.addEventListener('pointerdown', handler, true);
+    window.addEventListener('keydown', handler, true);
 
     return () => {
-      // Cleanup
+      cancelled = true;
+      window.removeEventListener('pointerdown', handler, true);
+      window.removeEventListener('keydown', handler, true);
+
       if (analyserRef.current) {
         try {
           analyserRef.current.disconnect();
-        } catch (e) {
-          // Already disconnected
+        } catch {
+          // ignore
         }
+        analyserRef.current = null;
       }
     };
-  }, []);
+  }, [album, ensureAnalyser, state.currentAlbum, state.playRequestId]);
 
   // Initialize queue when albums change
   useEffect(() => {
@@ -116,6 +180,9 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
     if (!currentAlbum?.musicData) return;
     if (requestId === 0 || requestId === handledPlayRequestIdRef.current) return;
 
+    // If audio isn't unlocked yet, wait for the first user gesture.
+    if (!audioUnlocked) return;
+
     let cancelled = false;
     (async () => {
       try {
@@ -131,7 +198,7 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [state.currentAlbum?.id, album?.id, state.playRequestId]);
+  }, [state.currentAlbum?.id, album?.id, state.playRequestId, audioUnlocked]);
 
   // Update visualization data when playing
   useEffect(() => {
@@ -175,6 +242,15 @@ export const EnhancedMiniPlayer: React.FC<EnhancedMiniPlayerProps> = ({
   const startPlayback = async () => {
     try {
       setPlaybackState(PlaybackState.LOADING);
+
+      // Ensure AudioContext is running (user gesture is required by browsers).
+      await Tone.start();
+      if (Tone.context.state !== 'running') {
+        setPlaybackState(PlaybackState.PAUSED);
+        throw new Error('AudioContext is not running (user gesture required)');
+      }
+
+      ensureAnalyser();
       
       const player = playerRef.current;
       await player.play();

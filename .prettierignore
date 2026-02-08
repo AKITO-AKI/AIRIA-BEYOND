@@ -5,6 +5,10 @@ node_modules
 **/coverage
 apps/web/public
 
+# Archives / runtime data
+docs/archive
+api/data
+
 # Generated or vendored
 package-lock.json
 pnpm-lock.yaml

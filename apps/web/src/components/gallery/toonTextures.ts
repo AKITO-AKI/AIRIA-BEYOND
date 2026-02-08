@@ -63,7 +63,7 @@ export function patchMaterialWithGrain(
       )
       .replace(
         '#include <dithering_fragment>',
-        `#include <dithering_fragment>\n\n// Subtle paper-grain (illustration vibe)\nvec2 grainUv = vUv * uGrainScale + vec2(uTime * uGrainSpeed * 0.13, uTime * uGrainSpeed * 0.07);\nfloat g = texture2D(uNoiseTex, fract(grainUv)).r;\nfloat grain = (g - 0.5) * 0.28;\nvec3 grained = gl_FragColor.rgb * (1.0 + grain);\ngl_FragColor.rgb = mix(gl_FragColor.rgb, grained, uGrainStrength);\n`
+        `#include <dithering_fragment>\n\n// Subtle paper-grain (illustration vibe)\n// Guard UV usage: vUv only exists when USE_UV is enabled.\nvec2 grainBaseUv = vec2(0.0);\n#ifdef USE_UV\n  grainBaseUv = vUv;\n#else\n  // Stable fallback on materials without UVs.\n  grainBaseUv = gl_FragCoord.xy * 0.001;\n#endif\n\nvec2 grainUv = grainBaseUv * uGrainScale + vec2(uTime * uGrainSpeed * 0.13, uTime * uGrainSpeed * 0.07);\nfloat g = texture2D(uNoiseTex, fract(grainUv)).r;\nfloat grain = (g - 0.5) * 0.28;\nvec3 grained = gl_FragColor.rgb * (1.0 + grain);\ngl_FragColor.rgb = mix(gl_FragColor.rgb, grained, uGrainStrength);\n`
       );
 
     (material as any).userData.__grainShader = shader;

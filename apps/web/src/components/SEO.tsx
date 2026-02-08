@@ -1,28 +1,24 @@
-// SEO component for meta tags
-// Install react-helmet-async: npm install react-helmet-async
-// This module will work with or without react-helmet-async installed
+import { useEffect } from 'react';
 
 interface SEOProps {
   title?: string;
   description?: string;
 }
 
-export const SEO = ({ 
+export const SEO = ({
   title = 'AIRIA BEYOND',
-  description = 'AI搭載の感情分析・クラシック音楽・絵画生成アプリ / AI-powered emotion analysis, classical music, and painting generation'
+  description =
+    'AI搭載の感情分析・クラシック音楽・絵画生成アプリ / AI-powered emotion analysis, classical music, and painting generation',
 }: SEOProps) => {
-  // Try to use react-helmet-async if available
-  // Otherwise, update document title directly
-  try {
-    // Dynamic import will fail if package not installed
-    return null; // Helmet will be imported lazily if needed
-  } catch {
-    // Fallback: update document title directly
-    if (typeof document !== 'undefined') {
-      document.title = title;
-    }
-    return null;
-  }
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    document.title = title;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute('content', description);
+  }, [title, description]);
+
+  return null;
 };
 
 // Export a simple document title updater as fallback

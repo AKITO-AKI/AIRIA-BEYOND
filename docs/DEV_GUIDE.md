@@ -41,6 +41,20 @@ npm run dev
 npm run dev:api
 ```
 
+## Lint / Format
+
+```bash
+npm run lint
+```
+
+- 自動修正（可能な範囲）: `npm run lint:fix`
+
+```bash
+npm run format
+```
+
+- 変更はせずチェックのみ: `npm run format:check`
+
 ## スモークテスト（重要）
 
 このリポジトリでは「壊れにくさ」をスモークで担保します。

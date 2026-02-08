@@ -179,11 +179,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     try {
       await apiLogout().catch(() => null);
     } finally {
-      if (!isLatest(opId)) return;
-      setAuthToken(null);
-      setToken('');
-      setUser(null);
-      setBusy(false);
+      if (isLatest(opId)) {
+        setAuthToken(null);
+        setToken('');
+        setUser(null);
+        setBusy(false);
+      }
     }
   }, [beginOp, isLatest]);
 

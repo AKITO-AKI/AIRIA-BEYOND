@@ -110,7 +110,7 @@ router.get('/metrics', authMiddleware, async (req, res) => {
       },
       series: {
         newUsersPerDay: usersPerDay,
-        totalUsersPerDay,
+        totalUsersPerDay: totalUsersByDay,
         actionsPerDay,
       },
     });
