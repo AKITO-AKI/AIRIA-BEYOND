@@ -14,7 +14,7 @@ export interface AlbumMetadata {
   // Generation parameters
   stylePreset?: string;
   seed?: number;
-  provider?: 'replicate' | 'local' | 'rule-based';
+  provider?: 'comfyui' | 'local' | 'rule-based' | 'replicate';
   // Prompts used
   prompt?: string;
   negativePrompt?: string;

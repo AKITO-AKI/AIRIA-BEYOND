@@ -41,8 +41,8 @@ export interface CausalLog {
     seed?: number;
     reasoning: string;  // Why this prompt/style was chosen
     jobId: string;
-    provider: string;  // "replicate"
-    model: string;  // "sdxl"
+    provider: string;  // "comfyui" (or "local")
+    model: string;
     resultUrl: string;
     timestamp: Date;
     duration: number;

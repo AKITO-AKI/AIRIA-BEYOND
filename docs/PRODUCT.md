@@ -41,7 +41,7 @@ AIRIA BEYOND は、セッション管理／気分（ムード）トラッキン�
 
 ### 3) image（ジョブ生成→ポーリング）
 - `POST /api/image/generate` → `GET /api/job/:id`
-- Replicate / ComfyUI が無い場合は **placeholder** にフォールバック
+- ComfyUI が無い場合（未設定／到達不能／失敗時）は **placeholder** にフォールバック
 - 高度な表現:
   - 音楽の時代→美術史スタイル
   - 編成→テクスチャ（共感覚）
@@ -142,7 +142,7 @@ AIRIA BEYOND は、セッション管理／気分（ムード）トラッキン�
 
 - プロバイダ・マトリクスを定義し、挙動を揃える:
   - 音楽: OpenAI vs Ollama vs rule-based（スキーマ項目の機能差を縮める）。
-  - 画像: Replicate vs ComfyUI vs placeholder（プロンプト／プリセット適用が一貫）。
+  - 画像: ComfyUI vs placeholder（プロンプト／プリセット適用が一貫）。
 - ステージング限定の strict-provider チェック（nightly）で、プロバイダ側の破壊的変更を早期検知。
 
 受け入れ条件:

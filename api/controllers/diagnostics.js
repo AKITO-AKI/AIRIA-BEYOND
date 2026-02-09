@@ -25,7 +25,6 @@ export async function getImageDiagnostics(req, res) {
   }
 
   const comfyBase = getComfyUiBaseUrl();
-  const replicateAvailable = !!process.env.REPLICATE_API_TOKEN;
 
   const comfyProbe = await quickFetch(comfyBase, 900);
 
@@ -68,7 +67,6 @@ export async function getImageDiagnostics(req, res) {
       comfyuiBaseUrl: comfyBase,
       comfyuiCheckpoint: process.env.COMFYUI_CHECKPOINT || null,
       comfyuiConfigured: !!(process.env.COMFYUI_BASE_URL || process.env.IMAGE_PROVIDER === 'comfyui' || process.env.IMAGE_PROVIDER === 'comfy'),
-      replicateAvailable,
     },
     probes: {
       comfyui: {

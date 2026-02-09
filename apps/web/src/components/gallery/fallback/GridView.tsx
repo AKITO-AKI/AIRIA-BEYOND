@@ -10,7 +10,7 @@ interface GridViewProps {
 const GridView: React.FC<GridViewProps> = ({ albums, onAlbumClick }) => {
   const getProviderBadge = (provider?: string): string => {
     if (!provider) return '';
-    return provider === 'replicate' ? 'AI' : 'ローカル';
+    return provider === 'local' ? 'ローカル' : 'AI';
   };
 
   return (

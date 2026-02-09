@@ -226,6 +226,7 @@ export function buildPrompt(params) {
     subject,
     palette,
     ambiguity,
+    key,
     period,
     instrumentation,
     density,
@@ -249,6 +250,10 @@ export function buildPrompt(params) {
   // Art-historical mapping from music period (optional)
   const periodArt = getArtHistoricalDirection(period);
   if (periodArt) components.push(periodArt);
+
+  // Synesthesia mapping: musical key → dominant colors
+  const keyDir = getSynestheticKeyColorDirection(key);
+  if (keyDir) components.push(keyDir);
 
   // Synesthesia mapping: instrumentation → texture/material vocabulary
   const instDir = getSynestheticInstrumentationDirection(instrumentation);
@@ -328,6 +333,87 @@ export function buildPrompt(params) {
     negativePrompt: fullNegative,
     stylePreset: selectedPreset || 'oil-painting',
   };
+}
+
+function getSynestheticKeyColorDirection(key) {
+  const parsed = parseMusicalKey(key);
+  if (!parsed) return '';
+  const { tonic, mode } = parsed;
+
+  // A pragmatic mapping inspired by common synesthetic associations (e.g., Scriabin-like tables)
+  // tuned for classical jacket art direction.
+  const MAJOR = {
+    C: 'pure white, pearl, luminous neutral',
+    'C#': 'violet, electric purple, iridescent',
+    Db: 'violet, electric purple, iridescent',
+    D: 'golden yellow, warm light, champagne',
+    Eb: 'steel blue, smoky indigo',
+    'D#': 'steel blue, smoky indigo',
+    E: 'bright cyan, crystalline turquoise',
+    F: 'soft green, pastoral jade',
+    'F#': 'deep blue, ultramarine, silver',
+    Gb: 'deep blue, ultramarine, silver',
+    G: 'amber, honey, sunlit ochre',
+    Ab: 'rose, magenta, velvet red',
+    'G#': 'rose, magenta, velvet red',
+    A: 'spring green, fresh emerald',
+    Bb: 'warm brown, sepia, antique parchment',
+    'A#': 'warm brown, sepia, antique parchment',
+    B: 'cool white, ice, pale silver-blue',
+  };
+
+  const MINOR = {
+    C: 'charcoal, graphite, cold moonlight',
+    'C#': 'dark violet, nocturne purple',
+    Db: 'dark violet, nocturne purple',
+    D: 'deep blue, stormy slate, silver',
+    Eb: 'smoky teal, dusk cyan',
+    'D#': 'smoky teal, dusk cyan',
+    E: 'midnight blue, ink, faint cyan highlights',
+    F: 'olive green, moss, muted earth',
+    'F#': 'indigo, deep ultramarine, starlight',
+    Gb: 'indigo, deep ultramarine, starlight',
+    G: 'dark amber, burnt sienna, candlelight',
+    Ab: 'burgundy, wine red, velvet shadow',
+    'G#': 'burgundy, wine red, velvet shadow',
+    A: 'cool green, sea glass, pale jade',
+    Bb: 'sepia, umber, antique bronze',
+    'A#': 'sepia, umber, antique bronze',
+    B: 'glacial blue-grey, porcelain shadow',
+  };
+
+  const colors = mode === 'minor' ? (MINOR[tonic] || '') : (MAJOR[tonic] || '');
+  if (!colors) return '';
+  return `dominant colors are ${colors}`;
+}
+
+function parseMusicalKey(raw) {
+  const s0 = String(raw ?? '').trim();
+  if (!s0) return null;
+  const s = s0
+    .replace(/♭/g, 'b')
+    .replace(/♯/g, '#')
+    .replace(/major/gi, 'major')
+    .replace(/minor/gi, 'minor')
+    .replace(/(maj|min)\b/gi, (m) => (m.toLowerCase() === 'maj' ? 'major' : 'minor'))
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Examples:
+  // - "D minor" / "D minor key" / "Dm"
+  // - "F# major" / "Gb major"
+  const m = s.match(/^([A-G])\s*([#b])?\s*(major|minor)?\b/i);
+  if (!m) {
+    // "Dm" shorthand
+    const m2 = s.match(/^([A-G])\s*([#b])?\s*m\b/i);
+    if (!m2) return null;
+    const tonic = `${m2[1].toUpperCase()}${m2[2] || ''}`;
+    return { tonic, mode: 'minor' };
+  }
+
+  const tonic = `${m[1].toUpperCase()}${m[2] || ''}`;
+  const mode = (m[3] || '').toLowerCase() === 'minor' ? 'minor' : 'major';
+  return { tonic, mode };
 }
 
 function getArtHistoricalDirection(period) {

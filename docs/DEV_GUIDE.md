@@ -20,8 +20,8 @@ cp .env.example .env
 代表的な環境変数:
 
 - `OPENAI_API_KEY`（未設定でも rule-based にフォールバック）
-- `REPLICATE_API_TOKEN`（未設定でも placeholder/ComfyUI などにフォールバック）
-- `IMAGE_PROVIDER=comfyui`（ローカル ComfyUI を使う場合）
+- `IMAGE_PROVIDER=comfyui`（画像生成は ComfyUI 統一）
+- `COMFYUI_BASE_URL=http://127.0.0.1:8188`（ローカル ComfyUI を使う場合）
 - `DISABLE_LLM_ANALYSIS=true`（分析を LLM ではなくルールベースに固定）
 
 ## ローカル起動
@@ -70,7 +70,7 @@ npm run smoke:e2e:http
 
 ### 2) strict-provider（実プロバイダ必須）
 
-実環境で「本当に OpenAI/Ollama と Replicate/ComfyUI を使えているか」を検証する用途です。
+実環境で「本当に OpenAI/Ollama と ComfyUI を使えているか」を検証する用途です。
 
 ```bash
 node scripts/smoke-e2e-http.mjs --strict

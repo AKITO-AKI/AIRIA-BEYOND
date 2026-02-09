@@ -1,35 +1,25 @@
 /**
  * POST /api/image/generate
- * 
- * Generate an image using Replicate (SDXL) or local ComfyUI
- * Returns a job ID immediately, actual generation happens async
+ *
+ * Generate an image using ComfyUI.
+ * Returns a job ID immediately, actual generation happens async.
  */
-
-import Replicate from 'replicate';
 import { createJob, updateJob, incrementRetryCount, getJob } from '../jobStore.js';
 import { checkRateLimit, checkConcurrency, releaseJob } from '../lib/rate-limit.js';
 import { getClientIdentifier } from '../lib/client-id.js';
 import { buildPrompt } from '../promptBuilder.js';
+import { artDirectImagePrompt } from '../imagePromptDirector.js';
 import { trackUsage } from '../lib/usage-tracker.js';
 import { debugAiConsole, debugAiLog } from '../lib/aiDebug.js';
 import {
   buildBasicComfyWorkflow,
+  comfyuiGetObjectInfo,
+  comfyuiUploadImageFromUrl,
   comfyuiSubmitPrompt,
   comfyuiWaitForImage,
   comfyuiFetchImageBytes,
   bytesToDataUrl,
 } from '../lib/comfyuiClient.js';
-
-// SDXL model on Replicate
-const SDXL_MODEL = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b';
-
-// SDXL generation parameters
-const SDXL_PARAMS = {
-  width: 1024,
-  height: 1024,
-  num_inference_steps: 25,
-  guidance_scale: 7.5,
-};
 
 // Timeout for image generation (120 seconds)
 const GENERATION_TIMEOUT_MS = 120 * 1000;
@@ -73,6 +63,12 @@ function toStringOrUndefined(value) {
   if (typeof value !== 'string') return undefined;
   const s = value.trim();
   return s ? s : undefined;
+}
+
+function toShortStringOrUndefined(value, maxLen = 80) {
+  const s = toStringOrUndefined(value);
+  if (!s) return undefined;
+  return s.slice(0, maxLen);
 }
 
 function normalizeInstrumentation(raw) {
@@ -151,24 +147,17 @@ function createPlaceholderCoverDataUrl({ title, mood, seed, note }) {
 
 function resolveImageProvider(requestedProvider) {
   const pref = String(requestedProvider ?? process.env.IMAGE_PROVIDER ?? '').toLowerCase();
-  const hasReplicate = !!process.env.REPLICATE_API_TOKEN;
 
-  if (pref === 'replicate') return 'replicate';
+  // ComfyUI-only mode: ignore Replicate even if requested.
+  if (pref === 'placeholder') return 'placeholder';
   if (pref === 'comfyui' || pref === 'comfy') return 'comfyui';
-  if (pref === 'auto') {
-    return hasReplicate ? 'replicate' : 'comfyui';
-  }
+  if (pref === 'replicate') return 'comfyui';
+  if (pref === 'auto') return 'comfyui';
 
-  // Default mode:
-  // - In dev/local, prefer ComfyUI to avoid paid services.
-  // - In production, keep the legacy behavior if Replicate token exists.
-  if (process.env.NODE_ENV === 'production') {
-    return hasReplicate ? 'replicate' : 'comfyui';
-  }
   return 'comfyui';
 }
 
-async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed) {
+async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed, { styleReferenceImageUrl } = {}) {
   const steps = Number(process.env.COMFYUI_STEPS) || 25;
   const cfg = Number(process.env.COMFYUI_CFG) || 7.5;
   const width = Number(process.env.COMFYUI_WIDTH) || 1024;
@@ -176,6 +165,31 @@ async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed) {
   const sampler_name = process.env.COMFYUI_SAMPLER || 'euler';
   const scheduler = process.env.COMFYUI_SCHEDULER || 'normal';
   const checkpoint = process.env.COMFYUI_CHECKPOINT;
+
+  let objectInfo = null;
+  try {
+    objectInfo = await comfyuiGetObjectInfo({ ttlMs: 60_000 });
+  } catch (e) {
+    // Optional: workflow still runs in basic mode even if probing fails.
+    debugAiConsole(`ComfyUI_${jobId}.object_info_failed`, {
+      message: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  let referenceImageName;
+  const refUrl = String(styleReferenceImageUrl || process.env.COMFYUI_IPADAPTER_REFERENCE_URL || '').trim();
+  if (refUrl) {
+    try {
+      const uploaded = await comfyuiUploadImageFromUrl({ imageUrl: refUrl, subfolder: 'airia' });
+      referenceImageName = uploaded?.name || uploaded?.filename || uploaded?.image || undefined;
+      debugAiConsole(`ComfyUI_${jobId}.reference_uploaded`, { refUrl, uploaded });
+    } catch (e) {
+      debugAiConsole(`ComfyUI_${jobId}.reference_upload_failed`, {
+        refUrl,
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
 
   updateJob(jobId, {
     status: 'running',
@@ -194,6 +208,8 @@ async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed) {
     scheduler,
     ckpt_name: checkpoint,
     filenamePrefix: `AIRIA_${jobId}`,
+    objectInfo,
+    referenceImageName,
   });
 
   const promptId = await comfyuiSubmitPrompt({
@@ -243,11 +259,6 @@ function isTransientError(error) {
     return true;
   }
   
-  // 5xx server errors from Replicate
-  if (errorStatus && errorStatus >= 500 && errorStatus < 600) {
-    return true;
-  }
-  
   // Rate limit errors (429)
   if (errorStatus === 429) {
     return true;
@@ -267,7 +278,7 @@ function getRetryDelay(retryCount) {
 }
 
 /**
- * Run Replicate prediction with timeout
+ * Run an async operation with timeout
  * @param {Promise} promise - Promise to run
  * @param {number} timeoutMs - Timeout in milliseconds
  * @param {string} jobId - Job ID for logging
@@ -293,121 +304,6 @@ async function runWithTimeout(promise, timeoutMs, jobId) {
 }
 
 /**
- * Execute image generation with retry logic
- * @param {Replicate} replicate - Replicate client
- * @param {string} jobId - Job ID
- * @param {string} prompt - Image prompt
- * @param {string} negativePrompt - Negative prompt
- * @param {number} seed - Random seed
- * @param {string} clientId - Client identifier for rate limiting
- * @returns {Promise<string>} Result URL
- */
-async function executeGeneration(replicate, jobId, prompt, negativePrompt, seed, clientId) {
-  const job = getJob(jobId);
-  if (!job) {
-    throw new Error('Job not found');
-  }
-  
-  const maxRetries = job.maxRetries;
-  let lastError;
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[Generation] Job ${jobId} attempt ${attempt + 1}/${maxRetries + 1}`);
-      
-      // Update job status to running on first attempt
-      if (attempt === 0) {
-        updateJob(jobId, {
-          status: 'running',
-          startedAt: new Date().toISOString(),
-        });
-      }
-      
-      // Run prediction with timeout
-      const prediction = await runWithTimeout(
-        replicate.run(SDXL_MODEL, {
-          input: {
-            prompt,
-            negative_prompt: negativePrompt,
-            ...SDXL_PARAMS,
-            seed,
-          },
-        }),
-        GENERATION_TIMEOUT_MS,
-        jobId
-      );
-      
-      // Get result URL
-      const resultUrl = Array.isArray(prediction) ? prediction[0] : prediction;
-      
-      if (!resultUrl || typeof resultUrl !== 'string') {
-        throw new Error('Invalid result from Replicate');
-      }
-      
-      // Track API usage cost (approximate cost per image)
-      trackUsage('replicate', 0.0055, 'sdxl-image-generation', { 
-        model: SDXL_MODEL,
-        jobId,
-        attempt: attempt + 1
-      });
-      
-      console.log(`[Generation] Job ${jobId} succeeded on attempt ${attempt + 1}`);
-      return resultUrl;
-      
-    } catch (error) {
-      lastError = error;
-      
-      // Check if timeout
-      if (error.message?.includes('timeout')) {
-        console.error(`[Generation] Job ${jobId} timeout on attempt ${attempt + 1}:`, error.message);
-        
-        updateJob(jobId, {
-          errorCode: ERROR_CODES.TIMEOUT,
-          errorMessage: error.message,
-        });
-        
-        // Don't retry on timeout - it's unlikely to succeed
-        if (attempt >= maxRetries) {
-          break;
-        }
-      }
-      // Check if transient error and should retry
-      else if (isTransientError(error) && attempt < maxRetries) {
-        console.error(`[Generation] Job ${jobId} transient error on attempt ${attempt + 1}:`, error.message);
-        
-        // Increment retry count
-        incrementRetryCount(jobId);
-        
-        // Wait with exponential backoff before retry
-        const delay = getRetryDelay(attempt);
-        console.log(`[Generation] Job ${jobId} retrying in ${delay}ms`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-        continue;
-      }
-      // Non-transient error or max retries reached
-      else {
-        console.error(`[Generation] Job ${jobId} permanent error on attempt ${attempt + 1}:`, error.message);
-        
-        const errorCode = error.response?.status === 429 ? ERROR_CODES.RATE_LIMIT :
-                          isTransientError(error) ? ERROR_CODES.NETWORK_ERROR :
-                          ERROR_CODES.API_ERROR;
-        
-        updateJob(jobId, {
-          errorCode,
-          errorMessage: error.message,
-        });
-        
-        break;
-      }
-    }
-  }
-  
-  // If we get here, all retries failed
-  throw lastError;
-}
-
-/**
  * Generate image handler
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -421,12 +317,10 @@ export async function generateImage(req, res) {
 
   const providerRequestedRaw = req.body?.provider;
   let provider = resolveImageProvider(providerRequestedRaw);
-  const apiToken = process.env.REPLICATE_API_TOKEN;
   const providerWarnings = [];
-  if (provider === 'replicate' && !apiToken) {
-    // Do not hard-fail: fall back so the product can still be debugged.
-    providerWarnings.push('REPLICATE_API_TOKEN is not set; falling back to placeholder cover.');
-    provider = 'placeholder';
+
+  if (String(providerRequestedRaw || '').toLowerCase() === 'replicate') {
+    providerWarnings.push('Replicate is disabled (ComfyUI-only deployment); using ComfyUI instead.');
   }
 
   // Get client identifier for rate limiting
@@ -533,6 +427,8 @@ export async function generateImage(req, res) {
     const palette = toStringOrUndefined(req.body?.palette);
     const period = toStringOrUndefined(req.body?.period);
     const instrumentation = normalizeInstrumentation(req.body?.instrumentation);
+    const key = toShortStringOrUndefined(req.body?.key);
+    const styleReferenceImageUrl = toStringOrUndefined(req.body?.styleReferenceImageUrl);
 
     // If mood is missing, do not hard-fail. Use placeholder so the user can still proceed.
     if (!mood) {
@@ -567,6 +463,7 @@ export async function generateImage(req, res) {
         density,
         subject,
         palette,
+        key,
         period,
         instrumentation,
       });
@@ -585,6 +482,40 @@ export async function generateImage(req, res) {
       negativePrompt = 'text, watermark, logo, low quality, blurry';
     }
 
+    // Optional Art Director layer: rewrite prompt into a cohesive, classical-jacket-focused description.
+    // Safe defaults: disabled unless explicitly enabled via env.
+    try {
+      const directed = await artDirectImagePrompt({
+        basePrompt: prompt,
+        negativePrompt,
+        context: {
+          mood,
+          valence,
+          arousal,
+          focus,
+          period,
+          stylePreset,
+          motifTags,
+          subjectHint: subject,
+          paletteHint: palette,
+          key,
+          // These two are already embedded in base prompt, but passing them gives the director explicit levers.
+          // (They are best-effort hints; if missing, the director still works.)
+          keyColorDirection: undefined,
+          instrumentationDirection: Array.isArray(instrumentation) ? instrumentation.join(', ') : undefined,
+        },
+      });
+
+      if (directed?.prompt) {
+        prompt = directed.prompt;
+        negativePrompt = directed.negativePrompt || negativePrompt;
+        providerWarnings.push(`ArtDirectorPrompt: ${directed.provider}`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      providerWarnings.push(`ArtDirectorPrompt failed (fallback used): ${msg.slice(0, 120)}`);
+    }
+
     debugAiConsole('image.generate.request', {
       provider,
       mood,
@@ -597,11 +528,9 @@ export async function generateImage(req, res) {
     const job = createJob({
       provider,
       model:
-        provider === 'replicate'
-          ? SDXL_MODEL
-          : provider === 'comfyui'
-            ? `comfyui:${process.env.COMFYUI_CHECKPOINT || 'workflow'}`
-            : 'placeholder:svg',
+        provider === 'comfyui'
+          ? `comfyui:${process.env.COMFYUI_CHECKPOINT || 'workflow'}`
+          : 'placeholder:svg',
       input: {
         mood,
         duration,
@@ -616,6 +545,8 @@ export async function generateImage(req, res) {
         density,
         subject,
         palette,
+        key,
+        styleReferenceImageUrl,
         period,
         instrumentation,
         providerRequested: providerRequestedRaw,
@@ -655,18 +586,9 @@ export async function generateImage(req, res) {
         let extraMeta;
 
         try {
-          if (provider === 'replicate') {
-            resultUrl = await executeGeneration(
-              new Replicate({ auth: apiToken }),
-              job.id,
-              prompt,
-              negativePrompt,
-              finalSeed,
-              clientId
-            );
-          } else if (provider === 'comfyui') {
+          if (provider === 'comfyui') {
             const out = await runWithTimeout(
-              executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed),
+              executeComfyUiGeneration(job.id, prompt, negativePrompt, finalSeed, { styleReferenceImageUrl }),
               GENERATION_TIMEOUT_MS,
               job.id
             );

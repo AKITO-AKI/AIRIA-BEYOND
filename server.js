@@ -81,10 +81,6 @@ app.get('/api/health', (req, res) => {
         configured: !!(process.env.COMFYUI_BASE_URL || process.env.IMAGE_PROVIDER === 'comfyui' || process.env.IMAGE_PROVIDER === 'comfy'),
         baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
       },
-      replicate: { 
-        available: !!process.env.REPLICATE_API_TOKEN,
-        configured: !!process.env.REPLICATE_API_TOKEN
-      },
       openai: { 
         available: !!process.env.OPENAI_API_KEY,
         configured: !!process.env.OPENAI_API_KEY

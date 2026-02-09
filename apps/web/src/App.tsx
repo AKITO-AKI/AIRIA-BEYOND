@@ -331,7 +331,7 @@ const Phase1SessionUI = () => {
                     // Generation parameters
                     stylePreset: selectedStylePreset,
                     seed: sessionData.seed,
-                    provider: externalImageUrl ? 'replicate' : 'local',
+                    provider: externalImageUrl ? 'comfyui' : 'local',
                 },
                 // P4: Music data
                 musicData: musicData || undefined,
@@ -543,7 +543,7 @@ const Phase1SessionUI = () => {
         }
     };
 
-    // External image generation with Replicate (now with analysis and music)
+    // High-quality image generation via API (ComfyUI-only)
     const generateExternalImage = async () => {
         try {
             setError(null);
@@ -614,8 +614,8 @@ const Phase1SessionUI = () => {
                         seed: sessionData.seed,
                         reasoning,
                         jobId: response.jobId,
-                        provider: 'replicate',
-                        model: 'sdxl',
+                        provider: 'comfyui',
+                        model: 'comfyui',
                         resultUrl: finalStatus.resultUrl,
                         duration: imageDuration,
                         retryCount: finalStatus.retryCount || 0,
@@ -879,8 +879,8 @@ const Phase1SessionUI = () => {
                 </section>
 
                 <section className="external-generation" aria-label="外部画像生成">
-                    <h2>外部生成 (Replicate SDXL)</h2>
-                    <p className="section-description">高品質なAI画像生成 - 完了まで30-60秒かかります</p>
+                    <h2>高品質生成 (ComfyUI)</h2>
+                    <p className="section-description">高品質なAI画像生成 - 完了まで30-120秒かかることがあります</p>
                     
                     {/* P4: Updated progress flow with music generation */}
                     {(isAnalyzing || isGeneratingExternal || isGeneratingMusic || externalImageUrl || musicData) && (
@@ -969,7 +969,7 @@ const Phase1SessionUI = () => {
                             aria-label="外部生成"
                             {...interactiveProps}
                         >
-                            {isGeneratingExternal ? '生成中...' : '外部生成 (Replicate)'}
+                            {isGeneratingExternal ? '生成中...' : '高品質生成 (ComfyUI)'}
                         </button>
                         {externalImageUrl && (
                             <button 
@@ -1004,10 +1004,10 @@ const Phase1SessionUI = () => {
 
                     {externalImageUrl && !isGeneratingExternal && (
                         <div className="preview-container">
-                            <h3>生成された画像 (Replicate SDXL)</h3>
+                            <h3>生成された画像 (ComfyUI)</h3>
                             <img 
                                 src={externalImageUrl} 
-                                alt="Replicate SDXLで生成された画像" 
+                                alt="ComfyUIで生成された画像" 
                                 className="preview-image"
                                 crossOrigin="anonymous"
                             />

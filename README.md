@@ -14,18 +14,23 @@ An AI-powered session management and mood tracking application.
 2) 「ログインしてはじめる」
 - メールアドレスで新規登録 → ログイン
 
-3) はじめに（所要 30秒〜2分）
+   - **OpenAI**: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 - 早く試したい場合は「創作から」を選ぶ（ステップ数が短い）
 - 最後に「完了」→ 次画面で「はじめる」
 
 4) 生成を体験
 - 「1曲作ってはじめる」で、オンボーディング回答から1曲生成してそのまま再生
 - 生成が止まった/通信が切れた場合は「生成を再開」で復帰できます
+3. Add your token to `.env`:
+```
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
 ### 直接リンク（プレログイン）
-
-- ログイン画面: https://akito-aki.github.io/AIRIA-BEYOND/#login
-- プライバシー: https://akito-aki.github.io/AIRIA-BEYOND/#privacy
+**Note:**
+- Image generation is ComfyUI-only (`IMAGE_PROVIDER=comfyui`).
+- Without `OPENAI_API_KEY`, the app uses rule-based (or Ollama if configured).
+- Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control).
 - 利用規約: https://akito-aki.github.io/AIRIA-BEYOND/#terms
 
 ### つまずきやすいポイント
@@ -36,7 +41,6 @@ An AI-powered session management and mood tracking application.
 
 補足:
 - プレリリースはメール/パスワードのみ（OAuth無効）です。
-
 ### 印刷用チラシ（QR/URL）
 
 - 印刷ページ: [docs/flyer.html](docs/flyer.html)
@@ -54,17 +58,8 @@ Custom domain migration guide:
 
 ```
 ┌─────────────────────────────┐
-│  GitHub Pages               │
-│  (Frontend Static Files)    │
 │  https://akito-aki.github.io│
 │  /AIRIA-BEYOND/             │
-└──────────┬──────────────────┘
-           │
-           │ API Calls (CORS enabled)
-           ▼
-┌─────────────────────────────┐
-│  Render Web Service         │
-│  (Express.js Backend)       │
 │  https://airia-beyond.      │
 │  onrender.com               │
 │  /api/*                     │
@@ -131,27 +126,30 @@ This will install all dependencies for the monorepo workspaces.
 
 ### Environment Variables
 
-For external image generation with Replicate SDXL and LLM-based analysis, you need to configure API tokens:
+This project generates images via **ComfyUI** (SDXL workflow). LLM features (analysis / optional Art Director prompt layer) can use OpenAI or Ollama.
 
 1. Copy the example environment file:
 ```bash
 cp .env.example .env
 ```
 
-2. Get your API tokens:
-   - **Replicate**: [https://replicate.com/account/api-tokens](https://replicate.com/account/api-tokens)
-   - **OpenAI**: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-
-3. Add your tokens to `.env`:
+2. Configure ComfyUI (required for image generation):
 ```
-REPLICATE_API_TOKEN=your_replicate_token_here
+IMAGE_PROVIDER=comfyui
+COMFYUI_BASE_URL=http://127.0.0.1:8188
+# Optional but recommended for determinism
+COMFYUI_CHECKPOINT=sdxl_base_1.0.safetensors
+```
+
+3. Configure OpenAI (optional; enables LLM analysis and the Art Director prompt layer):
+- Get your API token: https://platform.openai.com/api-keys
+```
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-**Note:** 
-- Without `REPLICATE_API_TOKEN`, the app can run with local ComfyUI (`IMAGE_PROVIDER=comfyui`)
-- Without `OPENAI_API_KEY`, the app uses rule-based (or Ollama if configured)
-- Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control)
+Notes:
+- Without `OPENAI_API_KEY`, the app uses rule-based analysis (or Ollama if configured).
+- Set `DISABLE_LLM_ANALYSIS=true` to force rule-based analysis (for cost control).
 
 ### Email/Password Login (Pre-release)
 
@@ -234,7 +232,7 @@ Current triggers (best-effort):
 
 ### Local-first (Ollama + ComfyUI)
 
-If you want to avoid paid services (OpenAI/Replicate), run everything locally:
+If you want to avoid paid services (OpenAI), run everything locally:
 
 1) Start Ollama and pull a model
 ```bash
@@ -262,7 +260,7 @@ DEBUG_AI=1
 
 Provider behavior:
 - `/api/chat` and `/api/event/refine` use Ollama when `LLM_PROVIDER=ollama`.
-- `/api/image/generate` uses ComfyUI when `IMAGE_PROVIDER=comfyui` (or when Replicate token is missing in auto mode).
+- `/api/image/generate` uses ComfyUI when `IMAGE_PROVIDER=comfyui`.
 
 ### Smoke test (debug)
 
@@ -287,8 +285,8 @@ Tips:
 
 - **Rate Limiting**: 5 requests per minute per IP address
 - **Concurrency**: Maximum 3 concurrent image generations per IP
-- **Costs**: Each SDXL image generation on Replicate costs ~$0.0055 (check current pricing at [replicate.com/pricing](https://replicate.com/pricing))
-- **Generation Time**: 30-60 seconds per image
+- **Costs**: Image generation cost depends on your ComfyUI host (GPU / cloud).
+- **Generation Time**: 30-120 seconds per image (varies by GPU/workflow)
 
 ## Development
 
@@ -521,13 +519,13 @@ This serves the production build locally for testing.
 
 **User Experience**: Complete journey from session to gallery! Create sessions, watch AI analyze your emotions, generate beautiful classical-style art, save to albums with full metadata, and explore your emotional collection in the 3D gallery bookshelf. Regenerate variations with a single click!
 
-### Phase P0: External Image Generation (Replicate SDXL)
-- High-quality AI image generation using Replicate's SDXL model
+### Phase P0: High-quality Image Generation (ComfyUI)
+- High-quality AI image generation using ComfyUI (SDXL workflow)
 - Style presets for classic aesthetics (see P3 for updated presets)
 - Automatic prompt generation from session IR data (mood, duration, tags)
 - Asynchronous job processing with real-time status updates
-- Fallback to local generation when API token is not configured
-- Rate limiting and concurrency guards for cost protection
+- Fallback to placeholder/local generation on failures
+- Rate limiting and concurrency guards for stability
 - 1024x1024px high-quality output
 
 ## Usage
@@ -586,21 +584,21 @@ The onboarding data is stored locally and can be used to personalize your sessio
    - View the preview on screen
    - Click "Download PNG" to save the generated image
 
-5. **Generate with external AI (Replicate SDXL) - P3 Enhanced:**
+5. **Generate with AI (ComfyUI) - P3 Enhanced:**
    - Select a style preset (油絵, 水彩画, 印象派, etc.) or let auto-select based on your mood
-   - Click "外部生成(Replicate)" to generate a high-quality AI image
+   - Click "高品質生成(ComfyUI)" to generate a high-quality AI image
    - **Watch the progress flow:**
      - Step 1: "解析中..." - AI analyzes your session (2-5 seconds)
      - See your emotional analysis (valence, arousal, focus, motif tags)
-     - Step 2: "画像生成中..." - Replicate SDXL generates image (30-60 seconds)
+     - Step 2: "画像生成中..." - ComfyUI generates image (30-120 seconds)
      - Step 3: "完了" - Generation complete!
    - View retry count if automatic retries occur
-   - Wait 30-60 seconds for generation to complete
+   - Wait 30-120 seconds for generation to complete
    - If it fails:
      - Click "🔄 再試行" to manually retry
      - Or click "🎨 ローカル生成に切り替え" to use local generation
    - Click "📚 アルバムに保存" to save to album with full metadata
-   - Note: Requires `REPLICATE_API_TOKEN` to be set in `.env`
+   - Note: LLM analysis is optional (OpenAI/Ollama); image generation runs on your ComfyUI host
 
 6. **View your albums in Gallery:**
    - Navigate to Gallery room
@@ -627,7 +625,7 @@ The generated images reflect your emotional state through intelligent prompt gen
 
 **Phase P1 (Prototype)**: ✅ Robust generation flow complete - Timeout handling, automatic retry with exponential backoff, manual retry UI, fallback mechanism, enhanced error display, and comprehensive logging.
 
-**Phase P0 (Prototype)**: ✅ External image generation integration complete - Replicate SDXL with style presets, job tracking, rate limiting, and fallback support.
+**Phase P0 (Prototype)**: ✅ High-quality image generation integration complete - ComfyUI with style presets, job tracking, rate limiting, and fallback support.
 
 **Phase B**: Onboarding deep-life questions complete - 4-step questionnaire capturing emotional patterns, triggers, and goals with localStorage persistence.
 
@@ -736,7 +734,9 @@ For the complete experience with external image generation:
 
 1. Install Vercel CLI: `npm install -g vercel`
 2. Link to Vercel: `vercel link`
-3. Add environment variable: `vercel env add REPLICATE_API_TOKEN`
+3. Add environment variables (ComfyUI-only):
+  - `vercel env add IMAGE_PROVIDER` (set to `comfyui`)
+  - `vercel env add COMFYUI_BASE_URL` (must be reachable from the deployed backend)
 4. Deploy: `vercel --prod`
 
 The `vercel.json` configuration automatically handles:

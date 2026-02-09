@@ -46,7 +46,7 @@ export const PrivacyPolicy = () => (
         本サービスは以下の第三者サービスを使用します：
       </p>
       <ul>
-        <li>Replicate (画像生成 / Image generation)</li>
+        <li>ComfyUI (画像生成 / Image generation)</li>
         <li>OpenAI (感情分析 / Emotion analysis)</li>
         <li>Render (APIホスティング / API hosting)</li>
         <li>GitHub Pages (フロントエンド配信 / Frontend hosting)</li>

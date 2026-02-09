@@ -71,6 +71,12 @@ export interface GenerateImageRequest {
   density?: number;
   period?: string;
   instrumentation?: string[];
+
+  // Optional: musical key (e.g., "D minor", "C Major", "F# minor") for color-direction mapping
+  key?: string;
+
+  // Optional: style reference image URL for ComfyUI IP-Adapter (advanced)
+  styleReferenceImageUrl?: string;
 }
 
 export interface GenerateImageResponse {

@@ -5,13 +5,13 @@ import './GalleryRoom.css';
 // P3: Provider label mapping utility
 const getProviderLabel = (provider?: string): string => {
   if (!provider) return '';
-  return provider === 'replicate' ? 'AI生成' : 'ローカル';
+  return provider === 'local' ? 'ローカル' : 'AI生成';
 };
 
 // P3: Provider badge display
 const getProviderBadge = (provider?: string): string => {
   if (!provider) return '';
-  return provider === 'replicate' ? 'AI' : 'ローカル';
+  return provider === 'local' ? 'ローカル' : 'AI';
 };
 
 const GalleryRoom: React.FC = () => {

@@ -418,8 +418,9 @@ const AlbumRoom: React.FC = () => {
                   <div className="metadata-item">
                     <span className="metadata-label">生成方法</span>
                     <span className="metadata-value">
-                      {album.metadata.provider === 'replicate' ? 'Replicate (SDXL)' : 
-                       album.metadata.provider === 'local' ? 'ローカル生成' : 
+                      {album.metadata.provider === 'comfyui' ? 'ComfyUI' :
+                       album.metadata.provider === 'local' ? 'ローカル生成' :
+                       album.metadata.provider === 'replicate' ? 'ComfyUI（旧: Replicate）' :
                        album.metadata.provider}
                     </span>
                   </div>
@@ -492,8 +493,8 @@ const AlbumRoom: React.FC = () => {
                 </div>
               )}
 
-              {/* P3: Regenerate button */}
-              {album.metadata.provider === 'replicate' && (
+              {/* Regenerate button (AI-generated albums) */}
+              {album.metadata.provider !== 'local' && (
                 <div className="album-actions">
                   <button
                     className="regenerate-btn"

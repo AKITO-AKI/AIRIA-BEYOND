@@ -21,7 +21,7 @@ flowchart LR
   end
 
   subgraph PR[プロバイダ]
-    P[外部呼び出し<br/>LLM OpenAI または Ollama<br/>画像 Replicate または ComfyUI<br/>試聴 iTunes Search]
+    P[外部呼び出し<br/>LLM OpenAI または Ollama<br/>画像 ComfyUI（未設定/到達不能/失敗時はplaceholder）<br/>試聴 iTunes Search]
   end
 
   subgraph DATA[永続化]
@@ -47,7 +47,7 @@ flowchart LR
   - **ジョブ管理**は現状インメモリのため、API再起動でジョブが消え、一定時間後に自動削除されます。
   - **制限**（レートと同時実行）で、連打や過負荷時の破綻を抑えます。
 - **プロバイダ**
-  - LLM（OpenAI / Ollama）、画像生成（Replicate / ComfyUI）、試聴取得（iTunes Search）などの外部呼び出しをまとめています。
+  - LLM（OpenAI / Ollama）、画像生成（ComfyUI）、試聴取得（iTunes Search）などの外部呼び出しをまとめています。
   - 未設定・到達不能・失敗時はフォールバックして、体験が止まらないようにしています。
 - **永続化**
   - 認証ストア（JSON または Postgres）と監査ログ（JSON + SSE）が対象です。
@@ -64,7 +64,7 @@ sequenceDiagram
   participant FE as Frontend (React)
   participant API as Backend API (Express)
   participant LLM as LLM (OpenAI/Ollama)
-  participant IMG as Image (Replicate/ComfyUI)
+  participant IMG as Image (ComfyUI/placeholder)
   participant J as Job Stores (in-memory)
 
   U->>FE: 入力（オンボーディング/会話/ムード）
@@ -97,7 +97,7 @@ sequenceDiagram
   API->>J: createJob(status=queued)
   API-->>FE: 202 { jobId, status='queued', provider }
   API->>API: buildPrompt()（promptBuilder、失敗時は安全プロンプト）
-  API->>IMG: Replicate or ComfyUI（未設定/到達不能/失敗時はplaceholder）
+  API->>IMG: ComfyUI（未設定/到達不能/失敗時はplaceholder）
   IMG-->>API: resultUrl (or fallback dataURL)
   API->>J: updateJob(status='succeeded', resultUrl)
   loop Poll (image)
@@ -149,7 +149,7 @@ sequenceDiagram
 - **ジョブ方式でUIを軽くする**
   - 生成はジョブ化してポーリングで状態取得するため、長時間処理でも画面が固まりにくく、通信断からも復帰しやすい構造です。
 - **プロバイダ差し替え可能な境界**
-  - LLM と画像生成の呼び出しを入れ替え可能にして、ローカル（Ollama / ComfyUI）と外部（OpenAI / Replicate）を選べるようにしています。
+  - LLM はローカル（Ollama）と外部（OpenAI）を選べ、画像は ComfyUI を前提にしています（未設定/到達不能時は placeholder へフォールバック）。
 - **過負荷対策を最初から入れる**
   - レート制限と同時実行制限で、1ユーザーの連打や想定外のトラフィックでも落ちにくい前提を作っています。
 - **運用に必要なログ導線**

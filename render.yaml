@@ -41,12 +41,16 @@ services:
         sync: false
       - key: SMTP_SECURE
         sync: false
-      - key: REPLICATE_API_TOKEN
-        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: ADMIN_TOKEN
         sync: false
       - key: DISABLE_LLM_ANALYSIS
         value: false
+      - key: IMAGE_PROVIDER
+        value: comfyui
+      - key: COMFYUI_BASE_URL
+        sync: false
+      - key: COMFYUI_CHECKPOINT
+        sync: false
     healthCheckPath: /api/health

@@ -43,11 +43,6 @@ export async function getUsage(req, res) {
         available: true,
         baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
       },
-      replicate: {
-        requests: 0,
-        estimatedCost: 0,
-        available: !!process.env.REPLICATE_API_TOKEN
-      },
       openai: {
         requests: 0,
         estimatedCost: 0,
