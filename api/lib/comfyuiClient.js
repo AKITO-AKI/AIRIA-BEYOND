@@ -135,6 +135,14 @@ function envNum(name, fallback) {
   return Number.isFinite(v) ? v : fallback;
 }
 
+function envBool(name) {
+  const raw = String(process.env[name] ?? '').trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on') return true;
+  if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'off') return false;
+  return null;
+}
+
 function parseJsonEnv(name) {
   const raw = envStr(name);
   if (!raw) return null;
@@ -169,8 +177,10 @@ function getWorkflowOptionsFromEnv() {
         .slice(0, 4)
     : [];
 
-  const hiresEnabled = String(envStr('COMFYUI_HIRES_ENABLED', '')).toLowerCase();
-  const enableHires = hiresEnabled === '1' || hiresEnabled === 'true' || hiresEnabled === 'yes' || hiresEnabled === 'on';
+  // Hi-Res Fix: if COMFYUI_HIRES_ENABLED is unset, default to AUTO (enabled with safe defaults).
+  // This lets deployments improve detail without adding env vars.
+  const hiresEnabled = envBool('COMFYUI_HIRES_ENABLED');
+  const hiresMode = hiresEnabled === null ? 'auto' : hiresEnabled ? 'on' : 'off';
 
   const refinerCkpt = envStr('COMFYUI_REFINER_CHECKPOINT', '');
 
@@ -181,13 +191,15 @@ function getWorkflowOptionsFromEnv() {
 
   return {
     loras: parsedLoras,
-    hires: enableHires
-      ? {
-          scale: clamp(envNum('COMFYUI_HIRES_SCALE', 1.5), 1.1, 2.0, 1.5),
-          denoise: clamp(envNum('COMFYUI_HIRES_DENOISE', 0.35), 0.05, 0.75, 0.35),
-          steps: Math.round(clamp(envNum('COMFYUI_HIRES_STEPS', 12), 4, 40, 12)),
-        }
-      : null,
+    hires:
+      hiresMode === 'off'
+        ? null
+        : {
+            // AUTO defaults tuned for SDXL cover art: moderate upscale + low denoise for detail.
+            scale: clamp(envNum('COMFYUI_HIRES_SCALE', 1.35), 1.1, 2.0, 1.35),
+            denoise: clamp(envNum('COMFYUI_HIRES_DENOISE', 0.32), 0.05, 0.75, 0.32),
+            steps: Math.round(clamp(envNum('COMFYUI_HIRES_STEPS', 12), 4, 40, 12)),
+          },
     refiner: refinerCkpt
       ? {
           ckpt_name: refinerCkpt,
@@ -205,6 +217,46 @@ function getWorkflowOptionsFromEnv() {
         }
       : null,
   };
+}
+
+function extractChoicesFromInputSpec(spec) {
+  // ComfyUI /object_info formats vary across versions/custom nodes.
+  // We support a few common shapes, returning an array of strings.
+  if (!spec) return [];
+
+  // Shape A: [ ["a", "b"], { ... } ]
+  if (Array.isArray(spec) && Array.isArray(spec[0])) {
+    return spec[0].map((v) => String(v)).filter(Boolean);
+  }
+
+  // Shape B: { choices: ["a", "b"] }
+  if (typeof spec === 'object' && !Array.isArray(spec) && Array.isArray(spec.choices)) {
+    return spec.choices.map((v) => String(v)).filter(Boolean);
+  }
+
+  // Shape C: ["a", "b"]
+  if (Array.isArray(spec) && spec.every((v) => typeof v === 'string')) {
+    return spec.map((v) => String(v)).filter(Boolean);
+  }
+
+  // Shape D: [ "STRING", { choices: [...] } ]
+  if (Array.isArray(spec)) {
+    const meta = spec.find((v) => v && typeof v === 'object' && !Array.isArray(v));
+    if (meta && Array.isArray(meta.choices)) {
+      return meta.choices.map((v) => String(v)).filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+function pickCheckpointFromObjectInfo(objectInfo) {
+  const required = getRequiredInputs(objectInfo, 'CheckpointLoaderSimple');
+  if (!required) return '';
+  const key = pickInputKey(required, ['ckpt_name', 'checkpoint', 'ckpt', 'name']);
+  if (!key) return '';
+  const choices = extractChoicesFromInputSpec(required[key]);
+  return choices[0] ? String(choices[0]) : '';
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 20_000) {
@@ -240,16 +292,20 @@ export function buildBasicComfyWorkflow({
   objectInfo,
   referenceImageName,
 }) {
-  const checkpoint = ckpt_name || process.env.COMFYUI_CHECKPOINT || 'sdxl_base_1.0.safetensors';
+  const envCheckpoint = String(process.env.COMFYUI_CHECKPOINT || '').trim();
+  const checkpoint =
+    String(ckpt_name || '').trim() ||
+    envCheckpoint ||
+    pickCheckpointFromObjectInfo(objectInfo) ||
+    'sdxl_base_1.0.safetensors';
 
   const options = getWorkflowOptionsFromEnv();
   const canLora = hasNode(objectInfo, 'LoraLoader');
   const canLatentUpscale = hasNode(objectInfo, 'LatentUpscale');
   const canLoadImage = hasNode(objectInfo, 'LoadImage');
 
-  // NOTE: Refiner and hi-res fix are optional and only used when:
-  // - enabled via env, AND
-  // - the required nodes exist in the running ComfyUI instance.
+  // NOTE: Refiner is env-driven. Hi-res fix defaults to AUTO (on) unless explicitly disabled.
+  // All enhancements require the necessary nodes to exist in the running ComfyUI instance.
   const useLoras = canLora && Array.isArray(options.loras) && options.loras.length > 0;
   const useHires = canLatentUpscale && options.hires;
   const useRefiner = options.refiner && typeof options.refiner.ckpt_name === 'string' && options.refiner.ckpt_name;

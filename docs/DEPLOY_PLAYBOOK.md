@@ -167,6 +167,12 @@ Render（API）の Environment に最低限入れるもの:
 任意（品質・固定化）:
 
 - `COMFYUI_CHECKPOINT=...`
+- `COMFYUI_STEPS=30`
+- `COMFYUI_CFG=7.0`
+- `COMFYUI_SAMPLER=dpmpp_2m`
+- `COMFYUI_SCHEDULER=karras`
+- `COMFYUI_TIMEOUT_MS=240000`
+- `COMFYUI_HTTP_TIMEOUT_MS=20000`
 - 7-2 の LoRA / Hi-Res Fix / Refiner / IP-Adapter
 
 重要:
@@ -237,6 +243,12 @@ IP-Adapter（スタイル参照画像; ComfyUI にノードが入っている場
 
 - API リクエストで `styleReferenceImageUrl` を送る
 - もしくは env で `COMFYUI_IPADAPTER_REFERENCE_URL=https://...` を設定
+
+補足（安定運用のためのタイムアウト）:
+
+- `COMFYUI_TIMEOUT_MS`（生成全体の待ち時間。重い設定では 240000〜420000 推奨）
+- `COMFYUI_POLL_INTERVAL_MS`（既定 750）
+- `COMFYUI_HTTP_TIMEOUT_MS`（ComfyUI の各HTTP呼び出しのタイムアウト。既定 20000）
 
 注意:
 

@@ -158,12 +158,13 @@ function resolveImageProvider(requestedProvider) {
 }
 
 async function executeComfyUiGeneration(jobId, prompt, negativePrompt, seed, { styleReferenceImageUrl } = {}) {
-  const steps = Number(process.env.COMFYUI_STEPS) || 25;
-  const cfg = Number(process.env.COMFYUI_CFG) || 7.5;
+  // Quality-biased defaults (env can still override).
+  const steps = Number(process.env.COMFYUI_STEPS) || 30;
+  const cfg = Number(process.env.COMFYUI_CFG) || 7.0;
   const width = Number(process.env.COMFYUI_WIDTH) || 1024;
   const height = Number(process.env.COMFYUI_HEIGHT) || 1024;
-  const sampler_name = process.env.COMFYUI_SAMPLER || 'euler';
-  const scheduler = process.env.COMFYUI_SCHEDULER || 'normal';
+  const sampler_name = process.env.COMFYUI_SAMPLER || 'dpmpp_2m';
+  const scheduler = process.env.COMFYUI_SCHEDULER || 'karras';
   const checkpoint = process.env.COMFYUI_CHECKPOINT;
 
   let objectInfo = null;

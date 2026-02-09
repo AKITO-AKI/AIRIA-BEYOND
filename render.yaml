@@ -53,4 +53,76 @@ services:
         sync: false
       - key: COMFYUI_CHECKPOINT
         sync: false
+
+      # --- ComfyUI quality defaults (recommended) ---
+      - key: COMFYUI_WIDTH
+        value: 1024
+      - key: COMFYUI_HEIGHT
+        value: 1024
+      - key: COMFYUI_STEPS
+        value: 30
+      - key: COMFYUI_CFG
+        value: 7.0
+      - key: COMFYUI_SAMPLER
+        value: dpmpp_2m
+      - key: COMFYUI_SCHEDULER
+        value: karras
+
+      # Timeouts / polling
+      - key: COMFYUI_TIMEOUT_MS
+        value: 240000
+      - key: COMFYUI_POLL_INTERVAL_MS
+        value: 750
+      - key: COMFYUI_HTTP_TIMEOUT_MS
+        value: 20000
+
+      # Hi-Res Fix (LatentUpscale + 2nd sampler pass)
+      - key: COMFYUI_HIRES_ENABLED
+        value: true
+      - key: COMFYUI_HIRES_SCALE
+        value: 1.5
+      - key: COMFYUI_HIRES_DENOISE
+        value: 0.35
+      - key: COMFYUI_HIRES_STEPS
+        value: 12
+      - key: COMFYUI_HIRES_UPSCALE_METHOD
+        value: nearest-exact
+
+      # LoRA / Refiner (optional; set only if models exist on the ComfyUI host)
+      - key: COMFYUI_LORAS
+        sync: false
+      - key: COMFYUI_REFINER_CHECKPOINT
+        sync: false
+      - key: COMFYUI_REFINER_DENOISE
+        value: 0.22
+      - key: COMFYUI_REFINER_STEPS
+        value: 12
+
+      # IP-Adapter (optional; requires custom nodes + models)
+      - key: COMFYUI_IPADAPTER_ENABLED
+        value: false
+      - key: COMFYUI_IPADAPTER_MODEL
+        sync: false
+      - key: COMFYUI_CLIP_VISION_MODEL
+        sync: false
+      - key: COMFYUI_IPADAPTER_WEIGHT
+        value: 0.65
+      - key: COMFYUI_IPADAPTER_START_AT
+        value: 0.0
+      - key: COMFYUI_IPADAPTER_END_AT
+        value: 1.0
+      - key: COMFYUI_IPADAPTER_REFERENCE_URL
+        sync: false
+
+      # --- Art Director prompt layer (recommended) ---
+      - key: IMAGE_ART_DIRECTOR_ENABLED
+        value: true
+      - key: IMAGE_PROMPT_LLM_PROVIDER
+        value: openai
+      - key: OPENAI_MODEL_IMAGE_PROMPT
+        value: gpt-4o-mini
+      - key: IMAGE_PROMPT_LLM_TEMPERATURE
+        value: 0.7
+      - key: IMAGE_PROMPT_LLM_MAX_TOKENS
+        value: 800
     healthCheckPath: /api/health
