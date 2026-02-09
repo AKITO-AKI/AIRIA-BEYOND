@@ -143,10 +143,6 @@ const FeedbackRoom: React.FC = () => {
   return (
     <div className="room-content feedback-room">
       <div className="feedback-header" data-no-swipe="true">
-        <div>
-          <h1 className="room-title">FEEDBACK</h1>
-          <p className="room-subtitle">改善のために、気づいたことを教えてください</p>
-        </div>
         <div className="feedback-header-actions">
           <button className="btn btn-secondary" onClick={() => navigateToRoom('info')}>
             Infoへ

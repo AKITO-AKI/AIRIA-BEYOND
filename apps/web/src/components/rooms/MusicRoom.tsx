@@ -95,10 +95,6 @@ const MusicRoom: React.FC = () => {
   return (
     <div className="room-content music-room">
       <div className="room-header music-header">
-        <div>
-          <h1 className="room-title">MUSIC</h1>
-          <p className="room-subtitle">選択したアルバムを再生する</p>
-        </div>
         <div className="room-header-actions">
           <button className="btn" onClick={() => navigateToRoom('gallery')}>
             ギャラリーへ

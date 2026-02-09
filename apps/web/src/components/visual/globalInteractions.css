@@ -90,21 +90,3 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* Ensure sufficient color contrast */
-:root {
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #666666;
-  --color-background: #ffffff;
-  --color-surface: #f5f5f5;
-  --color-accent: #D4AF37;
-  --color-accent-dark: #B8941E;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #cccccc;
-    --color-background: #1a1a1a;
-    --color-surface: #2a2a2a;
-  }
-}

@@ -495,10 +495,7 @@ const OnboardingRoom: React.FC<Props> = ({ onExit }) => {
           opacity={0.16}
         />
       )}
-      
-      <h1 className="room-title">はじめに</h1>
-      <p className="room-subtitle">あなたに合う体験へ整えます</p>
-      
+
       {!isCompleted ? (
         <OnboardingForm onComplete={handleComplete} onProgressChange={setProgress} />
       ) : (

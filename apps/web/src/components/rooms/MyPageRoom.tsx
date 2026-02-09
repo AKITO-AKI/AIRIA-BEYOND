@@ -81,10 +81,6 @@ const MyPageRoom: React.FC = () => {
   return (
     <div className="room-content mypage-room">
       <div className="mypage-header" data-no-swipe="true">
-        <div>
-          <h1 className="room-title">MY</h1>
-          <p className="room-subtitle">あなたのプロフィールと投稿</p>
-        </div>
         <div className="mypage-header-actions">
           <button className="btn" onClick={() => navigateToRoom('settings')}>設定へ</button>
           <button className="btn" onClick={() => void load()} disabled={loading || !user}>

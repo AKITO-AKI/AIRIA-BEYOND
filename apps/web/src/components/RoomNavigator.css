@@ -103,8 +103,34 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px 4px 0;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.room-sidebar-description {
+  margin-top: 12px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 62%, transparent 38%);
+  background: color-mix(in srgb, var(--bg-primary) 58%, transparent 42%);
+}
+
+.room-sidebar-description-title {
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+}
+
+.room-sidebar-description-text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .room-sidebar-item {
@@ -242,6 +268,10 @@
   overflow: hidden;
 }
 
+.room-sidebar.wide.closed .room-sidebar-description {
+  display: none;
+}
+
 .room-stage {
   position: relative;
   height: 100dvh;
@@ -271,15 +301,15 @@
   flex-shrink: 0;
   background: var(--bg-primary);
   position: relative;
-  overflow-y: auto;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  overscroll-behavior: contain;
 }
 
 .room-content {
   width: 100%;
   max-width: 1200px;
-  margin: 0;
+  margin: 0 auto;
   padding: 28px 24px calc(32px + var(--player-safe-area, 96px));
   display: flex;
   flex-direction: column;
@@ -287,6 +317,18 @@
   justify-content: flex-start;
   text-align: left;
   position: relative;
+  overflow: visible;
+  min-width: 0;
+  --room-content-scale: 0.5;
+  transform: scale(var(--room-content-scale));
+  transform-origin: top left;
+}
+
+@supports (zoom: 1) {
+  .room-content {
+    zoom: var(--room-content-scale);
+    transform: none;
+  }
 }
 
 .room-navigator.indicators-hidden .room-content {

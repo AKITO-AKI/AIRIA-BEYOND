@@ -158,8 +158,6 @@ const AlbumRoom: React.FC = () => {
   if (!album) {
     return (
       <div className="room-content album-room">
-        <h1 className="room-title">ALBUM</h1>
-        <p className="room-subtitle">アルバム詳細</p>
         <div className="album-empty">
           <p>アルバムが選択されていません</p>
           <p className="album-empty-hint">Galleryからアルバムを選択してください</p>

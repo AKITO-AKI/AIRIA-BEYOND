@@ -242,13 +242,6 @@ const GalleryRoom: React.FC = () => {
         opacity={0.08}
       />
 
-      <div className="room-header" data-no-swipe="true">
-        <div>
-          <h1 className="room-title">GALLERY</h1>
-          <p className="room-subtitle">作品の棚。選んで、開いて、再生して、公開する。</p>
-        </div>
-      </div>
-
       <div className="gallery-toolbar room-card" data-no-swipe="true">
         <div className="gallery-toolbar-left">
           <SegmentedControl

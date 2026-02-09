@@ -16,6 +16,19 @@ interface RoomNavigatorProps {
   initialRoom?: RoomType;
 }
 
+const ROOM_DESCRIPTIONS: Partial<Record<RoomType, string>> = {
+  main: '会話を育てて、創作の種をつくる。',
+  gallery: '作品の棚。選んで、開いて、再生して、公開する。',
+  album: '選択した作品の詳細・再生・公開設定。',
+  music: '音楽付きアルバムを再生・ライブラリ管理。',
+  social: '作品を公開して、反応を集める。',
+  me: 'あなたのプロフィールと投稿。',
+  settings: 'プロフィールと各種設定。',
+  admin: 'ユーザーアクション監視ログ（リアルタイム）。',
+  info: 'このアプリについて。',
+  feedback: '改善のために、気づいたことを送る。',
+};
+
 function RoomIcon({ roomId }: { roomId: RoomType }) {
   const common = {
     width: 18,
@@ -139,6 +152,16 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
     setSidebarOpen(!isNarrow);
   }, [isNarrow]);
 
+  const getScrollableRoom = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return null;
+    const roomEl = target.closest('.room');
+    if (!(roomEl instanceof HTMLElement)) return null;
+    if (roomEl.scrollWidth <= roomEl.clientWidth + 1 && roomEl.scrollHeight <= roomEl.clientHeight + 1) {
+      return null;
+    }
+    return roomEl;
+  };
+
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!(target instanceof Element)) return false;
     return Boolean(
@@ -163,7 +186,7 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
     const dx = currentX - startX;
     const dy = currentY - startY;
 
-    // Decide whether user intent is scrolling (vertical) or room swipe (horizontal)
+    // Decide whether user intent is scrolling (vertical / horizontal) or room swipe
     if (!dragAxis) {
       const ax = Math.abs(dx);
       const ay = Math.abs(dy);
@@ -174,6 +197,22 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
         setOffsetX(0);
         return;
       }
+
+      // If the active room can scroll horizontally in the drag direction,
+      // prefer native horizontal scrolling over room swipes.
+      const scrollRoom = getScrollableRoom(e.target);
+      if (scrollRoom && scrollRoom.scrollWidth > scrollRoom.clientWidth + 1) {
+        const maxScrollLeft = scrollRoom.scrollWidth - scrollRoom.clientWidth;
+        const canScrollLeft = scrollRoom.scrollLeft > 0;
+        const canScrollRight = scrollRoom.scrollLeft < maxScrollLeft - 1;
+        if ((dx > 0 && canScrollLeft) || (dx < 0 && canScrollRight)) {
+          setIsDragging(false);
+          setOffsetX(0);
+          setDragAxis(null);
+          return;
+        }
+      }
+
       setDragAxis('horizontal');
     }
 
@@ -281,6 +320,9 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
   const currentRoomId = rooms[currentIndex]?.id;
   const showIndicators = currentRoomId !== 'onboarding';
 
+  const currentRoomName = rooms[currentIndex]?.name || '';
+  const currentRoomDescription = (currentRoomId && ROOM_DESCRIPTIONS[currentRoomId]) || '';
+
   const visibleRooms = useMemo(() => {
     // Keep onboarding isolated (no global navigation).
     if (!showIndicators) return [] as Room[];
@@ -357,6 +399,11 @@ const RoomNavigator: React.FC<RoomNavigatorProps> = ({ rooms, initialRoom = 'mai
                   </button>
                 ))}
               </nav>
+
+              <section className="room-sidebar-description" aria-label="現在のルーム説明">
+                <div className="room-sidebar-description-title">{currentRoomName}</div>
+                <p className="room-sidebar-description-text">{currentRoomDescription}</p>
+              </section>
             </aside>
 
             {isNarrow && !sidebarOpen ? (

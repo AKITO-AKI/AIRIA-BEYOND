@@ -251,10 +251,6 @@ const SocialRoom: React.FC = () => {
   return (
     <div className="room-content social-room">
       <div className="social-header">
-        <div>
-          <h1 className="room-title">SOCIAL</h1>
-          <p className="room-subtitle">作品を公開して、反応を集める</p>
-        </div>
         <div className="social-header-actions" data-no-swipe="true">
           <button className="btn" onClick={() => navigateToRoom('gallery')}>
             ギャラリーへ

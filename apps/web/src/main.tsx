@@ -41,7 +41,6 @@ if (import.meta.env.PROD) {
 }
 
 const ONBOARDING_STORAGE_KEY = 'airia_onboarding_data';
-const THEME_STORAGE_KEY = 'airia_theme';
 const POST_ONBOARDING_ROOM_KEY = 'airia_post_onboarding_room';
 const PREAUTH_VIEW_KEY = 'airia_preauth_view_v1';
 
@@ -57,18 +56,6 @@ function viewFromHash(): PreAuthView | null {
     return null;
   } catch {
     return null;
-  }
-}
-
-function applyThemePreference() {
-  try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const choice = stored || 'system';
-    const next = choice === 'system' ? (prefersDark ? 'dark' : 'light') : choice;
-    document.documentElement.setAttribute('data-theme', next);
-  } catch {
-    document.documentElement.setAttribute('data-theme', 'light');
   }
 }
 
@@ -202,10 +189,6 @@ const AppContent = () => {
     }
   }, []);
 
-  useEffect(() => {
-    applyThemePreference();
-  }, []);
-  
   // Create queue from all albums with music data
   const musicQueue = albums.filter(album => album.musicData);
 

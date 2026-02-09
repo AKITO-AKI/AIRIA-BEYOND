@@ -162,10 +162,6 @@ const AdminRoom: React.FC = () => {
   return (
     <div className="room-content admin-room">
       <div className="admin-header" data-no-swipe="true">
-        <div>
-          <h1 className="room-title">ADMIN</h1>
-          <p className="room-subtitle">ユーザーアクション監視ログ（リアルタイム）</p>
-        </div>
         <div className="admin-header-actions">
           <span className={`admin-pill ${connected ? 'ok' : 'ng'}`}>{connected ? 'LIVE' : 'OFFLINE'}</span>
           <button className="btn" onClick={() => void load()} disabled={loading || !savedToken}>

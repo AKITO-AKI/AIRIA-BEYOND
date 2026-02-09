@@ -103,7 +103,7 @@
   backdrop-filter: blur(10px);
 }
 
-:root[data-theme='light'] .book-tooltip {
+.book-tooltip {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(0, 0, 0, 0.10);
   color: rgba(0, 0, 0, 0.86);
@@ -147,7 +147,7 @@
   user-select: none;
 }
 
-:root[data-theme='light'] .book-focus-btn {
+.book-focus-btn {
   border: 1px solid rgba(0, 0, 0, 0.12);
   background: rgba(255, 255, 255, 0.80);
   color: rgba(0, 0, 0, 0.78);
@@ -248,7 +248,7 @@
   opacity: 0.9;
 }
 
-:root[data-theme='light'] .gallery-shelf-hint {
+.gallery-shelf-hint {
   border: 1px solid rgba(0, 0, 0, 0.10);
   background: rgba(255, 255, 255, 0.55);
   color: rgba(0, 0, 0, 0.70);

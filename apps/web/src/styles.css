@@ -93,55 +93,6 @@
     --shadow-soft: rgba(0, 0, 0, 0.06);
 }
 
-html[data-theme='dark'] {
-    --color-bg: #0b0b0c;
-    --color-bg-muted: #121216;
-    --color-surface: rgba(18, 18, 20, 0.9);
-    --color-surface-strong: rgba(18, 18, 20, 0.98);
-    --color-surface-glass: rgba(18, 18, 20, 0.75);
-    --color-surface-glass-strong: rgba(18, 18, 20, 0.9);
-    --color-border: rgba(255, 255, 255, 0.08);
-    --color-text: #f5f5f7;
-    --color-text-muted: rgba(255, 255, 255, 0.6);
-    --color-text-invert: #0b0b0c;
-    --color-accent: #e6c35a;
-    --color-accent-hover: #d4af37;
-    --color-danger: #ff6b6b;
-    --color-success: #63e6be;
-    --color-focus: #f5f5f7;
-
-    --overlay-chip-border: rgba(255, 255, 255, 0.72);
-    --overlay-chip-bg: rgba(0, 0, 0, 0.62);
-    --overlay-chip-fg: rgba(255, 255, 255, 0.96);
-    --overlay-chip-priority-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
-}
-
-html[data-theme='high-contrast'] {
-    --color-bg: #000000;
-    --color-bg-muted: #000000;
-    --color-surface: #000000;
-    --color-surface-strong: #000000;
-    --color-surface-glass: #000000;
-    --color-surface-glass-strong: #000000;
-    --color-border: #ffffff;
-    --color-text: #ffffff;
-    --color-text-muted: #ffffff;
-    --color-text-invert: #000000;
-    --color-accent: #ffffff;
-    --color-accent-hover: #ffffff;
-    --color-danger: #ffffff;
-    --color-success: #ffffff;
-    --color-focus: #ffffff;
-
-    --overlay-chip-border: #ffffff;
-    --overlay-chip-bg: #000000;
-    --overlay-chip-fg: #ffffff;
-    --overlay-chip-priority-shadow: 0 0 0 2px #ffffff;
-
-    /* Floating player dock (room padding uses this) */
-    --player-safe-area: 32px;
-}
-
 * {
     box-sizing: border-box;
 }
@@ -160,6 +111,22 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+#root {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+img,
+video,
+canvas {
+    max-width: 100%;
+}
 .app-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -178,6 +145,7 @@ body {
 .preauth-shell {
     height: 100dvh;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
 }
@@ -468,8 +436,8 @@ button,
     cursor: pointer;
     transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
     font-weight: var(--font-weight-medium);
-    flex: 1;
-    min-width: fit-content;
+    flex: 1 1 auto;
+    min-width: 0;
     letter-spacing: 0.02em;
 }
 

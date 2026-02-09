@@ -65,10 +65,6 @@ const SettingsRoom: React.FC = () => {
   return (
     <div className="room-content settings-room">
       <div className="settings-header" data-no-swipe="true">
-        <div>
-          <h1 className="room-title">MY</h1>
-          <p className="room-subtitle">プロフィールと設定</p>
-        </div>
         <div className="settings-header-actions">
           <button className="btn" onClick={() => void doLogout()} disabled={!user || busy}>
             ログアウト
