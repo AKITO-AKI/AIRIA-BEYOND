@@ -76,10 +76,9 @@ app.get('/api/health', (req, res) => {
         available: true,
         configured: !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL),
       },
-      comfyui: {
+      hf: {
         available: true,
-        configured: !!(process.env.COMFYUI_BASE_URL || process.env.IMAGE_PROVIDER === 'comfyui' || process.env.IMAGE_PROVIDER === 'comfy'),
-        baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
+        configured: !!process.env.HF_API_KEY,
       },
       openai: { 
         available: !!process.env.OPENAI_API_KEY,
@@ -91,7 +90,8 @@ app.get('/api/health', (req, res) => {
 
 // Import and mount API routes
 import analyzeRoutes from './api/routes/analyze.js';
-import imageRoutes from './api/routes/image.js';
+// import imageRoutes from './api/routes/image.js';
+import imageHfRoutes from './api/routes/image-hf.js';
 import musicRoutes from './api/routes/music.js';
 import jobRoutes from './api/routes/job.js';
 import adminRoutes from './api/routes/admin.js';
@@ -104,7 +104,8 @@ import diagnosticsRoutes from './api/routes/diagnostics.js';
 import authRoutes from './api/routes/auth.js';
 
 app.use('/api/analyze', analyzeRoutes);
-app.use('/api/image', imageRoutes);
+// app.use('/api/image', imageRoutes);
+app.use('/api/image-hf', imageHfRoutes);
 app.use('/api/music', musicRoutes);
 app.use('/api/job', jobRoutes);
 app.use('/api/admin', adminRoutes);

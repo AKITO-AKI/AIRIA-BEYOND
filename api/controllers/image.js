@@ -1,3 +1,4 @@
+// This file has been removed as ComfyUI is no longer used and Hugging Face is now the only image provider.
 /**
  * POST /api/image/generate
  *
