@@ -307,10 +307,10 @@
 }
 
 .room-content {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 28px 24px calc(32px + var(--player-safe-area, 96px));
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0 !important;
+  padding: 0 !important;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -318,18 +318,14 @@
   text-align: left;
   position: relative;
   overflow: visible;
-  min-width: 0;
-  --room-content-scale: 0.5;
-  transform: scale(var(--room-content-scale));
+  min-width: 100vw;
+  min-height: 100vh;
+  --room-content-scale: 1;
+  transform: none;
   transform-origin: top left;
 }
 
-@supports (zoom: 1) {
-  .room-content {
-    zoom: var(--room-content-scale);
-    transform: none;
-  }
-}
+/* zoomは不要なので削除 */
 
 .room-navigator.indicators-hidden .room-content {
   padding-top: 40px;
