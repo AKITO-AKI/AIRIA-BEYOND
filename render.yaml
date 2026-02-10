@@ -125,4 +125,31 @@ services:
         value: 0.7
       - key: IMAGE_PROMPT_LLM_MAX_TOKENS
         value: 800
+
+      # --- Music quality (recommended) ---
+      # Music LLM provider can be overridden independently of LLM_PROVIDER
+      - key: MUSIC_LLM_PROVIDER
+        value: openai
+      - key: OPENAI_MODEL_MUSIC
+        value: gpt-4o-mini
+      - key: LLM_TEMPERATURE_MUSIC
+        value: 0.65
+      - key: MUSIC_LLM_MAX_TOKENS
+        value: 2600
+
+      # Allow more time for structure generation/refinement
+      - key: MUSIC_STRUCTURE_TIMEOUT_MS
+        value: 120000
+
+      # Enable 2nd-pass editor/refiner for higher coherence
+      - key: MUSIC_HIGH_QUALITY
+        value: true
+      - key: MUSIC_STRUCTURE_EDITOR_ENABLED
+        value: true
+      - key: MUSIC_STRUCTURE_EDITOR_PROVIDER
+        value: openai
+      - key: MUSIC_LLM_EDITOR_TEMPERATURE
+        value: 0.25
+      - key: MUSIC_LLM_EDITOR_MAX_TOKENS
+        value: 3000
     healthCheckPath: /api/health

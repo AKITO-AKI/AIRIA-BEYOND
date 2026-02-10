@@ -25,7 +25,7 @@ const ERROR_CODES = {
   EMERGENCY_FALLBACK: 'EMERGENCY_FALLBACK',
 };
 
-const MUSIC_STRUCTURE_TIMEOUT_MS = 60 * 1000;
+const MUSIC_STRUCTURE_TIMEOUT_MS = Number(process.env.MUSIC_STRUCTURE_TIMEOUT_MS) || 60 * 1000;
 
 async function runWithTimeout(promise, timeoutMs) {
   let timeoutHandle;

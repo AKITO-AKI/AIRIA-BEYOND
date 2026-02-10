@@ -17,6 +17,41 @@ function envNum(name, fallback) {
   return Number.isFinite(v) ? v : fallback;
 }
 
+function envBool(name, fallback = false) {
+  const raw = process.env[name];
+  if (raw == null || raw === '') return fallback;
+  const s = String(raw).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'y', 'on', 'enabled'].includes(s)) return true;
+  if (['0', 'false', 'no', 'n', 'off', 'disabled'].includes(s)) return false;
+  return fallback;
+}
+
+function getMusicProviderPreference() {
+  return String(process.env.MUSIC_LLM_PROVIDER ?? process.env.LLM_PROVIDER ?? '').toLowerCase();
+}
+
+function getMusicMaxTokens(defaultTokens) {
+  const tokens = envNum('MUSIC_LLM_MAX_TOKENS', defaultTokens);
+  return Math.max(256, Math.min(8192, tokens));
+}
+
+function getMusicEditorEnabled() {
+  return envBool('MUSIC_STRUCTURE_EDITOR_ENABLED', false) || envBool('MUSIC_HIGH_QUALITY', false);
+}
+
+function getMusicEditorProviderPreference() {
+  return String(process.env.MUSIC_STRUCTURE_EDITOR_PROVIDER ?? process.env.MUSIC_LLM_PROVIDER ?? process.env.LLM_PROVIDER ?? '').toLowerCase();
+}
+
+function getMusicEditorTemperature() {
+  return Math.max(0, Math.min(1, envNum('MUSIC_LLM_EDITOR_TEMPERATURE', 0.25)));
+}
+
+function getMusicEditorMaxTokens(fallbackTokens) {
+  const tokens = envNum('MUSIC_LLM_EDITOR_MAX_TOKENS', fallbackTokens);
+  return Math.max(256, Math.min(8192, tokens));
+}
+
 function getMusicModel() {
   return envStr('OPENAI_MODEL_MUSIC', 'gpt-4o-mini');
 }
@@ -636,6 +671,90 @@ function hasOllamaConfigured() {
   return !!(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL);
 }
 
+function isValidMusicStructure(structure) {
+  return !!(structure?.key && structure?.tempo && Array.isArray(structure?.sections) && structure.sections.length);
+}
+
+async function refineMusicStructureWithEditor({ request, draft, plan }) {
+  if (!getMusicEditorEnabled()) return draft;
+
+  const editorPref = getMusicEditorProviderPreference();
+  const useOllama =
+    editorPref !== 'openai' && (editorPref === 'ollama' || (!openai && hasOllamaConfigured()));
+
+  const editorSystemPrompt = `You are a meticulous music editor and orchestrator. You will be given a draft JSON music structure.
+
+Your job:
+- Improve musical coherence and classical form: motivic unity, phrase structure, sensible harmonic motion, clear cadences.
+- Ensure the output strictly matches the required JSON schema and is MIDI-friendly.
+- Keep the overall intent (emotion, duration, genre palette) and follow the provided section plan.
+
+Rules:
+- Output ONLY valid JSON (no markdown).
+- Keep timeSignature within: 3/4, 4/4, 6/8.
+- tempo must be a number 40..220.
+- chordProgression must use ONLY diatonic roman numerals (no slashes, no 7ths).
+- degrees must be integers 1..7 (optionally up to 14 for octave shifts).
+- rhythm values must be beats from: 0.25, 0.5, 1, 2, 4.
+`;
+
+  const editorUserPrompt = `Here is the SECTION PLAN you MUST follow (names, approximate measures, section keys, cadence goals):
+${JSON.stringify(plan.sections.map((s) => ({ name: s.name, measures: s.measures, key: s.key, cadence: s.cadence })), null, 2)}
+
+Here is the DRAFT structure to refine:
+${JSON.stringify(draft)}
+
+Return an improved structure that:
+- Keeps the same overall form and section count
+- Preserves section names, and keeps measures close to the plan (exact is preferred)
+- Strengthens cadences at section endings according to the plan when present
+- Uses 2–3 leitmotifs and restates them later with variation
+- Adds or improves harmonicFunctions alignment if present
+`;
+
+  try {
+    if (useOllama) {
+      const edited = await ollamaChatJson({
+        system: editorSystemPrompt,
+        user: editorUserPrompt,
+        temperature: getMusicEditorTemperature(),
+        maxTokens: getMusicEditorMaxTokens(getMusicMaxTokens(1800)),
+        model: process.env.OLLAMA_MODEL_MUSIC || process.env.OLLAMA_MODEL,
+        debugTag: 'MusicLLMEditor',
+      });
+      const sanitized = sanitizeMusicStructure(edited, request);
+      if (!isValidMusicStructure(sanitized)) throw new Error('Invalid edited music structure from Ollama');
+      return sanitized;
+    }
+
+    if (!openai) {
+      return draft;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: getMusicModel(),
+      messages: [
+        { role: 'system', content: editorSystemPrompt },
+        { role: 'user', content: editorUserPrompt },
+      ],
+      temperature: getMusicEditorTemperature(),
+      max_tokens: getMusicEditorMaxTokens(getMusicMaxTokens(2200)),
+      response_format: { type: 'json_object' },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) return draft;
+    const parsed = parseJsonLoose(content);
+    if (parsed == null) return draft;
+    const sanitized = sanitizeMusicStructure(parsed, request);
+    if (!isValidMusicStructure(sanitized)) return draft;
+    return sanitized;
+  } catch (e) {
+    console.warn('[MusicLLM] Editor pass failed; returning draft:', e?.message || e);
+    return draft;
+  }
+}
+
 /**
  * Generate music structure using LLM
  * @param {Object} request - Music generation request
@@ -653,7 +772,7 @@ function hasOllamaConfigured() {
  * @returns {Promise<Object>} Music structure
  */
 export async function generateMusicStructure(request) {
-  const providerPref = getProviderPreference();
+  const providerPref = getMusicProviderPreference() || getProviderPreference();
   if (providerPref !== 'openai' && (providerPref === 'ollama' || (!openai && hasOllamaConfigured()))) {
     const {
       valence,
@@ -769,18 +888,33 @@ Hard constraints for MIDI compatibility:
 
     const userPrompt = `Generate a single cohesive classical piece (not a loop) with the following emotional parameters:\n\nValence: ${Number(valence).toFixed(2)}\nArousal: ${Number(arousal).toFixed(2)}\nFocus: ${Number(focus).toFixed(2)}\nArtistic motifs: ${Array.isArray(motif_tags) ? motif_tags.join(', ') : ''}\nTarget duration: ${duration} seconds\n\nClassical-theory requirements:\n- Use clear phrase structure (often 4+4 or 8-bar periods) and motivic unity across sections\n- Use functional harmony and cadences at section endings (HC/PAC)\n- Use development techniques (sequence, inversion, augmentation/diminution) especially in development/variation sections\n- Avoid pop-loop progressions and avoid random chord jumps\n\nNow add artistic depth:\n- Define 2–3 leitmotifs from the theme keywords (tagged), and restate them later with variation.\n- Annotate chord functions with tension/release/ambiguity where it helps the narrative (optional).\n- Add humanize guidance (rubato + velocity shaping) compatible with MIDI.${constraintsBlock}`;
 
-    const musicStructure = await ollamaChatJson({
-      system: systemPrompt,
-      user: userPrompt,
-      temperature: getMusicTemperature(),
-      maxTokens: 1800,
-      model: process.env.OLLAMA_MODEL_MUSIC || process.env.OLLAMA_MODEL,
-      debugTag: 'MusicLLM',
-    });
+    const attempt = async (temperature, strictTag) => {
+      const musicStructure = await ollamaChatJson({
+        system:
+          systemPrompt +
+          (strictTag
+            ? '\n\nSTRICT MODE: Output ONLY valid JSON. Ensure types: tempo/measures are numbers, arrays are arrays.'
+            : ''),
+        user: userPrompt,
+        temperature,
+        maxTokens: getMusicMaxTokens(1800),
+        model: process.env.OLLAMA_MODEL_MUSIC || process.env.OLLAMA_MODEL,
+        debugTag: 'MusicLLM',
+      });
 
-    const sanitized = sanitizeMusicStructure(musicStructure, request);
-    if (!sanitized?.key || !sanitized?.tempo || !sanitized?.sections?.length) {
-      throw new Error('Invalid music structure from Ollama');
+      const sanitized = sanitizeMusicStructure(musicStructure, request);
+      if (!isValidMusicStructure(sanitized)) {
+        throw new Error('Invalid music structure from Ollama');
+      }
+      return sanitized;
+    };
+
+    let sanitized;
+    try {
+      sanitized = await attempt(getMusicTemperature(), false);
+    } catch (e) {
+      console.warn('[MusicLLM] Ollama first attempt invalid; retrying strict mode');
+      sanitized = await attempt(0.2, true);
     }
 
     console.log('[MusicLLM] Generated music structure (ollama):', {
@@ -790,7 +924,8 @@ Hard constraints for MIDI compatibility:
       sections: Array.isArray(musicStructure.sections) ? musicStructure.sections.length : 0,
     });
 
-    return sanitized;
+    const edited = await refineMusicStructureWithEditor({ request, draft: sanitized, plan });
+    return edited;
   }
 
   if (!openai) {
@@ -952,7 +1087,7 @@ Create a composition that reflects these emotional qualities, staying within the
           { role: 'user', content: userPrompt },
         ],
         temperature,
-        max_tokens: 2200,
+        max_tokens: getMusicMaxTokens(2200),
         response_format: { type: 'json_object' },
       });
 
@@ -961,7 +1096,7 @@ Create a composition that reflects these emotional qualities, staying within the
       const parsed = parseJsonLoose(content);
       if (parsed == null) throw new Error('Music JSON parse failed');
       const sanitized = sanitizeMusicStructure(parsed, request);
-      if (!sanitized.key || !sanitized.tempo || !Array.isArray(sanitized.sections) || !sanitized.sections.length) {
+      if (!isValidMusicStructure(sanitized)) {
         throw new Error('Invalid music structure from LLM');
       }
       return sanitized;
@@ -982,7 +1117,8 @@ Create a composition that reflects these emotional qualities, staying within the
       sections: musicStructure.sections.length,
     });
 
-    return musicStructure;
+    const edited = await refineMusicStructureWithEditor({ request, draft: musicStructure, plan });
+    return edited;
   } catch (error) {
     console.error('[MusicLLM] Error generating music structure:', error);
     throw error;
@@ -997,7 +1133,7 @@ Create a composition that reflects these emotional qualities, staying within the
 export async function generateMusicStructureWithFallback(request) {
   try {
     const structure = await generateMusicStructure(request);
-    const providerPref = getProviderPreference();
+    const providerPref = getMusicProviderPreference() || getProviderPreference();
     const provider = providerPref === 'ollama' || (!openai && hasOllamaConfigured()) ? 'ollama' : 'openai';
     return { structure, provider };
   } catch (error) {
