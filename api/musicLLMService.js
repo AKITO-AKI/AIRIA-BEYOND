@@ -910,6 +910,7 @@ Hard constraints for MIDI compatibility:
     };
 
     let sanitized;
+
     try {
       sanitized = await attempt(getMusicTemperature(), false);
     } catch (e) {
@@ -918,10 +919,10 @@ Hard constraints for MIDI compatibility:
     }
 
     console.log('[MusicLLM] Generated music structure (ollama):', {
-      key: musicStructure.key,
-      tempo: musicStructure.tempo,
-      form: musicStructure.form,
-      sections: Array.isArray(musicStructure.sections) ? musicStructure.sections.length : 0,
+      key: sanitized.key,
+      tempo: sanitized.tempo,
+      form: sanitized.form,
+      sections: Array.isArray(sanitized.sections) ? sanitized.sections.length : 0,
     });
 
     const edited = await refineMusicStructureWithEditor({ request, draft: sanitized, plan });
